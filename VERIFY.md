@@ -57,5 +57,21 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 Findings from the first runs (0.9.0, Obsidian 1.15.1, Tasks 8.6.0): Tasks inserts the next occurrence **above** the completed line; callout tasks are indexed; the Settings window keeps the plugin code it was opened with, so **quit and reopen Obsidian** (not just Force Reload) after changing settings code.
 
 ## MVP acceptance
-- [ ] A 10,000-task vault renders and filters without visible lag.
-- [ ] Disable the plugin: every note opens normally, and `Project tasks.base` still opens (Bases shows the unknown view type, or falls back) with no YAML errors. Re-enabling restores the views.
+
+Run on 2026-11-20 with Tasklines 0.9.2 in Obsidian 1.15.1 (macOS), using `npm run perf-vault` (5,000 notes, 10,494 tasks) and `bench/perf-in-obsidian.js`:
+
+- [x] **A 10,000-task vault renders and filters without visible lag.**
+
+  | Step | Time |
+  | --- | --- |
+  | First open of the base (indexing 3,000 notes with tasks takes 42 ms of it) | 199 ms |
+  | Reopening it | 130 to 143 ms |
+  | Filter (add Done) | 45 to 51 ms |
+  | Group by priority | 31 ms |
+  | Text search, after the 300 ms typing pause | 33 to 41 ms |
+  | Scrolling: frame time while jumping 1,500 px a frame | median 17 ms (60 fps), p95 17 to 18 ms |
+  | Refresh after a note is edited elsewhere | 91 to 97 ms |
+
+  Only 24 to 35 rows are ever in the page.
+- [x] **Disabling the plugin leaves every note and `.base` file valid.** With Tasklines off, notes open and render normally. A base with Tasklines views still opens, and Bases shows "Unknown view type: tasklines" for those views. The `.base` file stays valid YAML.
+- [ ] Repeat on a phone.
