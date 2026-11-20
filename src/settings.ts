@@ -1,4 +1,4 @@
-import { App, PluginSettingTab, Setting, type Plugin } from 'obsidian';
+import { App, normalizePath, PluginSettingTab, Setting, type Plugin } from 'obsidian';
 import type { FieldFormat } from './edit.ts';
 import { configureStatuses, DEFAULT_STATUSES, formatStatusSetting, parseStatusSetting } from './parser.ts';
 import type { CompletionDate } from './writeback.ts';
@@ -32,7 +32,7 @@ export function applyStatusSetting(settings: TasklinesSettings): string[] {
 export function excludedFolders(settings: TasklinesSettings): string[] {
 	return settings.excludeFolders
 		.split(/\r?\n/)
-		.map((f) => f.trim().replace(/^\/+|\/+$/g, ''))
+		.map((f) => (f.trim() ? normalizePath(f.trim()) : ''))
 		.filter(Boolean);
 }
 

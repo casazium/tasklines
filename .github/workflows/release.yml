@@ -21,10 +21,24 @@ jobs:
                   node-version: 24
                   cache: 'npm'
 
-            - name: Build plugin
+            - name: Check tag matches manifest and package versions
+              run: |
+                  tag="${GITHUB_REF#refs/tags/}"
+                  manifest=$(node -p "require('./manifest.json').version")
+                  pkg=$(node -p "require('./package.json').version")
+                  mapped=$(node -p "require('./versions.json')['$tag'] || ''")
+                  echo "tag=$tag manifest=$manifest package=$pkg versions.json=$mapped"
+                  # Obsidian requires the tag to be exactly the manifest version, with no "v" prefix.
+                  [ "$tag" = "$manifest" ] || { echo "::error::Tag $tag does not match manifest.json version $manifest"; exit 1; }
+                  [ "$tag" = "$pkg" ] || { echo "::error::Tag $tag does not match package.json version $pkg"; exit 1; }
+                  [ -n "$mapped" ] || { echo "::error::versions.json has no entry for $tag"; exit 1; }
+
+            - name: Build, lint and test
               run: |
                   npm ci
                   npm run build
+                  npm run lint
+                  npm test
 
             - name: Check for optional styles
               id: styles
@@ -44,7 +58,14 @@ jobs:
               run: |
                   tag="${GITHUB_REF#refs/tags/}"
 
+                  # 0.x and x.y.z-something are pre-releases: installable with BRAT,
+                  # not offered by Obsidian's community plugin browser.
+                  prerelease=""
+                  case "$tag" in 0.*|*-*) prerelease="--prerelease" ;; esac
+
+                  # Drafts are published by hand after checking the notes and assets.
                   gh release create "$tag" \
-                    --title="$tag" \
-                    --draft \
+                    --title="Tasklines $tag" \
+                    --draft $prerelease \
+                    --generate-notes \
                     main.js manifest.json ${{ steps.styles.outputs.exists == 'true' && 'styles.css' || '' }}

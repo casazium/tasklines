@@ -61,7 +61,7 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 
 	// Columns: task text, chosen task columns, then the base's note-property columns.
 	const colCount = 1 + input.taskColumns.length + input.columns.length;
-	list.scroller.style.setProperty('--tasklines-cols', `minmax(16em, 3fr) repeat(${colCount - 1}, minmax(7em, 1fr))`);
+	list.scroller.setCssProps({ '--tasklines-cols': `minmax(16em, 3fr) repeat(${colCount - 1}, minmax(7em, 1fr))` });
 	list.header.empty();
 	if (items.length === 0) {
 		list.header.createDiv({
@@ -95,7 +95,7 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	el.addClasses(['tasklines-grid', 'tasklines-row', `tasklines-status-${kind}`]);
 	el.setAttr('role', 'row');
 	const textCell = el.createDiv({ cls: 'tasklines-text', attr: { role: 'cell' } });
-	textCell.style.paddingInlineStart = `calc(8px + ${task.depth * 1.25}em)`;
+	textCell.setCssProps({ '--tasklines-depth': String(task.depth) });
 	const box = textCell.createEl('input', {
 		type: 'checkbox',
 		cls: 'task-list-item-checkbox tasklines-checkbox',
@@ -112,9 +112,13 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 		ev.preventDefault(); // the checkbox shows the note's state, which changes only after the write
 		if (box.disabled) return;
 		box.disabled = true;
-		void input.toggleTask(task).finally(() => {
-			box.disabled = false;
-		});
+		void (async () => {
+			try {
+				await input.toggleTask(task);
+			} finally {
+				box.disabled = false;
+			}
+		})();
 	});
 	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
 	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
@@ -173,7 +177,13 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 			cell.setText(shown);
 			if (edit) {
 				cell.addClass('is-saving');
-				void input.editTask(task, edit).finally(() => cell.removeClass('is-saving'));
+				void (async () => {
+					try {
+						await input.editTask(task, edit);
+					} finally {
+						cell.removeClass('is-saving');
+					}
+				})();
 			}
 		};
 		control.addEventListener('change', () => close(true));

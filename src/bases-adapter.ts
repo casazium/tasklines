@@ -157,44 +157,47 @@ class TasklinesView extends BasesView {
 	}
 
 	private render(): void {
+		void this.renderAsync();
+	}
+
+	private async renderAsync(): Promise<void> {
 		const notes = this.notes;
 		const query = this.query;
 		const token = ++this.renderToken;
-		void this.index.tasksFor(notes.map((n) => n.entry.file)).then((tasksByPath) => {
-			if (token !== this.renderToken) return; // superseded by a newer render
-			const rows: ViewRow[] = [];
-			for (const n of notes) {
-				const tasks = tasksByPath.get(n.entry.file.path);
-				if (!tasks?.length) continue;
-				const props = new Map<string, string>();
-				for (const [id, v] of n.entry.values) props.set(id, valueText(v));
-				for (const task of tasks) {
-					rows.push({ task, entry: n.entry, noteIndex: n.noteIndex, noteName: n.entry.file.basename, baseGroup: n.baseGroup, baseGroupIndex: n.baseGroupIndex, props });
-				}
+		const tasksByPath = await this.index.tasksFor(notes.map((n) => n.entry.file));
+		if (token !== this.renderToken) return; // superseded by a newer render
+		const rows: ViewRow[] = [];
+		for (const n of notes) {
+			const tasks = tasksByPath.get(n.entry.file.path);
+			if (!tasks?.length) continue;
+			const props = new Map<string, string>();
+			for (const [id, v] of n.entry.values) props.set(id, valueText(v));
+			for (const task of tasks) {
+				rows.push({ task, entry: n.entry, noteIndex: n.noteIndex, noteName: n.entry.file.basename, baseGroup: n.baseGroup, baseGroupIndex: n.baseGroupIndex, props });
 			}
-			const columns = this.config.getOrder().filter((p) => p !== 'file.name');
-			const today = localDate(new Date());
-			const context = columnContext(tasksByPath, today);
-			renderRows(this.statsEl, this.list, {
-				groups: applyQuery(rows, query, today),
-				context,
-				total: rows.length,
-				columns,
-				columnNames: columns.map((p) => this.config.getDisplayName(p)),
-				taskColumns: TASK_COLUMNS.filter((c) => {
-					const v = this.config.get(columnOptionKey(c.key));
-					return typeof v === 'boolean' ? v : c.defaultOn;
-				}),
-				stats: this.index.lastStats,
-				openTask: (path, line, newTab) => this.openTask(path, line, newTab),
-				toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
-				tasksPluginAvailable: this.writer.tasksPluginAvailable(),
-				editTask: (task, edit) => this.writer.edit({ path: task.path, line: task.line, raw: task.raw }, edit),
-				renderValue: (el, entry, prop) => {
-					const value = entry.values.get(prop);
-					if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);
-				},
-			});
+		}
+		const columns = this.config.getOrder().filter((p) => p !== 'file.name');
+		const today = localDate(new Date());
+		const context = columnContext(tasksByPath, today);
+		renderRows(this.statsEl, this.list, {
+			groups: applyQuery(rows, query, today),
+			context,
+			total: rows.length,
+			columns,
+			columnNames: columns.map((p) => this.config.getDisplayName(p)),
+			taskColumns: TASK_COLUMNS.filter((c) => {
+				const v = this.config.get(columnOptionKey(c.key));
+				return typeof v === 'boolean' ? v : c.defaultOn;
+			}),
+			stats: this.index.lastStats,
+			openTask: (path, line, newTab) => this.openTask(path, line, newTab),
+			toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
+			tasksPluginAvailable: this.writer.tasksPluginAvailable(),
+			editTask: (task, edit) => this.writer.edit({ path: task.path, line: task.line, raw: task.raw }, edit),
+			renderValue: (el, entry, prop) => {
+				const value = entry.values.get(prop);
+				if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);
+			},
 		});
 	}
 

@@ -1,4 +1,4 @@
-import { Notice, TFile, type Editor, type MarkdownFileInfo, type MarkdownView, type Plugin } from 'obsidian';
+import { normalizePath, Notice, TFile, type Editor, type MarkdownFileInfo, type MarkdownView, type Plugin } from 'obsidian';
 import { findDataviewBlock, migrationToBase, translateDataviewTask } from './dataview-migrate.ts';
 
 /** Command: turn the Dataview TASK query under the cursor into a .base file next to the note. */
@@ -25,8 +25,8 @@ async function convert(plugin: Plugin, note: TFile, source: string): Promise<voi
 		return;
 	}
 	const folder = note.parent?.path && note.parent.path !== '/' ? `${note.parent.path}/` : '';
-	let path = `${folder}${note.basename} tasks.base`;
-	for (let n = 2; app.vault.getAbstractFileByPath(path); n++) path = `${folder}${note.basename} tasks ${n}.base`;
+	let path = normalizePath(`${folder}${note.basename} tasks.base`);
+	for (let n = 2; app.vault.getAbstractFileByPath(path); n++) path = normalizePath(`${folder}${note.basename} tasks ${n}.base`);
 
 	const file = await app.vault.create(path, migrationToBase(migration, 'Tasks', source));
 	const name = file.name;
