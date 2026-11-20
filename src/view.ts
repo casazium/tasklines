@@ -27,6 +27,8 @@ export interface RenderInput {
 	taskColumns: TaskColumn[];
 	context: ColumnContext;
 	stats: IndexStats;
+	/** All notes the base selects, and how many of them have at least one task. */
+	notes: { total: number; withTasks: number };
 	openTask: (path: string, line: number, newTab: boolean) => void;
 	/** Toggle a task in its note; resolves true if the note changed. */
 	toggleTask: (task: QueryRow['task']) => Promise<boolean>;
@@ -49,8 +51,8 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 	statsEl.createSpan({ cls: 'tasklines-summary', text: formatSummary(summarize([...new Set(shownRows)], today)) });
 	statsEl.createSpan({
 		text:
-			`${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${s.filesSeen} notes ` +
-			`(${s.filesRead} read, ${s.cacheHits} cached, ${s.filesSkippedNoTasks} without tasks) · ${s.ms.toFixed(0)} ms`,
+			`${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${input.notes.total} notes ` +
+			`(${input.notes.total - input.notes.withTasks} without tasks; ${s.filesRead} read, ${s.cacheHits} cached) · ${s.ms.toFixed(0)} ms`,
 	});
 
 	const items: Item[] = [];

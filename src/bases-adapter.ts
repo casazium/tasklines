@@ -190,6 +190,8 @@ class TasklinesView extends BasesView {
 				return typeof v === 'boolean' ? v : c.defaultOn;
 			}),
 			stats: this.index.lastStats,
+			// Notes known to have no tasks are skipped before indexing, so count from all paths.
+			notes: { total: this.paths.size, withTasks: [...tasksByPath.values()].filter((t) => t.length > 0).length },
 			openTask: (path, line, newTab) => this.openTask(path, line, newTab),
 			toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
 			tasksPluginAvailable: this.writer.tasksPluginAvailable(),
