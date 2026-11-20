@@ -26,7 +26,11 @@ export class TaskIndex {
 	private listeners = new Set<(paths: string[]) => void>();
 	lastStats: IndexStats = { filesSeen: 0, filesSkippedNoTasks: 0, filesRead: 0, cacheHits: 0, ms: 0 };
 
-	constructor(private app: App) {}
+	private app: App;
+
+	constructor(app: App) {
+		this.app = app;
+	}
 
 	/** Drop a file's cached tasks and tell open views which paths changed. */
 	invalidate(file: TAbstractFile, oldPath?: string): void {
@@ -39,6 +43,17 @@ export class TaskIndex {
 	onInvalidate(fn: (paths: string[]) => void): () => void {
 		this.listeners.add(fn);
 		return () => this.listeners.delete(fn);
+	}
+
+	/** Cached tasks for a file if still fresh, else undefined. Synchronous; never reads. */
+	peek(file: TFile): IndexedTask[] | undefined {
+		const cached = this.files.get(file.path);
+		return cached && cached.mtime === file.stat.mtime ? cached.tasks : undefined;
+	}
+
+	/** Number of files currently cached (for tests and diagnostics). */
+	get size(): number {
+		return this.files.size;
 	}
 
 	async tasksFor(files: TFile[]): Promise<Map<string, IndexedTask[]>> {

@@ -31,12 +31,13 @@ export default defineConfig(
 	...obsidianmd.configs.recommended,
 	{
 		// Tests run under Node's test runner, not inside Obsidian.
-		files: ['tests/**/*.ts'],
+		files: ['tests/**/*.ts', 'bench/**/*.ts'],
 		languageOptions: { globals: { ...globals.node } },
 		rules: {
 			'obsidianmd/no-nodejs-modules': 'off',
 			'@typescript-eslint/no-floating-promises': 'off',
 			'obsidianmd/rule-custom-message': 'off',
+			'obsidianmd/no-tfile-tfolder-cast': 'off',
 		},
 	},
 	globalIgnores(['test-vault']),

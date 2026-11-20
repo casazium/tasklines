@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { extractTasks } from '../src/extract.ts';
-import { stableSort, localDate } from '../src/view.ts';
+import { localDate } from '../src/view.ts';
 
 // Mimics the metadata cache: list items with line, task char and parent line.
 // parent is the parent item's line, or -(first line of the list) for root items.
@@ -67,17 +67,6 @@ test('cache says task but line does not parse: skipped, not guessed', () => {
 
 test('stale cache line beyond end of file is skipped', () => {
 	assert.equal(extractTasks('a.md', '- [ ] one', [item(5, -5, ' ')], []).length, 0);
-});
-
-test('task sort is stable and puts undated last', () => {
-	const rows = [
-		{ id: 'a', task: { due: undefined } },
-		{ id: 'b', task: { due: '2026-02-01' } },
-		{ id: 'c', task: { due: '2026-01-01' } },
-		{ id: 'd', task: { due: '2026-01-01' } },
-	] as unknown as Array<{ id: string; task: import('../src/extract.ts').IndexedTask }>;
-	assert.deepEqual(stableSort(rows, 'due').map((r) => r.id), ['c', 'd', 'b', 'a']);
-	assert.deepEqual(stableSort(rows, 'file').map((r) => r.id), ['a', 'b', 'c', 'd']);
 });
 
 test('localDate uses local time, not UTC', () => {

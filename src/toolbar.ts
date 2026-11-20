@@ -1,0 +1,163 @@
+// In-view toolbar for task-level filter, sort and group. The query it edits is saved
+// in the .base view config by the adapter, so each view keeps its own preset.
+
+import { normalizeTag, PRIORITY_ORDER, STATUS_KINDS, TASK_GROUP_KEYS, TASK_SORT_KEYS, type DuePreset, type TaskQuery } from './query.ts';
+
+export interface PropChoice {
+	id: string;
+	label: string;
+}
+
+const STATUS_LABELS: Record<string, string> = { todo: 'To do', 'in-progress': 'In progress', done: 'Done', cancelled: 'Cancelled', other: 'Other' };
+const DUE_LABELS: Record<DuePreset, string> = {
+	any: 'Any due date',
+	overdue: 'Overdue',
+	today: 'Due today',
+	next7: 'Due in next 7 days',
+	next30: 'Due in next 30 days',
+	has: 'Has a due date',
+	none: 'No due date',
+	range: 'Due between…',
+};
+const SORT_LABELS: Record<string, string> = {
+	due: 'Due',
+	scheduled: 'Scheduled',
+	start: 'Start',
+	created: 'Created',
+	done: 'Done date',
+	priority: 'Priority',
+	status: 'Status',
+	text: 'Task text',
+	note: 'Note name',
+	position: 'Base order',
+};
+const GROUP_LABELS: Record<string, string> = {
+	bases: 'Base grouping',
+	none: 'No grouping',
+	note: 'Note',
+	section: 'Section',
+	status: 'Status',
+	due: 'Due bucket',
+	priority: 'Priority',
+	tag: 'Tag',
+};
+
+export class TaskToolbar {
+	private el: HTMLElement;
+	private query: TaskQuery;
+	private props: PropChoice[] = [];
+	private textTimer: number | undefined;
+
+	constructor(
+		parent: HTMLElement,
+		query: TaskQuery,
+		private onChange: (q: TaskQuery) => void,
+	) {
+		this.el = parent.createDiv({ cls: 'task-rows-toolbar' });
+		this.query = query;
+		this.build();
+	}
+
+	/** Sync from the saved config. Skipped while the user is typing in the toolbar. */
+	update(query: TaskQuery, props: PropChoice[]): void {
+		const propsChanged = props.map((p) => p.id + p.label).join() !== this.props.map((p) => p.id + p.label).join();
+		const queryChanged = JSON.stringify(query) !== JSON.stringify(this.query);
+		if (!propsChanged && !queryChanged) return;
+		if (this.el.contains(document.activeElement) && !propsChanged) return;
+		this.props = props;
+		this.query = query;
+		this.build();
+	}
+
+	private set(patch: Partial<TaskQuery>, rebuild = true): void {
+		this.query = { ...this.query, ...patch };
+		if (rebuild) this.build();
+		this.onChange(this.query);
+	}
+
+	private setLater(patch: Partial<TaskQuery>): void {
+		window.clearTimeout(this.textTimer);
+		this.textTimer = window.setTimeout(() => this.set(patch, false), 300);
+	}
+
+	private build(): void {
+		const q = this.query;
+		this.el.empty();
+
+		// Row 1: status and priority chips.
+		const chips = this.el.createDiv({ cls: 'task-rows-toolbar-row' });
+		this.chipSet(chips, 'Status', STATUS_KINDS, q.statuses, (s) => STATUS_LABELS[s] ?? s, (v) => this.set({ statuses: v }));
+		this.chipSet(chips, 'Priority', PRIORITY_ORDER, q.priorities, (p) => p[0]?.toUpperCase() + p.slice(1), (v) => this.set({ priorities: v }));
+
+		// Row 2: due, tags, text.
+		const filters = this.el.createDiv({ cls: 'task-rows-toolbar-row' });
+		const due = this.select(filters, 'Due', Object.entries(DUE_LABELS), q.due);
+		due.addEventListener('change', () => this.set({ due: due.value as DuePreset }));
+		if (q.due === 'range') {
+			for (const key of ['dueFrom', 'dueTo'] as const) {
+				const input = filters.createEl('input', { type: 'date', cls: 'task-rows-date', attr: { 'aria-label': key === 'dueFrom' ? 'Due from' : 'Due to' } });
+				input.value = q[key];
+				input.addEventListener('change', () => this.set({ [key]: input.value }, false));
+			}
+		}
+		const tags = filters.createEl('input', { type: 'text', cls: 'task-rows-input', attr: { placeholder: 'Tags: #work #home', 'aria-label': 'Filter by tags' } });
+		tags.value = q.tags.join(' ');
+		tags.addEventListener('input', () => this.setLater({ tags: tags.value.split(/[\s,]+/).map(normalizeTag).filter(Boolean) }));
+		const text = filters.createEl('input', { type: 'search', cls: 'task-rows-input', attr: { placeholder: 'Search task text', 'aria-label': 'Search task text' } });
+		text.value = q.text;
+		text.addEventListener('input', () => this.setLater({ text: text.value }));
+
+		// Row 3: sort keys and group.
+		const order = this.el.createDiv({ cls: 'task-rows-toolbar-row' });
+		order.createSpan({ cls: 'task-rows-label', text: 'Sort' });
+		const sortChoices: Array<[string, string]> = [
+			...TASK_SORT_KEYS.map((k): [string, string] => [k, SORT_LABELS[k] ?? k]),
+			...this.props.map((p): [string, string] => [`prop:${p.id}`, p.label]),
+		];
+		q.sort.forEach((s, i) => {
+			const wrap = order.createSpan({ cls: 'task-rows-sort-key' });
+			const sel = this.select(wrap, `Sort key ${i + 1}`, sortChoices, s.key);
+			sel.addEventListener('change', () => this.set({ sort: q.sort.map((x, j) => (j === i ? { ...x, key: sel.value } : x)) }));
+			const dir = wrap.createEl('button', { cls: 'task-rows-btn', text: s.desc ? '↓' : '↑', attr: { 'aria-label': s.desc ? 'Descending' : 'Ascending' } });
+			dir.addEventListener('click', () => this.set({ sort: q.sort.map((x, j) => (j === i ? { ...x, desc: !x.desc } : x)) }));
+			const rm = wrap.createEl('button', { cls: 'task-rows-btn', text: '×', attr: { 'aria-label': 'Remove sort key' } });
+			rm.addEventListener('click', () => this.set({ sort: q.sort.filter((_, j) => j !== i) }));
+		});
+		if (q.sort.length < 3) {
+			const add = order.createEl('button', { cls: 'task-rows-btn', text: q.sort.length ? '+ then by' : '+ add sort' });
+			add.addEventListener('click', () => this.set({ sort: [...q.sort, { key: q.sort.length ? 'priority' : 'due', desc: false }] }));
+		}
+
+		order.createSpan({ cls: 'task-rows-label', text: 'Group' });
+		const groupChoices: Array<[string, string]> = [
+			...TASK_GROUP_KEYS.map((k): [string, string] => [k, GROUP_LABELS[k] ?? k]),
+			...this.props.map((p): [string, string] => [`prop:${p.id}`, p.label]),
+		];
+		const group = this.select(order, 'Group tasks by', groupChoices, q.group);
+		group.addEventListener('change', () => this.set({ group: group.value }));
+
+		const reset = order.createEl('button', { cls: 'task-rows-btn task-rows-reset', text: 'Reset' });
+		reset.addEventListener('click', () =>
+			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', sort: [], group: 'bases' }),
+		);
+	}
+
+	private chipSet<T extends string>(parent: HTMLElement, label: string, all: readonly T[], selected: T[], name: (v: T) => string, apply: (v: T[]) => void): void {
+		const set = parent.createSpan({ cls: 'task-rows-chips', attr: { role: 'group', 'aria-label': label } });
+		set.createSpan({ cls: 'task-rows-label', text: label });
+		for (const v of all) {
+			const on = selected.includes(v);
+			const chip = set.createEl('button', { cls: `task-rows-chip${on ? ' is-active' : ''}`, text: name(v), attr: { 'aria-pressed': String(on) } });
+			chip.addEventListener('click', () => apply(on ? selected.filter((s) => s !== v) : [...selected, v]));
+		}
+	}
+
+	private select(parent: HTMLElement, label: string, choices: Array<[string, string]>, value: string): HTMLSelectElement {
+		const sel = parent.createEl('select', { cls: 'dropdown task-rows-select', attr: { 'aria-label': label } });
+		for (const [v, text] of choices) sel.createEl('option', { value: v, text });
+		// Keep a saved value visible even if its property is not in this base any more.
+		if (!choices.some(([v]) => v === value)) sel.createEl('option', { value, text: `${value} (missing)` });
+		sel.value = value;
+		return sel;
+	}
+}

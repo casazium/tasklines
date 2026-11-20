@@ -1,12 +1,27 @@
 // The only module that touches the Obsidian Bases API (BasesView, BasesEntry,
 // BasesViewConfig, Value, registerBasesView). If the Bases API changes, change this file.
 
-import { BasesAllOptions, BasesEntry, BasesPropertyId, BasesView, debounce, Plugin, QueryController, RenderContext, TFile } from 'obsidian';
+import {
+	BasesAllOptions,
+	BasesEntry,
+	BasesPropertyId,
+	BasesView,
+	debounce,
+	NullValue,
+	Plugin,
+	QueryController,
+	TFile,
+	type Value,
+} from 'obsidian';
 import { columnOptionKey, TASK_COLUMNS } from './columns.ts';
 import type { TaskIndex } from './indexer.ts';
-import { renderTaskRows, type RowSource, type ViewSettings } from './view.ts';
+import { applyQuery, normalizeQuery, type TaskQuery } from './query.ts';
+import { TaskToolbar, type PropChoice } from './toolbar.ts';
+import { localDate, renderTaskRows, type RowSource, type ViewRow } from './view.ts';
+import { VirtualList } from './virtual-list.ts';
 
 export const VIEW_TYPE = 'task-rows';
+const QUERY_KEY = 'taskQuery';
 
 export function registerTaskRowsView(plugin: Plugin, index: TaskIndex): boolean {
 	return plugin.registerBasesView(VIEW_TYPE, {
@@ -19,36 +34,7 @@ export function registerTaskRowsView(plugin: Plugin, index: TaskIndex): boolean 
 
 function viewOptions(): BasesAllOptions[] {
 	return [
-		{
-			type: 'group',
-			displayName: 'Tasks',
-			items: [
-				{ type: 'toggle', key: 'hideCompleted', displayName: 'Hide completed and cancelled', default: false },
-				{ type: 'text', key: 'textFilter', displayName: 'Task text contains', placeholder: '' },
-				{
-					type: 'dropdown',
-					key: 'taskSort',
-					displayName: 'Sort tasks within a note by',
-					default: 'file',
-					options: { file: 'Position in note', due: 'Due date', priority: 'Priority', status: 'Status' },
-				},
-				{
-					type: 'dropdown',
-					key: 'taskGroup',
-					displayName: 'Group tasks by',
-					default: 'bases',
-					options: {
-						bases: 'Bases "Group by" (note level)',
-						note: 'Note',
-						section: 'Section',
-						status: 'Status',
-						due: 'Due bucket',
-						priority: 'Priority',
-						none: 'No grouping',
-					},
-				},
-			],
-		},
+		{ type: 'toggle', key: 'showToolbar', displayName: 'Show task toolbar', default: true },
 		{
 			type: 'group',
 			displayName: 'Task columns',
@@ -62,33 +48,50 @@ function viewOptions(): BasesAllOptions[] {
 	];
 }
 
-interface Snapshot {
-	groups: Array<{ label: string; entries: RowSource[] }>;
-	columns: BasesPropertyId[];
-	columnNames: string[];
-	settings: ViewSettings;
-	paths: Set<string>;
+interface NoteSnapshot {
+	entry: RowSource;
+	noteIndex: number;
+	baseGroup: string;
+	baseGroupIndex: number;
 }
 
 class TaskRowsView extends BasesView {
 	readonly type = VIEW_TYPE;
+	private index: TaskIndex;
 	private rootEl: HTMLElement;
+	private toolbar: TaskToolbar;
+	private statsEl: HTMLElement;
+	private list: VirtualList;
+	private query: TaskQuery = normalizeQuery(null);
+	private notes: NoteSnapshot[] = [];
+	private paths = new Set<string>();
 	private renderToken = 0;
-	private snapshot: Snapshot | null = null;
 	private unsubscribe: (() => void) | null = null;
-	private rerenderSoon = debounce(() => this.render(), 300, true);
+	private rerenderSoon = debounce(
+		() => {
+			// `this.data` is still the current result (no onDataUpdated since), so re-reading it is safe.
+			this.snapshot();
+			this.render();
+		},
+		300,
+		true,
+	);
 
-	constructor(controller: QueryController, parentEl: HTMLElement, private index: TaskIndex) {
+	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex) {
 		super(controller);
+		this.index = index;
 		this.rootEl = parentEl.createDiv({ cls: 'task-rows-view' });
+		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q));
+		this.statsEl = this.rootEl.createDiv({ cls: 'task-rows-stats' });
+		this.list = new VirtualList(this.rootEl);
 		// Bases may not call onDataUpdated when only a note's body changes (no property
 		// changed), so re-render ourselves when a note in the current result set changes.
 		// Subscribed here rather than in onload() because the docs do not say whether
 		// Bases loads the view as a child component.
 		this.unsubscribe = this.index.onInvalidate((paths) => {
 			// If the view was torn down without onunload, stop listening instead of leaking.
-			if (!this.rootEl.isConnected && this.snapshot) return this.onunload();
-			if (this.snapshot && paths.some((p) => this.snapshot?.paths.has(p))) this.rerenderSoon();
+			if (!this.rootEl.isConnected && this.notes.length) return this.onunload();
+			if (paths.some((p) => this.paths.has(p))) this.rerenderSoon();
 		});
 	}
 
@@ -96,61 +99,93 @@ class TaskRowsView extends BasesView {
 		this.unsubscribe?.();
 		this.unsubscribe = null;
 		this.rerenderSoon.cancel();
-		this.snapshot = null;
+		this.list.destroy();
+		this.notes = [];
 	}
 
 	onDataUpdated(): void {
-		// `this.data` and its entries are replaced on every update: copy what we need now,
-		// never keep references to entries across updates.
-		const order = this.config.getOrder();
-		const groups = this.data.groupedData.map((g) => ({
-			label: g.hasKey() ? (g.key?.toString() ?? '') : '',
-			entries: g.entries.map((e) => snapshotEntry(e, order)),
-		}));
-		const columns = order.filter((p) => p !== 'file.name');
-		this.snapshot = {
-			groups,
-			columns,
-			columnNames: columns.map((p) => this.config.getDisplayName(p)),
-			settings: this.readSettings(),
-			paths: new Set(groups.flatMap((g) => g.entries.map((e) => e.file.path))),
-		};
+		this.query = normalizeQuery(this.config.get(QUERY_KEY));
+		this.rootEl.toggleClass('task-rows-no-toolbar', this.config.get('showToolbar') === false);
+		this.toolbar.update(this.query, this.propChoices());
+		this.snapshot();
 		this.render();
 	}
 
+	private onQueryChange(q: TaskQuery): void {
+		this.query = q;
+		// Saved in the .base file so each view keeps its own preset.
+		this.config.set(QUERY_KEY, q);
+		// A new sort or group key may need property values we did not resolve yet.
+		this.snapshot();
+		this.render();
+	}
+
+	/**
+	 * Copy what we need from `this.data` now. It and its entries are replaced on every
+	 * update, so no entry objects are kept across updates.
+	 */
+	private snapshot(): void {
+		const props = new Set<BasesPropertyId>(this.config.getOrder());
+		for (const key of [...this.query.sort.map((s) => s.key), this.query.group]) {
+			if (key.startsWith('prop:')) props.add(key.slice(5) as BasesPropertyId);
+		}
+		const notes: NoteSnapshot[] = [];
+		// Every note in the base, including task-free ones, so a note that gains its
+		// first task in a body edit still triggers a refresh.
+		const paths = new Set<string>();
+		let noteIndex = 0;
+		this.data.groupedData.forEach((g, baseGroupIndex) => {
+			const baseGroup = g.hasKey() ? valueText(g.key) : '';
+			for (const e of g.entries) {
+				const i = noteIndex++;
+				paths.add(e.file.path);
+				// Known to have no tasks: skip resolving its properties.
+				if (this.index.peek(e.file)?.length === 0) continue;
+				notes.push({ entry: snapshotEntry(e, props), noteIndex: i, baseGroup, baseGroupIndex });
+			}
+		});
+		this.notes = notes;
+		this.paths = paths;
+	}
+
 	private render(): void {
-		const snap = this.snapshot;
-		if (!snap) return;
+		const notes = this.notes;
+		const query = this.query;
 		const token = ++this.renderToken;
-		const files = snap.groups.flatMap((g) => g.entries.map((e) => e.file));
-		void this.index.tasksFor(files).then((tasksByPath) => {
-			if (token !== this.renderToken || snap !== this.snapshot) return; // superseded
-			renderTaskRows(this.rootEl, {
-				...snap,
-				tasksByPath,
+		void this.index.tasksFor(notes.map((n) => n.entry.file)).then((tasksByPath) => {
+			if (token !== this.renderToken) return; // superseded by a newer render
+			const rows: ViewRow[] = [];
+			for (const n of notes) {
+				const tasks = tasksByPath.get(n.entry.file.path);
+				if (!tasks?.length) continue;
+				const props = new Map<string, string>();
+				for (const [id, v] of n.entry.values) props.set(id, valueText(v));
+				for (const task of tasks) {
+					rows.push({ task, entry: n.entry, noteIndex: n.noteIndex, noteName: n.entry.file.basename, baseGroup: n.baseGroup, baseGroupIndex: n.baseGroupIndex, props });
+				}
+			}
+			const columns = this.config.getOrder().filter((p) => p !== 'file.name');
+			renderTaskRows(this.statsEl, this.list, {
+				groups: applyQuery(rows, query, localDate(new Date())),
+				total: rows.length,
+				columns,
+				columnNames: columns.map((p) => this.config.getDisplayName(p)),
+				taskColumns: TASK_COLUMNS.filter((c) => {
+					const v = this.config.get(columnOptionKey(c.key));
+					return typeof v === 'boolean' ? v : c.defaultOn;
+				}),
 				stats: this.index.lastStats,
 				openTask: (path, line, newTab) => this.openTask(path, line, newTab),
-				renderValue: (el, entry, prop) => renderValue(el, entry, prop, this.app.renderContext),
+				renderValue: (el, entry, prop) => {
+					const value = entry.values.get(prop);
+					if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);
+				},
 			});
 		});
 	}
 
-	private readSettings(): ViewSettings {
-		const str = (key: string, fallback: string): string => {
-			const v = this.config.get(key);
-			return typeof v === 'string' ? v : fallback;
-		};
-		const bool = (key: string, fallback: boolean): boolean => {
-			const v = this.config.get(key);
-			return typeof v === 'boolean' ? v : fallback;
-		};
-		return {
-			hideCompleted: bool('hideCompleted', false),
-			textFilter: str('textFilter', ''),
-			taskSort: str('taskSort', 'file'),
-			taskGroup: str('taskGroup', 'bases'),
-			taskColumns: TASK_COLUMNS.filter((c) => bool(columnOptionKey(c.key), c.defaultOn)),
-		};
+	private propChoices(): PropChoice[] {
+		return this.allProperties.map((id) => ({ id, label: this.config.getDisplayName(id) }));
 	}
 
 	private openTask(path: string, line: number, newTab: boolean): void {
@@ -160,15 +195,14 @@ class TaskRowsView extends BasesView {
 	}
 }
 
-function snapshotEntry(entry: BasesEntry, order: BasesPropertyId[]): RowSource {
-	// Resolve every visible property now, while the entry object is valid.
-	const values = new Map<string, ReturnType<BasesEntry['getValue']>>();
-	for (const prop of order) values.set(prop, entry.getValue(prop));
+function snapshotEntry(entry: BasesEntry, props: Iterable<BasesPropertyId>): RowSource {
+	const values = new Map<string, Value | null>();
+	for (const prop of props) values.set(prop, entry.getValue(prop));
 	return { file: entry.file, values };
 }
 
-function renderValue(el: HTMLElement, entry: RowSource, prop: BasesPropertyId, ctx: RenderContext): void {
-	const value = entry.values.get(prop);
-	if (!value || !value.isTruthy()) return;
-	value.renderTo(el, ctx);
+/** Display text for sorting and grouping; null and missing values become ''. */
+function valueText(v: Value | null | undefined): string {
+	if (!v || v instanceof NullValue) return '';
+	return v.toString();
 }

@@ -11,16 +11,33 @@ views:
     groupBy:
       property: note.area
       direction: ASC
-    hideCompleted: true
-    taskSort: due
-    taskGroup: bases
     taskCol_section: true
+    taskQuery:
+      statuses: [todo, in-progress]
+      sort:
+        - key: due
+          desc: false
+        - key: priority
+          desc: false
+      group: bases
+  - type: task-rows
+    name: Due soon by owner
+    order:
+      - file.name
+      - note.owner
+    taskQuery:
+      due: next30
+      group: prop:note.owner
+      sort:
+        - key: due
+          desc: false
   - type: task-rows
     name: All tasks by section
     order:
       - file.name
       - note.owner
-    taskGroup: section
     taskCol_tags: true
     taskCol_recurrence: true
     taskCol_line: true
+    taskQuery:
+      group: section
