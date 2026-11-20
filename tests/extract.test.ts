@@ -72,3 +72,10 @@ test('stale cache line beyond end of file is skipped', () => {
 test('localDate uses local time, not UTC', () => {
 	assert.equal(localDate(new Date(2026, 0, 2, 23, 59)), '2026-01-02');
 });
+
+test('list starting on line 0: root items (parent -0) are not children of line 0', () => {
+	const doc = '- [ ] first\n\t- [ ] child\n- [ ] second root';
+	const tasks = extractTasks('a.md', doc, [item(0, -0, ' '), item(1, 0, ' '), item(2, -0, ' ')], []);
+	assert.deepEqual(tasks.map((t) => [t.line, t.parentLine, t.depth]), [[0, undefined, 0], [1, 0, 1], [2, undefined, 0]]);
+	assert.deepEqual(tasks[0]?.children, [1]);
+});

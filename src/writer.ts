@@ -1,12 +1,13 @@
-// Writes a task toggle back to its note. The only code that modifies notes, and only
-// through Vault.process (atomic read-modify-write). The decision of what to write is in
-// writeback.ts; this file adds the Obsidian I/O, the Tasks plugin bridge and notices.
+// Writes task changes back to notes. The only code that modifies existing lines, and
+// only through Vault.process (atomic read-modify-write). What to write is decided by the
+// pure functions in writeback.ts and edit.ts; this file adds Obsidian I/O and notices.
 
 import { Notice, TFile, type App } from 'obsidian';
+import type { TaskEdit } from './edit.ts';
 import type { TaskIndex } from './indexer.ts';
 import type { TasklinesSettings } from './settings.ts';
 import { localDate } from './view.ts';
-import { toggleInContent, type ToggleOptions, type ToggleResult } from './writeback.ts';
+import { editInContent, insertTaskInContent, toggleInContent, type NewTask, type ToggleOptions } from './writeback.ts';
 
 export interface TaskTarget {
 	path: string;
@@ -15,6 +16,8 @@ export interface TaskTarget {
 }
 
 type TasksApi = { executeToggleTaskDoneCommand?: (line: string, path: string) => string };
+type Failure = { ok: false; reason: string; detail: string };
+type Computed = { ok: true; content: string; changed?: boolean } | Failure;
 
 const FAILURE_TEXT: Record<string, string> = {
 	'line-missing': 'The task is no longer in the note.',
@@ -22,6 +25,9 @@ const FAILURE_TEXT: Record<string, string> = {
 	'not-a-task': 'That line is no longer a task.',
 	'recurring-needs-tasks': 'Completing a recurring task needs the Tasks plugin (7.2.0 or later), so the next occurrence is created. Open the note to complete it there.',
 	'bad-external-output': 'The Tasks plugin returned an unexpected result.',
+	'invalid-edit': 'That edit could not be applied.',
+	'tasks-format-mismatch':
+		'The Tasks plugin is set to a different task format than this line uses (emoji or Dataview), so it cannot create the next occurrence. Change the format in the Tasks settings, or complete it in the note.',
 };
 
 export class TaskWriter {
@@ -42,12 +48,61 @@ export class TaskWriter {
 		return typeof fn === 'function' ? fn : undefined;
 	}
 
-	isPending(t: TaskTarget): boolean {
-		return this.pending.has(`${t.path}:${t.line}`);
+	tasksPluginAvailable(): boolean {
+		return this.tasksToggle() !== undefined;
 	}
 
-	/** Toggle one task. Returns true if the note was changed. */
+	private options(): ToggleOptions {
+		const tasks = this.tasksToggle();
+		return {
+			today: localDate(new Date()),
+			completionDate: this.settings.completionDate,
+			plainGetsEmojiDate: tasks !== undefined,
+			newFieldFormat: this.settings.newFieldFormat,
+		};
+	}
+
+	/** Toggle one task done/open. Returns true if the note was changed. */
 	async toggle(target: TaskTarget): Promise<boolean> {
+		const tasks = this.tasksToggle();
+		const opts = this.options();
+		const withTasks: ToggleOptions = { ...opts, external: tasks ? (line) => tasks(line, target.path) : undefined };
+		return this.run(target, (data, precheck) => {
+			// The precheck runs without the Tasks plugin so it has no side effects; a recurring
+			// task is only refused there if Tasks is not available to handle it.
+			if (precheck) {
+				const r = toggleInContent(data, target, opts);
+				return !r.ok && r.reason === 'recurring-needs-tasks' && tasks ? { ok: true, content: data } : r;
+			}
+			return toggleInContent(data, target, withTasks);
+		});
+	}
+
+	/** Change one field (status, date or priority) of one task. */
+	async edit(target: TaskTarget, edit: TaskEdit): Promise<boolean> {
+		const opts = this.options();
+		return this.run(target, (data) => editInContent(data, target, edit, opts));
+	}
+
+	/**
+	 * Add a task to a note, after its last task (so it joins that list) or at the end if the
+	 * note has none. The anchor task is verified like any edit before the line is inserted.
+	 */
+	async add(path: string, task: NewTask): Promise<boolean> {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) {
+			new Notice('Tasklines: that note no longer exists.');
+			return false;
+		}
+		const tasks = (await this.index.tasksFor([file])).get(path) ?? [];
+		const last = tasks.reduce<(typeof tasks)[number] | undefined>((a, t) => (!a || t.line > a.line ? t : a), undefined);
+		const anchor = last ? { path, line: last.line, raw: last.raw } : null;
+		const opts = this.options();
+		const target = anchor ?? { path, line: -1, raw: '' };
+		return this.run(target, (data) => insertTaskInContent(data, anchor, task, opts));
+	}
+
+	private async run(target: TaskTarget, compute: (data: string, precheck: boolean) => Computed): Promise<boolean> {
 		const key = `${target.path}:${target.line}`;
 		if (this.pending.has(key)) return false;
 		const file = this.app.vault.getAbstractFileByPath(target.path);
@@ -55,31 +110,23 @@ export class TaskWriter {
 			new Notice('Tasklines: the note was moved or deleted. Nothing was changed.');
 			return false;
 		}
-
 		this.pending.add(key);
 		try {
-			const tasks = this.tasksToggle();
-			const opts: ToggleOptions = {
-				today: localDate(new Date()),
-				completionDate: this.settings.completionDate,
-				plainGetsEmojiDate: tasks !== undefined,
-				external: tasks ? (line) => tasks(line, target.path) : undefined,
-			};
-
 			// Check first without writing, so a refusal never touches the file or its mtime.
-			const precheck = toggleInContent(await this.app.vault.read(file), target, { ...opts, external: undefined });
-			if (!precheck.ok && precheck.reason !== 'recurring-needs-tasks') return this.refuse(file, precheck);
-			if (!precheck.ok && !tasks) return this.refuse(file, precheck);
+			const pre = compute(await this.app.vault.read(file), true);
+			if (!pre.ok) return this.refuse(file, pre, target.line);
+			if (pre.changed === false) return false;
 
 			// Re-verify inside the atomic write: the file may have changed since the read.
-			let outcome: ToggleResult | null = null;
+			let outcome: Computed | null = null;
 			await this.app.vault.process(file, (data) => {
-				outcome = toggleInContent(data, target, opts);
-				return outcome.ok ? outcome.content : data;
+				const r = compute(data, false);
+				outcome = r;
+				return r.ok ? r.content : data;
 			});
-			const result = outcome as ToggleResult | null;
+			const result = outcome as Computed | null;
 			if (!result) return false;
-			if (!result.ok) return this.refuse(file, result);
+			if (!result.ok) return this.refuse(file, result, target.line);
 			return true;
 		} catch (err) {
 			console.error('Tasklines: write failed', err);
@@ -90,8 +137,17 @@ export class TaskWriter {
 		}
 	}
 
-	private refuse(file: TFile, result: Extract<ToggleResult, { ok: false }>): false {
-		new Notice(`Tasklines: ${FAILURE_TEXT[result.reason] ?? result.detail} Nothing was changed.`, 8000);
+	private refuse(file: TFile, result: Failure, line: number): false {
+		const message = new DocumentFragment();
+		message.createDiv({ text: `Tasklines: ${FAILURE_TEXT[result.reason] ?? result.detail} Nothing was changed.` });
+		// Offer the editor, where the Tasks plugin's own handling runs, one click away.
+		if (line >= 0) {
+			const open = message.createEl('button', { text: 'Open at line', cls: 'mod-cta tasklines-notice-btn' });
+			open.addEventListener('click', () => {
+				void this.app.workspace.getLeaf(false).openFile(file, { eState: { line } });
+			});
+		}
+		new Notice(message, 10000);
 		// Re-index the note so the view shows what is really there now.
 		this.index.invalidate(file);
 		return false;

@@ -61,7 +61,8 @@ const PRIORITIES: Array<[Priority, string]> = [
 ];
 // Every Tasks emoji; a free-text value (recurrence, on-completion) runs until the next one.
 const TASKS_EMOJI = '📅📆🗓⏳⌛🛫➕✅❌🔺⏫🔼🔽⏬🔁🆔⛔🏁';
-const FREE_TEXT = `([^${TASKS_EMOJI}^]+?)(?=\\s*(?:[${TASKS_EMOJI}]|\\^[\\w-]+\\s*$|$))`;
+// It also stops before a Dataview inline field, e.g. `🔁 every week [completion:: …]`.
+const FREE_TEXT = `([^${TASKS_EMOJI}^]+?)(?=\\s*(?:[${TASKS_EMOJI}]|[[(][\\p{L}\\p{N}_ -]+::|\\^[\\w-]+\\s*$|$))`;
 const RECURRENCE = new RegExp(`🔁${VS}\\s*${FREE_TEXT}`, 'u');
 const ON_COMPLETION = new RegExp(`🏁${VS}\\s*([a-z]+)`, 'u');
 const TASK_ID = new RegExp(`🆔${VS}\\s*([\\w-]+)`, 'u');
@@ -198,10 +199,74 @@ export function parseTaskLine(line: string): ParsedTask | null {
 
 export type StatusKind = 'todo' | 'done' | 'cancelled' | 'in-progress' | 'other';
 
+export interface StatusDef {
+	/** The single character between the brackets. */
+	char: string;
+	name: string;
+	kind: StatusKind;
+}
+
+/** Defaults follow the Tasks plugin's core and common custom statuses. */
+export const DEFAULT_STATUSES: StatusDef[] = [
+	{ char: ' ', name: 'To do', kind: 'todo' },
+	{ char: '/', name: 'In progress', kind: 'in-progress' },
+	{ char: 'x', name: 'Done', kind: 'done' },
+	{ char: 'X', name: 'Done', kind: 'done' },
+	{ char: '-', name: 'Cancelled', kind: 'cancelled' },
+	{ char: '>', name: 'Forwarded', kind: 'other' },
+	{ char: '<', name: 'Scheduling', kind: 'other' },
+	{ char: '?', name: 'Question', kind: 'other' },
+	{ char: '!', name: 'Important', kind: 'todo' },
+];
+
+let statusTable = new Map(DEFAULT_STATUSES.map((s) => [s.char, s]));
+
+/** Replace the status set (from settings). Space, x and - always keep their core meaning. */
+export function configureStatuses(defs: StatusDef[]): void {
+	const table = new Map(defs.map((s) => [s.char, s]));
+	for (const core of DEFAULT_STATUSES.filter((s) => [' ', 'x', '-'].includes(s.char))) {
+		const custom = table.get(core.char);
+		table.set(core.char, { ...core, name: custom?.name || core.name });
+	}
+	statusTable = table;
+}
+
+export function statusDefs(): StatusDef[] {
+	return [...statusTable.values()];
+}
+
 export function statusKind(status: string): StatusKind {
-	if (status === ' ') return 'todo';
-	if (status === 'x' || status === 'X') return 'done';
-	if (status === '-') return 'cancelled';
-	if (status === '/') return 'in-progress';
-	return 'other';
+	return statusTable.get(status)?.kind ?? 'other';
+}
+
+export function statusName(status: string): string {
+	return statusTable.get(status)?.name ?? `[${status}]`;
+}
+
+const KINDS: StatusKind[] = ['todo', 'in-progress', 'done', 'cancelled', 'other'];
+
+/**
+ * Parse the status setting: one status per line, `char | name | kind`, e.g. `/ | Doing | in-progress`.
+ * Returns the parsed list plus messages for lines that were skipped.
+ */
+export function parseStatusSetting(text: string): { defs: StatusDef[]; errors: string[] } {
+	const defs: StatusDef[] = [];
+	const errors: string[] = [];
+	text.split(/\r?\n/).forEach((line, i) => {
+		if (!line.trim() || line.trim().startsWith('#')) return;
+		const parts = line.split('|');
+		if (parts.length !== 3) return void errors.push(`Line ${i + 1}: expected "char | name | kind".`);
+		const [rawChar = '', rawName = '', rawKind = ''] = parts;
+		// The character may be a space, so only trim one surrounding space on each side.
+		const char = rawChar.replace(/^ (?=.)/, '').replace(/ $/, '') || ' ';
+		const kind = rawKind.trim() as StatusKind;
+		if ([...char].length !== 1 || char === ']') return void errors.push(`Line ${i + 1}: the status must be one character.`);
+		if (!KINDS.includes(kind)) return void errors.push(`Line ${i + 1}: kind must be one of ${KINDS.join(', ')}.`);
+		defs.push({ char, name: rawName.trim() || char, kind });
+	});
+	return { defs, errors };
+}
+
+export function formatStatusSetting(defs: StatusDef[]): string {
+	return defs.map((d) => `${d.char === ' ' ? ' ' : d.char} | ${d.name} | ${d.kind}`).join('\n');
 }

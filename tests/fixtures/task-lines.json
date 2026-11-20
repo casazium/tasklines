@@ -1,71 +1,336 @@
 [
-  {"name": "plain open task", "line": "- [ ] Buy milk",
-   "expect": {"status": " ", "text": "Buy milk", "format": "plain", "priority": "none"}},
-  {"name": "asterisk and plus markers", "line": "+ [x] Done thing",
-   "expect": {"marker": "+", "status": "x", "text": "Done thing"}},
-  {"name": "uppercase X", "line": "* [X] Shout",
-   "expect": {"status": "X"}},
-  {"name": "numbered list with paren", "line": "3) [ ] Third",
-   "expect": {"marker": "3)", "text": "Third"}},
-  {"name": "tab-indented subtask", "line": "\t\t- [ ] Deep",
-   "expect": {"indent": "\t\t", "text": "Deep"}},
-  {"name": "blockquote and callout prefix", "line": "> > - [ ] Nested quote",
-   "expect": {"text": "Nested quote"}},
-  {"name": "custom status characters", "line": "- [>] Forwarded",
-   "expect": {"status": ">"}},
-  {"name": "empty task body", "line": "- [ ] ",
-   "expect": {"text": ""}},
-
-  {"name": "Tasks: full emoji set", "line": "- [x] Ship release #work ⏫ 🔁 every week on Monday 🛫 2026-11-01 ⏳ 2026-11-10 📅 2026-11-20 ✅ 2026-11-19",
-   "expect": {"priority": "high", "recurrence": "every week on Monday", "start": "2026-11-01", "scheduled": "2026-11-10", "due": "2026-11-20", "done": "2026-11-19", "tags": ["#work"], "text": "Ship release #work", "format": "tasks-emoji"}},
-  {"name": "Tasks: created and cancelled", "line": "- [-] Drop it ➕ 2026-10-01 ❌ 2026-10-05",
-   "expect": {"created": "2026-10-01", "cancelled": "2026-10-05", "text": "Drop it"}},
-  {"name": "Tasks: all priorities - highest", "line": "- [ ] A 🔺", "expect": {"priority": "highest", "text": "A"}},
-  {"name": "Tasks: all priorities - medium", "line": "- [ ] B 🔼", "expect": {"priority": "medium"}},
-  {"name": "Tasks: all priorities - low", "line": "- [ ] C 🔽", "expect": {"priority": "low"}},
-  {"name": "Tasks: all priorities - lowest", "line": "- [ ] D ⏬", "expect": {"priority": "lowest"}},
-  {"name": "Tasks: alternative due and scheduled emoji", "line": "- [ ] Alt 📆 2026-01-02 ⌛ 2026-01-01",
-   "expect": {"due": "2026-01-02", "scheduled": "2026-01-01", "text": "Alt"}},
-  {"name": "Tasks: emoji with variation selector", "line": "- [ ] VS 📅️ 2026-03-04 ⏳️ 2026-03-01",
-   "expect": {"due": "2026-03-04", "scheduled": "2026-03-01", "text": "VS"}},
-  {"name": "Tasks: no space between emoji and date", "line": "- [ ] Tight 📅2026-05-06",
-   "expect": {"due": "2026-05-06", "text": "Tight"}},
-  {"name": "Tasks: id, depends-on and on-completion", "line": "- [ ] Step two 🆔 abc123 ⛔ xyz789,def456 🏁 delete 📅 2026-02-02",
-   "expect": {"id": "abc123", "dependsOn": ["xyz789", "def456"], "onCompletion": "delete", "due": "2026-02-02", "text": "Step two"}},
-  {"name": "Tasks: recurrence when done", "line": "- [ ] Water plants 🔁 every 3 days when done 📅 2026-11-21",
-   "expect": {"recurrence": "every 3 days when done", "due": "2026-11-21", "text": "Water plants"}},
-  {"name": "Tasks: recurrence at end of line", "line": "- [ ] Pay rent 📅 2026-12-01 🔁 every month",
-   "expect": {"recurrence": "every month", "due": "2026-12-01", "text": "Pay rent"}},
-  {"name": "Tasks: block id kept out of text", "line": "- [ ] Linked task 📅 2026-01-01 ^task-1",
-   "expect": {"blockId": "task-1", "text": "Linked task"}},
-  {"name": "Tasks: invalid date left in text", "line": "- [ ] Odd 📅 someday",
-   "expect": {"text": "Odd 📅 someday"}},
-
-  {"name": "Dataview: bracket fields", "line": "* [/] Draft spec [due:: 2026-12-01] (owner:: Bob) [priority:: high]",
-   "expect": {"status": "/", "due": "2026-12-01", "fields": {"due": "2026-12-01", "owner": "Bob", "priority": "high"}, "priority": "high", "text": "Draft spec", "format": "dataview"}},
-  {"name": "Dataview: completion and created", "line": "- [x] Finished [created:: 2026-01-01] [completion:: 2026-01-03]",
-   "expect": {"created": "2026-01-01", "done": "2026-01-03", "text": "Finished"}},
-  {"name": "Dataview: datetime value", "line": "- [ ] Call [due:: 2026-04-05T09:30]",
-   "expect": {"due": "2026-04-05", "fields": {"due": "2026-04-05T09:30"}}},
-  {"name": "Dataview: wikilink value", "line": "- [ ] Review [owner:: [[Ana Lima]]] notes",
-   "expect": {"fields": {"owner": "[[Ana Lima]]"}, "text": "Review notes"}},
-  {"name": "Dataview: paren field with wikilink", "line": "- [ ] Ping (project:: [[Alpha]])",
-   "expect": {"fields": {"project": "[[Alpha]]"}, "text": "Ping"}},
-  {"name": "Dataview: repeat field", "line": "- [ ] Standup [repeat:: every weekday]",
-   "expect": {"recurrence": "every weekday"}},
-  {"name": "Dataview: key with spaces and capitals", "line": "- [ ] Thing [Next Step:: call]",
-   "expect": {"fields": {"next step": "call"}, "text": "Thing"}},
-
-  {"name": "mixed formats", "line": "- [ ] Mixed 📅 2026-07-01 [owner:: Bob]",
-   "expect": {"due": "2026-07-01", "fields": {"owner": "Bob"}, "format": "mixed", "text": "Mixed"}},
-  {"name": "wikilinks without fields stay in text", "line": "- [ ] See [[Project Alpha|Alpha]] and [[Beta]]",
-   "expect": {"text": "See [[Project Alpha|Alpha]] and [[Beta]]", "links": ["Project Alpha", "Beta"], "fields": {}}},
-  {"name": "markdown link stays in text", "line": "- [ ] Read [docs](https://example.com/a(b))",
-   "expect": {"text": "Read [docs](https://example.com/a(b))", "fields": {}}},
-  {"name": "nested tags and tag in middle", "line": "- [ ] Plan #area/home trip #travel-2026",
-   "expect": {"tags": ["#area/home", "#travel-2026"]}},
-  {"name": "heading anchor is not a tag", "line": "- [ ] Check [[Note#Heading]] and C# code",
-   "expect": {"tags": []}},
-  {"name": "inline code is not parsed", "line": "- [ ] Escape `📅 2026-01-01 [due:: x] #nottag`",
-   "expect": {"text": "Escape `📅 2026-01-01 [due:: x] #nottag`", "fields": {}, "tags": []}}
+  {
+    "name": "plain open task",
+    "line": "- [ ] Buy milk",
+    "expect": {
+      "status": " ",
+      "text": "Buy milk",
+      "format": "plain",
+      "priority": "none"
+    }
+  },
+  {
+    "name": "asterisk and plus markers",
+    "line": "+ [x] Done thing",
+    "expect": {
+      "marker": "+",
+      "status": "x",
+      "text": "Done thing"
+    }
+  },
+  {
+    "name": "uppercase X",
+    "line": "* [X] Shout",
+    "expect": {
+      "status": "X"
+    }
+  },
+  {
+    "name": "numbered list with paren",
+    "line": "3) [ ] Third",
+    "expect": {
+      "marker": "3)",
+      "text": "Third"
+    }
+  },
+  {
+    "name": "tab-indented subtask",
+    "line": "\t\t- [ ] Deep",
+    "expect": {
+      "indent": "\t\t",
+      "text": "Deep"
+    }
+  },
+  {
+    "name": "blockquote and callout prefix",
+    "line": "> > - [ ] Nested quote",
+    "expect": {
+      "text": "Nested quote"
+    }
+  },
+  {
+    "name": "custom status characters",
+    "line": "- [>] Forwarded",
+    "expect": {
+      "status": ">"
+    }
+  },
+  {
+    "name": "empty task body",
+    "line": "- [ ] ",
+    "expect": {
+      "text": ""
+    }
+  },
+  {
+    "name": "Tasks: full emoji set",
+    "line": "- [x] Ship release #work ⏫ 🔁 every week on Monday 🛫 2026-11-01 ⏳ 2026-11-10 📅 2026-11-20 ✅ 2026-11-19",
+    "expect": {
+      "priority": "high",
+      "recurrence": "every week on Monday",
+      "start": "2026-11-01",
+      "scheduled": "2026-11-10",
+      "due": "2026-11-20",
+      "done": "2026-11-19",
+      "tags": [
+        "#work"
+      ],
+      "text": "Ship release #work",
+      "format": "tasks-emoji"
+    }
+  },
+  {
+    "name": "Tasks: created and cancelled",
+    "line": "- [-] Drop it ➕ 2026-10-01 ❌ 2026-10-05",
+    "expect": {
+      "created": "2026-10-01",
+      "cancelled": "2026-10-05",
+      "text": "Drop it"
+    }
+  },
+  {
+    "name": "Tasks: all priorities - highest",
+    "line": "- [ ] A 🔺",
+    "expect": {
+      "priority": "highest",
+      "text": "A"
+    }
+  },
+  {
+    "name": "Tasks: all priorities - medium",
+    "line": "- [ ] B 🔼",
+    "expect": {
+      "priority": "medium"
+    }
+  },
+  {
+    "name": "Tasks: all priorities - low",
+    "line": "- [ ] C 🔽",
+    "expect": {
+      "priority": "low"
+    }
+  },
+  {
+    "name": "Tasks: all priorities - lowest",
+    "line": "- [ ] D ⏬",
+    "expect": {
+      "priority": "lowest"
+    }
+  },
+  {
+    "name": "Tasks: alternative due and scheduled emoji",
+    "line": "- [ ] Alt 📆 2026-01-02 ⌛ 2026-01-01",
+    "expect": {
+      "due": "2026-01-02",
+      "scheduled": "2026-01-01",
+      "text": "Alt"
+    }
+  },
+  {
+    "name": "Tasks: emoji with variation selector",
+    "line": "- [ ] VS 📅️ 2026-03-04 ⏳️ 2026-03-01",
+    "expect": {
+      "due": "2026-03-04",
+      "scheduled": "2026-03-01",
+      "text": "VS"
+    }
+  },
+  {
+    "name": "Tasks: no space between emoji and date",
+    "line": "- [ ] Tight 📅2026-05-06",
+    "expect": {
+      "due": "2026-05-06",
+      "text": "Tight"
+    }
+  },
+  {
+    "name": "Tasks: id, depends-on and on-completion",
+    "line": "- [ ] Step two 🆔 abc123 ⛔ xyz789,def456 🏁 delete 📅 2026-02-02",
+    "expect": {
+      "id": "abc123",
+      "dependsOn": [
+        "xyz789",
+        "def456"
+      ],
+      "onCompletion": "delete",
+      "due": "2026-02-02",
+      "text": "Step two"
+    }
+  },
+  {
+    "name": "Tasks: recurrence when done",
+    "line": "- [ ] Water plants 🔁 every 3 days when done 📅 2026-11-21",
+    "expect": {
+      "recurrence": "every 3 days when done",
+      "due": "2026-11-21",
+      "text": "Water plants"
+    }
+  },
+  {
+    "name": "Tasks: recurrence at end of line",
+    "line": "- [ ] Pay rent 📅 2026-12-01 🔁 every month",
+    "expect": {
+      "recurrence": "every month",
+      "due": "2026-12-01",
+      "text": "Pay rent"
+    }
+  },
+  {
+    "name": "Tasks: block id kept out of text",
+    "line": "- [ ] Linked task 📅 2026-01-01 ^task-1",
+    "expect": {
+      "blockId": "task-1",
+      "text": "Linked task"
+    }
+  },
+  {
+    "name": "Tasks: invalid date left in text",
+    "line": "- [ ] Odd 📅 someday",
+    "expect": {
+      "text": "Odd 📅 someday"
+    }
+  },
+  {
+    "name": "Dataview: bracket fields",
+    "line": "* [/] Draft spec [due:: 2026-12-01] (owner:: Bob) [priority:: high]",
+    "expect": {
+      "status": "/",
+      "due": "2026-12-01",
+      "fields": {
+        "due": "2026-12-01",
+        "owner": "Bob",
+        "priority": "high"
+      },
+      "priority": "high",
+      "text": "Draft spec",
+      "format": "dataview"
+    }
+  },
+  {
+    "name": "Dataview: completion and created",
+    "line": "- [x] Finished [created:: 2026-01-01] [completion:: 2026-01-03]",
+    "expect": {
+      "created": "2026-01-01",
+      "done": "2026-01-03",
+      "text": "Finished"
+    }
+  },
+  {
+    "name": "Dataview: datetime value",
+    "line": "- [ ] Call [due:: 2026-04-05T09:30]",
+    "expect": {
+      "due": "2026-04-05",
+      "fields": {
+        "due": "2026-04-05T09:30"
+      }
+    }
+  },
+  {
+    "name": "Dataview: wikilink value",
+    "line": "- [ ] Review [owner:: [[Ana Lima]]] notes",
+    "expect": {
+      "fields": {
+        "owner": "[[Ana Lima]]"
+      },
+      "text": "Review notes"
+    }
+  },
+  {
+    "name": "Dataview: paren field with wikilink",
+    "line": "- [ ] Ping (project:: [[Alpha]])",
+    "expect": {
+      "fields": {
+        "project": "[[Alpha]]"
+      },
+      "text": "Ping"
+    }
+  },
+  {
+    "name": "Dataview: repeat field",
+    "line": "- [ ] Standup [repeat:: every weekday]",
+    "expect": {
+      "recurrence": "every weekday"
+    }
+  },
+  {
+    "name": "Dataview: key with spaces and capitals",
+    "line": "- [ ] Thing [Next Step:: call]",
+    "expect": {
+      "fields": {
+        "next step": "call"
+      },
+      "text": "Thing"
+    }
+  },
+  {
+    "name": "mixed formats",
+    "line": "- [ ] Mixed 📅 2026-07-01 [owner:: Bob]",
+    "expect": {
+      "due": "2026-07-01",
+      "fields": {
+        "owner": "Bob"
+      },
+      "format": "mixed",
+      "text": "Mixed"
+    }
+  },
+  {
+    "name": "wikilinks without fields stay in text",
+    "line": "- [ ] See [[Project Alpha|Alpha]] and [[Beta]]",
+    "expect": {
+      "text": "See [[Project Alpha|Alpha]] and [[Beta]]",
+      "links": [
+        "Project Alpha",
+        "Beta"
+      ],
+      "fields": {}
+    }
+  },
+  {
+    "name": "markdown link stays in text",
+    "line": "- [ ] Read [docs](https://example.com/a(b))",
+    "expect": {
+      "text": "Read [docs](https://example.com/a(b))",
+      "fields": {}
+    }
+  },
+  {
+    "name": "nested tags and tag in middle",
+    "line": "- [ ] Plan #area/home trip #travel-2026",
+    "expect": {
+      "tags": [
+        "#area/home",
+        "#travel-2026"
+      ]
+    }
+  },
+  {
+    "name": "heading anchor is not a tag",
+    "line": "- [ ] Check [[Note#Heading]] and C# code",
+    "expect": {
+      "tags": []
+    }
+  },
+  {
+    "name": "inline code is not parsed",
+    "line": "- [ ] Escape `📅 2026-01-01 [due:: x] #nottag`",
+    "expect": {
+      "text": "Escape `📅 2026-01-01 [due:: x] #nottag`",
+      "fields": {},
+      "tags": []
+    }
+  },
+  {
+    "name": "bug: recurrence followed by a Dataview field",
+    "line": "- [x] Water 🔁 every week 📅 2026-11-20 [completion:: 2026-11-20]",
+    "expect": {
+      "recurrence": "every week",
+      "done": "2026-11-20",
+      "fields": {
+        "completion": "2026-11-20"
+      },
+      "format": "mixed",
+      "text": "Water"
+    }
+  }
 ]

@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parseTaskLine } from '../src/parser.ts';
 import { toggleInContent, splitLines, type ToggleOptions } from '../src/writeback.ts';
 
-const OPTS: ToggleOptions = { today: '2026-11-20', completionDate: 'auto', plainGetsEmojiDate: false };
+const OPTS: ToggleOptions = { today: '2026-11-20', completionDate: 'auto', plainGetsEmojiDate: false, newFieldFormat: 'tasks-emoji' };
 const fixtures = (JSON.parse(readFileSync(new URL('./fixtures/task-lines.json', import.meta.url), 'utf8')) as Array<{ name: string; line: string }>);
 
 function toggle(line: string, opts: Partial<ToggleOptions> = {}): string {
@@ -116,7 +116,7 @@ test('recurring task: refused without Tasks, handled by Tasks when present', () 
 	assert.equal(toggle('- [x] Water 🔁 every week ✅ 2026-11-20'), '- [ ] Water 🔁 every week');
 });
 
-test('Tasks output: CRLF kept for both lines; unchanged output falls back; junk refused; dataview skips Tasks', () => {
+test('Tasks output: CRLF kept for both lines; unchanged output falls back; junk refused', () => {
 	const line = '\t- [ ] Sub 🔁 every day';
 	const two = (l: string) => `${l}\n${l.replace('[ ]', '[x]')}`;
 	const r = toggleInContent(`x\r\n${line}\r\ny`, { line: 1, raw: line }, { ...OPTS, external: two });
@@ -130,8 +130,37 @@ test('Tasks output: CRLF kept for both lines; unchanged output falls back; junk 
 		const bad = toggleInContent('- [ ] Ship ⏫', { line: 0, raw: '- [ ] Ship ⏫' }, { ...OPTS, external: () => junk });
 		assert.equal(bad.ok ? '' : bad.reason, 'bad-external-output', JSON.stringify(junk));
 	}
+});
 
-	let called = false;
-	toggleInContent('- [ ] D [due:: 2026-01-01]', { line: 0, raw: '- [ ] D [due:: 2026-01-01]' }, { ...OPTS, external: (l) => ((called = true), l) });
-	assert.equal(called, false);
+test('Dataview-format lines go to Tasks; output in Tasks\u2019 own Dataview format is accepted', () => {
+	const line = '- [ ] Water [repeat:: every week] [due:: 2026-11-20]';
+	// Tasks in Dataview mode: next occurrence above, completed line below, both in Dataview style.
+	const external = (l: string) => `${l.replace('2026-11-20', '2026-11-27')}\n${l.replace('[ ]', '[x]')} [completion:: 2026-11-20]`;
+	const r = toggleInContent(`${line}\n`, { line: 0, raw: line }, { ...OPTS, external });
+	assert.ok(r.ok && r.via === 'tasks-plugin');
+	assert.equal(r.newLines.length, 2);
+});
+
+test('Tasks set to the other format: recurring refused, non-recurring falls back to built-in', () => {
+	// Tasks in emoji mode does not see [repeat::] and just appends its own ✅ date.
+	const emojiMode = (l: string) => `${l.replace('[ ]', '[x]')} ✅ 2026-11-20`;
+	const rec = '- [ ] Water [repeat:: every week] [due:: 2026-11-20]';
+	const refused = toggleInContent(rec, { line: 0, raw: rec }, { ...OPTS, external: emojiMode });
+	assert.equal(refused.ok ? '' : refused.reason, 'tasks-format-mismatch');
+
+	const once = '- [ ] Call [due:: 2026-11-20]';
+	const fallback = toggleInContent(once, { line: 0, raw: once }, { ...OPTS, external: emojiMode });
+	assert.ok(fallback.ok && fallback.via === 'built-in');
+	assert.equal(fallback.content, '- [ ] Call [due:: 2026-11-20]'.replace('[ ]', '[x]') + ' [completion:: 2026-11-20]');
+
+	// And the reverse: Tasks in Dataview mode given an emoji line.
+	const dvMode = (l: string) => `${l.replace('[ ]', '[x]')} [completion:: 2026-11-20]`;
+	const emojiRec = '- [ ] Water 🔁 every week 📅 2026-11-20';
+	const r2 = toggleInContent(emojiRec, { line: 0, raw: emojiRec }, { ...OPTS, external: dvMode });
+	assert.equal(r2.ok ? '' : r2.reason, 'tasks-format-mismatch');
+});
+
+test('plain lines accept whichever style Tasks uses', () => {
+	const r = toggleInContent('- [ ] Plain', { line: 0, raw: '- [ ] Plain' }, { ...OPTS, external: (l) => `${l.replace('[ ]', '[x]')} [completion:: 2026-11-20]` });
+	assert.ok(r.ok && r.via === 'tasks-plugin');
 });

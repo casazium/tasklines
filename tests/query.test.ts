@@ -8,7 +8,7 @@ let lineNo = 0;
 function row(line: string, note = 'A', noteIndex = 0, props: Record<string, string> = {}, baseGroup = ''): QueryRow & { id: string } {
 	const parsed = parseTaskLine(line);
 	assert.ok(parsed);
-	const task = { ...parsed, path: `${note}.md`, line: lineNo++, depth: 0 };
+	const task = { ...parsed, path: `${note}.md`, line: lineNo++, depth: 0, children: [] };
 	return { id: task.text.replace(/\s#\S+/g, ''), task, noteIndex, noteName: note, baseGroup, baseGroupIndex: 0, props: new Map(Object.entries(props)) };
 }
 const q = (over: Partial<TaskQuery>): TaskQuery => ({ ...DEFAULT_QUERY, ...over });

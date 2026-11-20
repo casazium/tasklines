@@ -30,6 +30,8 @@ export interface TaskQuery {
 	/** Any-of match; `#area` also matches `#area/home`. Empty means no tag filter. */
 	tags: string[];
 	text: string;
+	/** Show completed or cancelled tasks only if they finished within this many days; null shows all. */
+	doneWithinDays: number | null;
 	/** Applied in order; ties fall back to the base's note order, then position in the note. */
 	sort: SortKey[];
 	group: string;
@@ -43,6 +45,7 @@ export const DEFAULT_QUERY: TaskQuery = {
 	priorities: [],
 	tags: [],
 	text: '',
+	doneWithinDays: null,
 	sort: [],
 	group: 'bases',
 };
@@ -83,6 +86,7 @@ export function normalizeQuery(raw: unknown): TaskQuery {
 	if (typeof r.dueTo === 'string' && ISO_DATE.test(r.dueTo)) q.dueTo = r.dueTo;
 	q.tags = strings(r.tags).map(normalizeTag).filter(Boolean);
 	if (typeof r.text === 'string') q.text = r.text;
+	if (typeof r.doneWithinDays === 'number' && Number.isInteger(r.doneWithinDays) && r.doneWithinDays >= 0 && r.doneWithinDays <= 3650) q.doneWithinDays = r.doneWithinDays;
 	if (Array.isArray(r.sort)) {
 		q.sort = r.sort
 			.filter((s): s is { key: string; desc?: unknown } => !!s && typeof s === 'object' && typeof (s as SortKey).key === 'string')
@@ -111,6 +115,15 @@ export function addDays(isoDate: string, days: number): string {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** Whole days from `a` to `b` (both YYYY-MM-DD); negative if b is earlier. */
+export function daysBetween(a: string, b: string): number {
+	const t = (d: string) => {
+		const [y, m, day] = d.split('-').map(Number);
+		return Date.UTC(y ?? 1970, (m ?? 1) - 1, day ?? 1);
+	};
+	return Math.round((t(b) - t(a)) / 86_400_000);
+}
+
 export function matches(row: QueryRow, q: TaskQuery, today: string): boolean {
 	const t = row.task;
 	if (q.statuses.length && !q.statuses.includes(statusKind(t.status))) return false;
@@ -118,6 +131,14 @@ export function matches(row: QueryRow, q: TaskQuery, today: string): boolean {
 	if (q.tags.length) {
 		const own = t.tags.map((x) => x.toLowerCase());
 		if (!q.tags.some((want) => own.some((have) => have === want || have.startsWith(`${want}/`)))) return false;
+	}
+	if (q.doneWithinDays !== null) {
+		const kind = statusKind(t.status);
+		if (kind === 'done' || kind === 'cancelled') {
+			// No date means we cannot tell when it finished: treat it as outside the window.
+			const finished = t.done ?? t.cancelled;
+			if (!finished || daysBetween(finished, today) > q.doneWithinDays) return false;
+		}
 	}
 	const needle = q.text.trim().toLowerCase();
 	if (needle && !t.text.toLowerCase().includes(needle)) return false;
@@ -268,4 +289,37 @@ export function applyQuery<R extends QueryRow>(rows: R[], q: TaskQuery, today: s
 		return [{ label: null, rows: sorted }];
 	}
 	return groupOrder(q.group, groups).map((label) => ({ label, rows: groups.get(label)?.rows ?? [] }));
+}
+
+export interface Summary {
+	total: number;
+	open: number;
+	done: number;
+	cancelled: number;
+	overdue: number;
+}
+
+/** Counts for a set of rows: shown in group headers and the stats line. */
+export function summarize(rows: Array<{ task: IndexedTask }>, today: string): Summary {
+	const s: Summary = { total: rows.length, open: 0, done: 0, cancelled: 0, overdue: 0 };
+	for (const { task } of rows) {
+		const kind = statusKind(task.status);
+		if (kind === 'done') s.done++;
+		else if (kind === 'cancelled') s.cancelled++;
+		else {
+			s.open++;
+			if (task.due && task.due < today) s.overdue++;
+		}
+	}
+	return s;
+}
+
+/** "12 open · 3 overdue · 5 done (29%)" — cancelled tasks are left out of the percentage. */
+export function formatSummary(s: Summary): string {
+	const parts = [`${s.open} open`];
+	if (s.overdue) parts.push(`${s.overdue} overdue`);
+	const finished = s.open + s.done;
+	if (s.done) parts.push(`${s.done} done${finished ? ` (${Math.round((100 * s.done) / finished)}%)` : ''}`);
+	if (s.cancelled) parts.push(`${s.cancelled} cancelled`);
+	return parts.join(' · ');
 }

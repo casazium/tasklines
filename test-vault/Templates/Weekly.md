@@ -1,0 +1,1 @@
+- [ ] Template task: must NOT appear when Templates is excluded 📅 2026-01-01

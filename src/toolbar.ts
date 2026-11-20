@@ -52,6 +52,7 @@ export class TaskToolbar {
 		parent: HTMLElement,
 		query: TaskQuery,
 		private onChange: (q: TaskQuery) => void,
+		private onAdd: () => void,
 	) {
 		this.el = parent.createDiv({ cls: 'tasklines-toolbar' });
 		this.query = query;
@@ -100,6 +101,15 @@ export class TaskToolbar {
 				input.addEventListener('change', () => this.set({ [key]: input.value }, false));
 			}
 		}
+		const doneChoices: Array<[string, string]> = [
+			['all', 'All completed'],
+			['0', 'Completed today'],
+			['7', 'Completed in last 7 days'],
+			['30', 'Completed in last 30 days'],
+		];
+		const doneValue = q.doneWithinDays === null ? 'all' : String(q.doneWithinDays);
+		const doneSel = this.select(filters, 'Completed tasks', doneChoices, doneValue);
+		doneSel.addEventListener('change', () => this.set({ doneWithinDays: doneSel.value === 'all' ? null : Number(doneSel.value) }));
 		const tags = filters.createEl('input', { type: 'text', cls: 'tasklines-input', attr: { placeholder: 'Tags: #work #home', 'aria-label': 'Filter by tags' } });
 		tags.value = q.tags.join(' ');
 		tags.addEventListener('input', () => this.setLater({ tags: tags.value.split(/[\s,]+/).map(normalizeTag).filter(Boolean) }));
@@ -136,9 +146,11 @@ export class TaskToolbar {
 		const group = this.select(order, 'Group tasks by', groupChoices, q.group);
 		group.addEventListener('change', () => this.set({ group: group.value }));
 
+		const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
+		add.addEventListener('click', () => this.onAdd());
 		const reset = order.createEl('button', { cls: 'tasklines-btn tasklines-reset', text: 'Reset' });
 		reset.addEventListener('click', () =>
-			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', sort: [], group: 'bases' }),
+			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', doneWithinDays: null, sort: [], group: 'bases' }),
 		);
 	}
 
