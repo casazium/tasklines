@@ -24,6 +24,7 @@ export class VirtualList {
 		this.header = this.scroller.createDiv({ cls: 'tasklines-header' });
 		this.spacer = this.scroller.createDiv({ cls: 'tasklines-spacer' });
 		this.windowEl = this.spacer.createDiv({ cls: 'tasklines-window' });
+		this.scroller.setCssProps({ '--tasklines-row-height': `${rowHeight}px` });
 		this.scroller.addEventListener('scroll', () => this.schedule(), { passive: true });
 		// Redraw when the pane is resized (more rows may fit).
 		this.resize = new ResizeObserver(() => this.schedule());
@@ -34,7 +35,7 @@ export class VirtualList {
 	setItems(count: number, renderItem: (index: number, el: HTMLElement) => void): void {
 		this.count = count;
 		this.renderItem = renderItem;
-		this.spacer.style.height = `${count * this.rowHeight}px`;
+		this.spacer.setCssProps({ '--tasklines-total-height': `${count * this.rowHeight}px` });
 		this.drawn = [-1, -1];
 		this.draw();
 	}
@@ -54,11 +55,10 @@ export class VirtualList {
 		const end = Math.min(this.count, Math.ceil((top + viewport) / this.rowHeight) + OVERSCAN);
 		if (start === this.drawn[0] && end === this.drawn[1]) return;
 		this.drawn = [start, end];
-		this.windowEl.style.transform = `translateY(${start * this.rowHeight}px)`;
+		this.windowEl.setCssProps({ '--tasklines-offset': `${start * this.rowHeight}px` });
 		this.windowEl.empty();
 		for (let i = start; i < end; i++) {
 			const el = this.windowEl.createDiv({ cls: 'tasklines-item' });
-			el.style.height = `${this.rowHeight}px`;
 			this.renderItem(i, el);
 		}
 	}

@@ -1,7 +1,7 @@
 {
 	"name": "tasklines",
-	"version": "0.0.1",
-	"description": "Inline checkbox tasks as rows in an Obsidian Bases view",
+	"version": "0.9.0",
+	"description": "Show inline checkbox tasks as rows in Bases, with each note’s properties as columns. Filter, sort, group, tick and edit tasks in place.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
@@ -12,8 +12,14 @@
 		"test": "node --test \"tests/**/*.test.ts\"",
 		"bench": "node bench/bench.ts"
 	},
-	"keywords": [],
-	"license": "0-BSD",
+	"keywords": [
+		"obsidian",
+		"obsidian-plugin",
+		"bases",
+		"tasks",
+		"dataview"
+	],
+	"license": "MIT",
 	"devDependencies": {
 		"@eslint/js": "^9.39.4",
 		"@types/node": "^22.15.17",
@@ -28,5 +34,11 @@
 	},
 	"engines": {
 		"node": ">=22.18"
-	}
+	},
+	"author": "Bob Casazza",
+	"repository": {
+		"type": "git",
+		"url": "https://github.com/casazium/tasklines.git"
+	},
+	"private": true
 }

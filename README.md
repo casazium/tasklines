@@ -1,31 +1,80 @@
 # Tasklines
 
-An Obsidian community plugin that adds a **Tasklines** view to Bases: one row per inline checkbox task, with the parent note's properties as columns.
+**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
 
-Status: v1 features (milestone 4) on branch `m4/v1-features`. Not yet checked inside Obsidian; see [VERIFY.md](VERIFY.md). See [SPIKE.md](SPIKE.md) for the API findings behind the design.
+> **Beta.** 0.9.x releases are for testing. Install with BRAT (below) and try it on a copy of your vault first. Please report problems on the [issue tracker](https://github.com/casazium/tasklines/issues).
 
-## How it works
+<!-- Screenshots: add images from docs/screenshots/ here before 1.0.0 (see RELEASE.md). -->
 
-- The base's own **filters** choose which notes are in scope, so note-property filters (`owner is Bob`, `file.inFolder(...)`) use the normal Bases filter menu. The base's **sort** orders notes, and its **Group by** groups them.
-- The columns you pick in the base's **Properties** menu (for example `status`, `owner`) appear on every task row from that note.
-- The **task toolbar** above the rows filters, sorts and groups tasks:
-  - Filter by status, priority, due date (overdue, today, next 7 or 30 days, has or has no due date, or a date range), tags (`#area` also matches `#area/home`) and task text.
-  - Sort by up to three keys, each ascending or descending. Keys are any task date, priority, status, text, note name, base order, or any note property. Tasks with no value always sort last.
-  - Group by the base's grouping, note, section, status, due bucket, priority, tag, or any note property.
-  - The toolbar's state is saved in the `.base` file under the view's `taskQuery` key, so each view is a saved preset. **Reset** clears it.
-- The view's config menu has **Show task toolbar** (turn it off for embedded bases) and switches for each task column.
-- Click a task to open its note at that line. Cmd/Ctrl-click opens it in a new tab.
-- **Tick the checkbox** to complete or reopen a task in its note (see below).
-- **Click a Status, Due, Scheduled, Start or Priority cell** to edit it in place. The change is written in the style the line already uses.
-- **New task** adds a task to any note in the base, after that note's last task.
-- **Computed columns** (switch them on in the view's config menu): Overdue, Days until due, Age, Subtasks done, Note progress.
-- Group headers and the line above the table show open, overdue and done counts.
-- **Completed-task window:** show completed tasks from today, the last 7 days or the last 30 days only.
-- Only the rows on screen are drawn, so large lists scroll smoothly.
+## Install
+
+**Beta (now), with BRAT**
+
+1. Install and enable the **BRAT** community plugin.
+2. In BRAT's settings choose **Add beta plugin**, enter `casazium/tasklines`, and enable **Tasklines** in **Settings → Community plugins**.
+
+**Community plugins (from 1.0.0):** search for "Tasklines" in **Settings → Community plugins → Browse**.
+
+**Manually:** download `main.js`, `manifest.json` and `styles.css` from a [release](https://github.com/casazium/tasklines/releases) into `<vault>/.obsidian/plugins/tasklines/`, then enable the plugin.
+
+Requires Obsidian 1.10 or newer with the **Bases** core plugin turned on. Works on desktop and mobile.
+
+## Quick start
+
+1. Create a base (**New base**), or open an existing one.
+2. Use the base's **Filters** to pick the notes whose tasks you want, for example notes in your `Projects` folder.
+3. Add a view and choose **Tasklines** as its layout.
+4. In the base's **Properties** menu, pick the note properties to show as columns (for example `status` or `owner`).
+5. Use the task toolbar to filter, sort and group the tasks.
+
+A `.base` file with a Tasklines view looks like this:
+
+```yaml
+filters:
+  and:
+    - file.inFolder("Projects")
+views:
+  - type: tasklines
+    name: Open tasks
+    order: [file.name, note.owner]
+    taskQuery:
+      statuses: [todo, in-progress]
+      due: next30
+      sort:
+        - key: due
+          desc: false
+      group: prop:note.owner
+```
+
+## Using the view
+
+- **Notes vs tasks:** the base's own filters, sort and **Group by** work on notes. The task toolbar works on tasks:
+  - **Filter** by status, priority, due date (overdue, today, next 7 or 30 days, has or has no due date, or a date range), completion window (completed today, in the last 7 or 30 days), tags (`#area` also matches `#area/home`) and task text.
+  - **Sort** by up to three keys, each ascending or descending: any task date, priority, status, text, note name, base order, or any note property. Tasks with no value always sort last.
+  - **Group** by the base's grouping, note, section (nearest heading), status, due bucket, priority, tag, or any note property.
+- **Each view is a saved preset:** the toolbar's settings are stored in the `.base` file, so each view keeps its own. **Reset** clears them.
+- **Columns:** note properties come from the base's **Properties** menu. Task columns (status, dates, priority, recurrence, tags, section, line, note) and computed columns (Overdue, Days until due, Age, Subtasks done, Note progress) are switched on in the view's config menu, which also has **Show task toolbar** (turn it off for embedded bases).
+- **Counts:** group headers and the line above the table show open, overdue and done counts.
+- **Open a task:** click its text to open the note at that line; Cmd/Ctrl-click opens a new tab.
+- **Large vaults:** only the rows on screen are drawn, and each note is read once and cached until it changes.
+
+## Completing, editing and adding tasks
+
+Every change follows the same safety rule. Tasklines re-reads the note and checks that the line is still exactly what the view showed. It then writes through Obsidian's atomic `Vault.process`, changing only that line. If anything differs (you edited the line, it moved, the note was renamed), nothing is written, and a notice with an **Open at line** button appears.
+
+- **Tick a checkbox** to complete or reopen a task. A completion date is added in the line's own style: `✅ 2026-11-20` or `[completion:: 2026-11-20]`. Unticking removes it.
+- **Click a Status, Due, Scheduled, Start or Priority cell** to edit it. Existing fields are changed where they are. New ones go at the end of the line, before any `^block-id`. Text in `inline code` is never touched.
+- **New task** adds one line to any note in the base, after the note's last task (and anything nested under it), in the same style and inside the same callout. A note without tasks gets it at the end.
+
+## Works with the Tasks plugin
+
+- **Completion:** when the Tasks plugin (7.2.0 or later) is enabled, Tasklines asks it to complete tasks. Recurrence, done dates and custom status transitions then follow your Tasks settings, and a recurring task gets its next occurrence exactly as it would in the editor.
+- **Formats:** Tasks reads one format at a time (emoji or Dataview). If it's set to the other format than a line uses, Tasklines never writes the mixed result. One-off tasks are completed by Tasklines itself; recurring ones are refused, so the next occurrence is never lost.
+- **Without Tasks:** recurring tasks (marked 🔁) can't be completed from the view; open the note to complete them. Everything else works.
 
 ## Supported task syntax
 
-Any list item Obsidian recognizes as a task (`-`, `*`, `+` or numbered list, any status character, including inside block quotes).
+Any list item Obsidian recognizes as a task: a `-`, `*`, `+` or numbered list item, with any status character, including inside block quotes and callouts.
 
 | Field | Tasks plugin emoji | Dataview inline field |
 | --- | --- | --- |
@@ -39,39 +88,11 @@ Any list item Obsidian recognizes as a task (`-`, `*`, `+` or numbered list, any
 | Recurrence | `🔁 every week` | `[repeat:: every week]` |
 | ID / depends on / on completion | `🆔` `⛔` `🏁` | |
 
-Also read: `#tags`, `[[wikilinks]]`, a trailing `^block-id`, any other `[key:: value]` or `(key:: value)` field, the nearest heading (Section) and subtask nesting. Text in `inline code` is never read as metadata. Checkboxes inside code blocks are ignored.
-
-## Completing tasks from the view
-
-Ticking a checkbox changes only that task's line in the note, through Obsidian's atomic `Vault.process`:
-
-- **Safety first.** Before writing, the plugin re-reads the note and checks that the line is exactly what the view showed. It checks again inside the atomic write. If anything differs (you edited the line, it moved, the note was renamed), nothing is written, you get a notice, and the view refreshes.
-- **Keeps your format.** Only the status character changes, plus a completion date in the format the line already uses: `✅ 2026-11-20` for Tasks-style lines, `[completion:: 2026-11-20]` for Dataview-style lines. A date goes before a trailing `^block-id`. Line endings (LF or CRLF) are preserved. Unticking removes the date.
-- **With the Tasks plugin (7.2.0 or later)** the plugin asks Tasks for the new line, so recurrence, done dates and custom statuses follow your Tasks settings. Completing a recurring task inserts the next occurrence just as Tasks does in the editor. This works for emoji lines and, when Tasks is set to its Dataview format, for `[repeat:: …]` lines too.
-- **Tasks reads one format at a time.** If Tasks is set to the emoji format and the line uses Dataview fields (or the other way round), Tasks can't see the line's fields. Tasklines notices this and never writes the mixed result. A one-off task is completed by Tasklines itself in the line's own style. A recurring one is refused, so the next occurrence is never lost.
-- **Without the Tasks plugin,** completing a **recurring** task is refused, because creating the next occurrence correctly is Tasks' job. Recurring tasks show 🔁 next to their text, and their checkbox explains this before you click. Unticking still works.
-- Every refusal notice has an **Open at line** button, so the task is one click from the editor.
-- In-progress and custom statuses complete to `[x]`. Done and cancelled reopen to `[ ]`.
-
-Settings (**Settings → Tasklines**):
-- Turn the completion date on or off, and choose whether to use the Tasks plugin.
-- **Style for new fields on plain tasks:** when you set a date or priority on a task with no metadata, use Tasks emoji (`📅 2026-01-31`) or Dataview fields (`[due:: 2026-01-31]`). Tasks that already have a style keep it.
-- **Task statuses:** one per line, `character | name | kind`, where kind is `todo`, `in-progress`, `done`, `cancelled` or `other`. Names appear in the Status column and editor. Space, `x` and `-` always mean to do, done and cancelled.
-- **Excluded folders:** notes in these folders are never indexed (for example `Templates`).
-
-## Editing and adding tasks
-
-Editing a cell follows the same rules as ticking: the line must still match what the view showed, only that line changes, and a mismatch is refused with a notice.
-
-- A date or priority the line already has is changed **where it is**, keeping its emoji variant or field brackets. A new one goes at the end of the line, before any `^block-id`. Text in `inline code` is never touched.
-- Setting the status to a done status adds a completion date; leaving done removes it.
-- **New task** inserts exactly one line after the note's last task (and after any bullets nested under it), in the same style and inside the same callout. A note without tasks gets the task at the end, after a blank line.
+Also read: `#tags`, `[[wikilinks]]`, a trailing `^block-id`, any other `[key:: value]` or `(key:: value)` field, the nearest heading and subtask nesting. Checkboxes in code blocks are ignored.
 
 ## Moving from Dataview
 
 Put the cursor inside a ```` ```dataview ```` block that starts with `TASK` and run **Convert Dataview task query under cursor to a base**. Tasklines creates `<note> tasks.base` next to the note and opens it. Your note isn't changed; embed the base with `![[<note> tasks.base]]` when you're happy with it.
-
-What gets translated:
 
 | Dataview | Tasklines |
 | --- | --- |
@@ -85,28 +106,42 @@ What gets translated:
 
 Anything else (`OR` inside `WHERE`, `LIMIT`, `FLATTEN`, link sources, custom functions) is listed at the top of the new file to fix by hand.
 
+## Settings
+
+- **Completion date** on or off, and whether to **let the Tasks plugin complete tasks**.
+- **Style for new fields on plain tasks:** Tasks emoji (`📅 2026-01-31`) or Dataview fields (`[due:: 2026-01-31]`). Tasks that already have a style keep it.
+- **Task statuses:** one per line, `character | name | kind`, where kind is `todo`, `in-progress`, `done`, `cancelled` or `other`. Space, `x` and `-` always mean to do, done and cancelled.
+- **Excluded folders:** notes in these folders are never indexed (for example `Templates`).
+
+## Privacy
+
+Tasklines works entirely inside your vault. It makes no network requests, collects no data, and changes notes only when you tick, edit or add a task. Turning the plugin off leaves every note and `.base` file as plain, valid Markdown and YAML.
 
 ## Known limits
 
-- Task fields cannot appear in Bases' own filter, sort or group menus. The Bases API only allows note, file and formula properties. That's why the task toolbar exists.
-- Task text, tags and recurrence rules can't be edited in the view yet; open the note for those. Bulk edits and drag between groups are planned for later.
-- Completing a recurring task still needs the Tasks plugin.
-- Rows have a fixed height. Long task text and multi-value properties are cut off with an ellipsis, and the full text is in the tooltip.
-- Sorting and grouping by a note property use the value's displayed text, compared with numbers in natural order (`9` before `10`).
-- In files with old Mac line endings (CR only), write-back may refuse to change a task if Obsidian numbers the lines differently. It never writes to the wrong line.
+- Task fields can't appear in Bases' own filter, sort or group menus, because the Bases API only allows note, file and formula properties. That's why the task toolbar exists.
+- Task text, tags and recurrence rules can't be edited in the view yet. Open the note for those.
+- Rows have a fixed height. Long text is cut off with an ellipsis, and the full text is in the tooltip.
+- Sorting and grouping by a note property use the value's displayed text, with numbers in natural order (`9` before `10`).
+- In files with old Mac line endings (CR only), a change may be refused if Obsidian numbers lines differently. Tasklines never writes to the wrong line.
 
 ## Development
 
-Needs Node 22.18 or newer: the tests import the TypeScript sources directly. CI builds, lints and runs the tests on Node 22 and 24.
+Needs Node 22.18 or newer. CI builds, lints and tests on Node 22 and 24.
 
 ```bash
-npm install
-npm run build   # type-check (src and tests) and bundle to main.js
-npm test        # parser fixtures, extraction and sort tests
+npm ci
+npm run build   # type-check and bundle to main.js
+npm test        # parser fixtures, write-back safety and feature tests
 npm run lint
-npm run bench   # index and query timing on a synthetic vault (NOTES=8000 npm run bench)
+npm run bench   # index and query timing on a synthetic vault
 ```
 
-Parser fixtures live in `tests/fixtures/task-lines.json`. Add one for every parsing bug found.
+- [AGENTS.md](AGENTS.md): code layout and the rules every change must keep.
+- [VERIFY.md](VERIFY.md): manual checks in Obsidian; `test-vault/` has material for each.
+- [RELEASE.md](RELEASE.md): how to cut a release and the community-submission checklist.
+- [SPIKE.md](SPIKE.md): the Bases API findings behind the design.
 
-`test-vault/` has the plugin installed. Open it in Obsidian 1.10 or newer and open `Project tasks.base`.
+## License
+
+[MIT](LICENSE) © 2026 Bob Casazza
