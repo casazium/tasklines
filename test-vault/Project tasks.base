@@ -1,0 +1,16 @@
+filters:
+  and:
+    - file.inFolder("Projects")
+views:
+  - type: task-rows
+    name: Open tasks
+    order:
+      - file.name
+      - note.status
+      - note.owner
+    groupBy:
+      property: note.area
+      direction: ASC
+    hideCompleted: true
+    taskSort: due
+    taskGroup: bases

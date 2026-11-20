@@ -1,0 +1,7 @@
+.task-rows-view { padding: var(--size-4-2) var(--size-4-4); overflow: auto; }
+.task-rows-stats { color: var(--text-muted); font-size: var(--font-ui-smaller); margin-bottom: var(--size-4-2); }
+.task-rows-group { margin: var(--size-4-4) 0 var(--size-4-1); }
+.task-rows-table { width: 100%; border-collapse: collapse; font-size: var(--font-ui-small); }
+.task-rows-table th, .task-rows-table td { text-align: left; padding: 2px 8px; border-bottom: 1px solid var(--background-modifier-border); }
+.task-rows-status { font-family: var(--font-monospace); color: var(--text-muted); }
+.task-rows-status-done a, .task-rows-status-cancelled a { text-decoration: line-through; color: var(--text-faint); }
