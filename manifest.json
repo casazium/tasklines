@@ -1,6 +1,6 @@
 {
-	"id": "task-rows",
-	"name": "Task Rows",
+	"id": "tasklines",
+	"name": "Tasklines",
 	"version": "0.0.1",
 	"minAppVersion": "1.10.0",
 	"description": "Adds a view to Bases that shows one row per inline checkbox task, with the parent note properties as columns.",

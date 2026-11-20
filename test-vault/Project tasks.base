@@ -2,7 +2,7 @@ filters:
   and:
     - file.inFolder("Projects")
 views:
-  - type: task-rows
+  - type: tasklines
     name: Open tasks
     order:
       - file.name
@@ -20,7 +20,7 @@ views:
         - key: priority
           desc: false
       group: bases
-  - type: task-rows
+  - type: tasklines
     name: Due soon by owner
     order:
       - file.name
@@ -31,7 +31,7 @@ views:
       sort:
         - key: due
           desc: false
-  - type: task-rows
+  - type: tasklines
     name: All tasks by section
     order:
       - file.name

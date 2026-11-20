@@ -1,17 +1,17 @@
 import { Notice, Plugin, TAbstractFile } from 'obsidian';
-import { registerTaskRowsView } from './bases-adapter.ts';
+import { registerTasklinesView } from './bases-adapter.ts';
 import { TaskIndex } from './indexer.ts';
-import { DEFAULT_SETTINGS, TaskRowsSettingTab, type TaskRowsSettings } from './settings.ts';
+import { DEFAULT_SETTINGS, TasklinesSettingTab, type TasklinesSettings } from './settings.ts';
 import { TaskWriter } from './writer.ts';
 
-export default class TaskRowsPlugin extends Plugin {
+export default class TasklinesPlugin extends Plugin {
 	private index!: TaskIndex;
-	private taskSettings: TaskRowsSettings = { ...DEFAULT_SETTINGS };
+	private taskSettings: TasklinesSettings = { ...DEFAULT_SETTINGS };
 
 	async onload(): Promise<void> {
-		const saved = (await this.loadData()) as Partial<TaskRowsSettings> | null;
+		const saved = (await this.loadData()) as Partial<TasklinesSettings> | null;
 		Object.assign(this.taskSettings, saved ?? {});
-		this.addSettingTab(new TaskRowsSettingTab(this.app, this, this.taskSettings, () => this.saveData(this.taskSettings)));
+		this.addSettingTab(new TasklinesSettingTab(this.app, this, this.taskSettings, () => this.saveData(this.taskSettings)));
 
 		this.index = new TaskIndex(this.app);
 		const writer = new TaskWriter(this.app, this.index, this.taskSettings);
@@ -25,8 +25,8 @@ export default class TaskRowsPlugin extends Plugin {
 		this.registerEvent(this.app.vault.on('delete', (f) => drop(f)));
 		this.registerEvent(this.app.vault.on('rename', (f, oldPath) => drop(f, oldPath)));
 
-		if (!registerTaskRowsView(this, this.index, writer)) {
-			new Notice('Task rows needs the Bases core plugin, which is off in this vault.');
+		if (!registerTasklinesView(this, this.index, writer)) {
+			new Notice('Tasklines needs the Bases core plugin, which is off in this vault.');
 		}
 	}
 }

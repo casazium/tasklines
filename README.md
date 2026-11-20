@@ -1,6 +1,6 @@
-# Task Rows
+# Tasklines
 
-An Obsidian community plugin that adds a **Task rows** view to Bases: one row per inline checkbox task, with the parent note's properties as columns.
+An Obsidian community plugin that adds a **Tasklines** view to Bases: one row per inline checkbox task, with the parent note's properties as columns.
 
 Status: MVP code complete (milestones 0–3). Not yet checked inside Obsidian; see [VERIFY.md](VERIFY.md). See [SPIKE.md](SPIKE.md) for the API findings behind the design.
 
@@ -46,7 +46,7 @@ Ticking a checkbox changes only that task's line in the note, through Obsidian's
 - **Without the Tasks plugin,** completing a **recurring** task is refused with a notice, because creating the next occurrence correctly is Tasks' job. Unticking still works.
 - In-progress and custom statuses complete to `[x]`. Done and cancelled reopen to `[ ]`.
 
-Settings (**Settings → Task Rows**): turn the completion date on or off, and choose whether to use the Tasks plugin.
+Settings (**Settings → Tasklines**): turn the completion date on or off, and choose whether to use the Tasks plugin.
 
 ## Known limits
 

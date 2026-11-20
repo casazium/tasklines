@@ -1,21 +1,21 @@
 import { App, PluginSettingTab, Setting, type Plugin } from 'obsidian';
 import type { CompletionDate } from './writeback.ts';
 
-export interface TaskRowsSettings {
+export interface TasklinesSettings {
 	completionDate: CompletionDate;
 	useTasksPlugin: boolean;
 }
 
-export const DEFAULT_SETTINGS: TaskRowsSettings = {
+export const DEFAULT_SETTINGS: TasklinesSettings = {
 	completionDate: 'auto',
 	useTasksPlugin: true,
 };
 
-export class TaskRowsSettingTab extends PluginSettingTab {
+export class TasklinesSettingTab extends PluginSettingTab {
 	constructor(
 		app: App,
 		plugin: Plugin,
-		private settings: TaskRowsSettings,
+		private settings: TasklinesSettings,
 		private save: () => Promise<void>,
 	) {
 		super(app, plugin);

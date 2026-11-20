@@ -18,17 +18,17 @@ import type { TaskIndex } from './indexer.ts';
 import type { TaskWriter } from './writer.ts';
 import { applyQuery, normalizeQuery, type TaskQuery } from './query.ts';
 import { TaskToolbar, type PropChoice } from './toolbar.ts';
-import { localDate, renderTaskRows, type RowSource, type ViewRow } from './view.ts';
+import { localDate, renderRows, type RowSource, type ViewRow } from './view.ts';
 import { VirtualList } from './virtual-list.ts';
 
-export const VIEW_TYPE = 'task-rows';
+export const VIEW_TYPE = 'tasklines';
 const QUERY_KEY = 'taskQuery';
 
-export function registerTaskRowsView(plugin: Plugin, index: TaskIndex, writer: TaskWriter): boolean {
+export function registerTasklinesView(plugin: Plugin, index: TaskIndex, writer: TaskWriter): boolean {
 	return plugin.registerBasesView(VIEW_TYPE, {
-		name: 'Task rows',
+		name: 'Tasklines',
 		icon: 'lucide-list-checks',
-		factory: (controller, containerEl) => new TaskRowsView(controller, containerEl, index, writer),
+		factory: (controller, containerEl) => new TasklinesView(controller, containerEl, index, writer),
 		options: () => viewOptions(),
 	});
 }
@@ -56,7 +56,7 @@ interface NoteSnapshot {
 	baseGroupIndex: number;
 }
 
-class TaskRowsView extends BasesView {
+class TasklinesView extends BasesView {
 	readonly type = VIEW_TYPE;
 	private index: TaskIndex;
 	private writer: TaskWriter;
@@ -83,9 +83,9 @@ class TaskRowsView extends BasesView {
 		super(controller);
 		this.index = index;
 		this.writer = writer;
-		this.rootEl = parentEl.createDiv({ cls: 'task-rows-view' });
+		this.rootEl = parentEl.createDiv({ cls: 'tasklines-view' });
 		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q));
-		this.statsEl = this.rootEl.createDiv({ cls: 'task-rows-stats' });
+		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
 		this.list = new VirtualList(this.rootEl);
 		// Bases may not call onDataUpdated when only a note's body changes (no property
 		// changed), so re-render ourselves when a note in the current result set changes.
@@ -108,7 +108,7 @@ class TaskRowsView extends BasesView {
 
 	onDataUpdated(): void {
 		this.query = normalizeQuery(this.config.get(QUERY_KEY));
-		this.rootEl.toggleClass('task-rows-no-toolbar', this.config.get('showToolbar') === false);
+		this.rootEl.toggleClass('tasklines-no-toolbar', this.config.get('showToolbar') === false);
 		this.toolbar.update(this.query, this.propChoices());
 		this.snapshot();
 		this.render();
@@ -168,7 +168,7 @@ class TaskRowsView extends BasesView {
 				}
 			}
 			const columns = this.config.getOrder().filter((p) => p !== 'file.name');
-			renderTaskRows(this.statsEl, this.list, {
+			renderRows(this.statsEl, this.list, {
 				groups: applyQuery(rows, query, localDate(new Date())),
 				total: rows.length,
 				columns,

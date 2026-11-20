@@ -33,7 +33,7 @@ export interface RenderInput {
 
 type Item = { kind: 'group'; label: string; count: number } | { kind: 'row'; row: ViewRow };
 
-export function renderTaskRows(statsEl: HTMLElement, list: VirtualList, input: RenderInput): void {
+export function renderRows(statsEl: HTMLElement, list: VirtualList, input: RenderInput): void {
 	const shown = input.groups.reduce((n, g) => n + g.rows.length, 0);
 	const hidden = input.total - shown;
 	const s = input.stats;
@@ -50,17 +50,17 @@ export function renderTaskRows(statsEl: HTMLElement, list: VirtualList, input: R
 
 	// Columns: task text, chosen task columns, then the base's note-property columns.
 	const colCount = 1 + input.taskColumns.length + input.columns.length;
-	list.scroller.style.setProperty('--task-rows-cols', `minmax(16em, 3fr) repeat(${colCount - 1}, minmax(7em, 1fr))`);
+	list.scroller.style.setProperty('--tasklines-cols', `minmax(16em, 3fr) repeat(${colCount - 1}, minmax(7em, 1fr))`);
 	list.header.empty();
 	if (items.length === 0) {
 		list.header.createDiv({
-			cls: 'task-rows-empty',
+			cls: 'tasklines-empty',
 			text: input.total === 0 ? 'No checkbox tasks in the notes this base selects.' : 'No tasks match the current filters.',
 		});
 		list.setItems(0, () => {});
 		return;
 	}
-	const head = list.header.createDiv({ cls: 'task-rows-grid task-rows-head', attr: { role: 'row' } });
+	const head = list.header.createDiv({ cls: 'tasklines-grid tasklines-head', attr: { role: 'row' } });
 	head.createDiv({ text: 'Task', attr: { role: 'columnheader' } });
 	for (const c of input.taskColumns) head.createDiv({ text: c.label, attr: { role: 'columnheader' } });
 	for (const name of input.columnNames) head.createDiv({ text: name, attr: { role: 'columnheader' } });
@@ -69,7 +69,7 @@ export function renderTaskRows(statsEl: HTMLElement, list: VirtualList, input: R
 		const item = items[i];
 		if (!item) return;
 		if (item.kind === 'group') {
-			el.addClass('task-rows-group');
+			el.addClass('tasklines-group');
 			el.setText(`${item.label || '(none)'} · ${item.count}`);
 			return;
 		}
@@ -79,14 +79,14 @@ export function renderTaskRows(statsEl: HTMLElement, list: VirtualList, input: R
 
 function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	const { task } = row;
-	el.addClasses(['task-rows-grid', 'task-rows-row', `task-rows-status-${statusKind(task.status)}`]);
+	el.addClasses(['tasklines-grid', 'tasklines-row', `tasklines-status-${statusKind(task.status)}`]);
 	el.setAttr('role', 'row');
-	const textCell = el.createDiv({ cls: 'task-rows-text', attr: { role: 'cell' } });
+	const textCell = el.createDiv({ cls: 'tasklines-text', attr: { role: 'cell' } });
 	textCell.style.paddingInlineStart = `calc(8px + ${task.depth * 1.25}em)`;
 	const kind = statusKind(task.status);
 	const box = textCell.createEl('input', {
 		type: 'checkbox',
-		cls: 'task-list-item-checkbox task-rows-checkbox',
+		cls: 'task-list-item-checkbox tasklines-checkbox',
 		attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status },
 	});
 	box.checked = kind !== 'todo';
@@ -99,16 +99,16 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 			box.disabled = false;
 		});
 	});
-	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'task-rows-open', attr: { title: task.text } });
+	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
 	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
 	link.addEventListener('click', (ev) => {
 		ev.preventDefault();
 		input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
 	});
 	for (const c of input.taskColumns) {
-		el.createDiv({ cls: `task-rows-col-${c.key}`, text: c.key === 'status' ? `[${task.status}]` : c.value(task), attr: { role: 'cell' } });
+		el.createDiv({ cls: `tasklines-col-${c.key}`, text: c.key === 'status' ? `[${task.status}]` : c.value(task), attr: { role: 'cell' } });
 	}
-	for (const prop of input.columns) input.renderValue(el.createDiv({ cls: 'task-rows-prop', attr: { role: 'cell' } }), row.entry, prop);
+	for (const prop of input.columns) input.renderValue(el.createDiv({ cls: 'tasklines-prop', attr: { role: 'cell' } }), row.entry, prop);
 }
 
 /** YYYY-MM-DD in local time; toISOString would use UTC and shift "today" near midnight. */

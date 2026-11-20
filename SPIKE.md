@@ -1,5 +1,7 @@
 # Spike findings: Task rows for Bases (milestone 0)
 
+> The plugin was later renamed from "Task Rows" to **Tasklines** (ID `tasklines`) to avoid confusion with the existing Bases Task Rows plugin. This note keeps the original wording.
+
 Nov 20, 2026. Sources: `obsidian@1.14.4` typings (`obsidian.d.ts`), the [Bases view guide](https://docs.obsidian.md/plugins/guides/bases-view), and the spike code in `src/`.
 
 **How this was checked:** Obsidian is not installed on the machine used for the spike. The spike view type-checks, lints and bundles, and the parser passes its fixture tests. **It has not been run inside Obsidian yet.** Answers below that rely on the type definitions are marked *(typings)*. Answers that still need a check in the running app are marked *(verify in app)*.

@@ -1,5 +1,5 @@
 {
-	"name": "task-rows",
+	"name": "tasklines",
 	"version": "0.0.1",
 	"description": "Inline checkbox tasks as rows in an Obsidian Bases view",
 	"main": "main.js",

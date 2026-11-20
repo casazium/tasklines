@@ -4,7 +4,7 @@
 
 import { Notice, TFile, type App } from 'obsidian';
 import type { TaskIndex } from './indexer.ts';
-import type { TaskRowsSettings } from './settings.ts';
+import type { TasklinesSettings } from './settings.ts';
 import { localDate } from './view.ts';
 import { toggleInContent, type ToggleOptions, type ToggleResult } from './writeback.ts';
 
@@ -30,7 +30,7 @@ export class TaskWriter {
 	constructor(
 		private app: App,
 		private index: TaskIndex,
-		private settings: TaskRowsSettings,
+		private settings: TasklinesSettings,
 	) {}
 
 	/** The Tasks plugin's toggle function, if Tasks is enabled, new enough and allowed. */
@@ -52,7 +52,7 @@ export class TaskWriter {
 		if (this.pending.has(key)) return false;
 		const file = this.app.vault.getAbstractFileByPath(target.path);
 		if (!(file instanceof TFile)) {
-			new Notice('Task rows: the note was moved or deleted. Nothing was changed.');
+			new Notice('Tasklines: the note was moved or deleted. Nothing was changed.');
 			return false;
 		}
 
@@ -82,8 +82,8 @@ export class TaskWriter {
 			if (!result.ok) return this.refuse(file, result);
 			return true;
 		} catch (err) {
-			console.error('Task rows: write failed', err);
-			new Notice('Task rows: could not write the change. Nothing was changed.');
+			console.error('Tasklines: write failed', err);
+			new Notice('Tasklines: could not write the change. Nothing was changed.');
 			return false;
 		} finally {
 			this.pending.delete(key);
@@ -91,7 +91,7 @@ export class TaskWriter {
 	}
 
 	private refuse(file: TFile, result: Extract<ToggleResult, { ok: false }>): false {
-		new Notice(`Task rows: ${FAILURE_TEXT[result.reason] ?? result.detail} Nothing was changed.`, 8000);
+		new Notice(`Tasklines: ${FAILURE_TEXT[result.reason] ?? result.detail} Nothing was changed.`, 8000);
 		// Re-index the note so the view shows what is really there now.
 		this.index.invalidate(file);
 		return false;

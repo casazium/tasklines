@@ -16,10 +16,10 @@ export class VirtualList {
 	private resize: ResizeObserver;
 
 	constructor(parent: HTMLElement) {
-		this.scroller = parent.createDiv({ cls: 'task-rows-scroller' });
-		this.header = this.scroller.createDiv({ cls: 'task-rows-header' });
-		this.spacer = this.scroller.createDiv({ cls: 'task-rows-spacer' });
-		this.windowEl = this.spacer.createDiv({ cls: 'task-rows-window' });
+		this.scroller = parent.createDiv({ cls: 'tasklines-scroller' });
+		this.header = this.scroller.createDiv({ cls: 'tasklines-header' });
+		this.spacer = this.scroller.createDiv({ cls: 'tasklines-spacer' });
+		this.windowEl = this.spacer.createDiv({ cls: 'tasklines-window' });
 		this.scroller.addEventListener('scroll', () => this.schedule(), { passive: true });
 		// Redraw when the pane is resized (more rows may fit).
 		this.resize = new ResizeObserver(() => this.schedule());
@@ -53,7 +53,7 @@ export class VirtualList {
 		this.windowEl.style.transform = `translateY(${start * ROW_HEIGHT}px)`;
 		this.windowEl.empty();
 		for (let i = start; i < end; i++) {
-			const el = this.windowEl.createDiv({ cls: 'task-rows-item' });
+			const el = this.windowEl.createDiv({ cls: 'tasklines-item' });
 			el.style.height = `${ROW_HEIGHT}px`;
 			this.renderItem(i, el);
 		}

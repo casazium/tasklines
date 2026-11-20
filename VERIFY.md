@@ -1,9 +1,9 @@
 # Manual checks in Obsidian
 
-The automated tests cover parsing, extraction, querying and the byte-level write-back logic. They can't cover Bases itself, the DOM or the Tasks plugin. Run these checks in `test-vault/` with Obsidian 1.10 or newer (`npm run build`, then copy `main.js`, `manifest.json` and `styles.css` into `test-vault/.obsidian/plugins/task-rows/`).
+The automated tests cover parsing, extraction, querying and the byte-level write-back logic. They can't cover Bases itself, the DOM or the Tasks plugin. Run these checks in `test-vault/` with Obsidian 1.10 or newer (`npm run build`, then copy `main.js`, `manifest.json` and `styles.css` into `test-vault/.obsidian/plugins/tasklines/`).
 
 ## Milestone 1: reading
-- [ ] `Project tasks.base` opens, and the **Task rows** view lists tasks from `Alpha` and `Beta` only. `NoTasks` and the checkbox inside the code block are absent.
+- [ ] `Project tasks.base` opens, and the **Tasklines** view lists tasks from `Alpha` and `Beta` only. `NoTasks` and the checkbox inside the code block are absent.
 - [ ] The `status` and `owner` columns show the note's values. Adding a property in the Properties menu adds a column.
 - [ ] The task inside the callout (`> - [ ] Task inside a callout`) appears. If it doesn't, the metadata cache skips callout list items.
 - [ ] Subtasks are indented, including the grandchild under a plain bullet.
