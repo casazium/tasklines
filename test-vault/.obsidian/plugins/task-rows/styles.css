@@ -53,3 +53,7 @@
 .task-rows-status-done .task-rows-open, .task-rows-status-cancelled .task-rows-open { text-decoration: line-through; color: var(--text-faint); }
 /* Property values rendered by Bases (lists, links) must stay on one line to keep row height fixed. */
 .task-rows-prop > * { display: inline; white-space: nowrap; }
+.task-rows-checkbox { margin-inline-end: 6px; vertical-align: middle; flex: none; }
+.task-rows-checkbox:disabled { opacity: 0.5; }
+.task-rows-text { display: flex; align-items: center; }
+.task-rows-text .task-rows-open { overflow: hidden; text-overflow: ellipsis; }

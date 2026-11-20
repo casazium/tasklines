@@ -15,6 +15,7 @@ import {
 } from 'obsidian';
 import { columnOptionKey, TASK_COLUMNS } from './columns.ts';
 import type { TaskIndex } from './indexer.ts';
+import type { TaskWriter } from './writer.ts';
 import { applyQuery, normalizeQuery, type TaskQuery } from './query.ts';
 import { TaskToolbar, type PropChoice } from './toolbar.ts';
 import { localDate, renderTaskRows, type RowSource, type ViewRow } from './view.ts';
@@ -23,11 +24,11 @@ import { VirtualList } from './virtual-list.ts';
 export const VIEW_TYPE = 'task-rows';
 const QUERY_KEY = 'taskQuery';
 
-export function registerTaskRowsView(plugin: Plugin, index: TaskIndex): boolean {
+export function registerTaskRowsView(plugin: Plugin, index: TaskIndex, writer: TaskWriter): boolean {
 	return plugin.registerBasesView(VIEW_TYPE, {
 		name: 'Task rows',
 		icon: 'lucide-list-checks',
-		factory: (controller, containerEl) => new TaskRowsView(controller, containerEl, index),
+		factory: (controller, containerEl) => new TaskRowsView(controller, containerEl, index, writer),
 		options: () => viewOptions(),
 	});
 }
@@ -58,6 +59,7 @@ interface NoteSnapshot {
 class TaskRowsView extends BasesView {
 	readonly type = VIEW_TYPE;
 	private index: TaskIndex;
+	private writer: TaskWriter;
 	private rootEl: HTMLElement;
 	private toolbar: TaskToolbar;
 	private statsEl: HTMLElement;
@@ -77,9 +79,10 @@ class TaskRowsView extends BasesView {
 		true,
 	);
 
-	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex) {
+	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex, writer: TaskWriter) {
 		super(controller);
 		this.index = index;
+		this.writer = writer;
 		this.rootEl = parentEl.createDiv({ cls: 'task-rows-view' });
 		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q));
 		this.statsEl = this.rootEl.createDiv({ cls: 'task-rows-stats' });
@@ -176,6 +179,7 @@ class TaskRowsView extends BasesView {
 				}),
 				stats: this.index.lastStats,
 				openTask: (path, line, newTab) => this.openTask(path, line, newTab),
+				toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
 				renderValue: (el, entry, prop) => {
 					const value = entry.values.get(prop);
 					if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);

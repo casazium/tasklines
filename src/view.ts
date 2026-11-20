@@ -26,6 +26,8 @@ export interface RenderInput {
 	taskColumns: TaskColumn[];
 	stats: IndexStats;
 	openTask: (path: string, line: number, newTab: boolean) => void;
+	/** Toggle a task in its note; resolves true if the note changed. */
+	toggleTask: (task: QueryRow['task']) => Promise<boolean>;
 	renderValue: (el: HTMLElement, entry: RowSource, prop: BasesPropertyId) => void;
 }
 
@@ -81,6 +83,22 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	el.setAttr('role', 'row');
 	const textCell = el.createDiv({ cls: 'task-rows-text', attr: { role: 'cell' } });
 	textCell.style.paddingInlineStart = `calc(8px + ${task.depth * 1.25}em)`;
+	const kind = statusKind(task.status);
+	const box = textCell.createEl('input', {
+		type: 'checkbox',
+		cls: 'task-list-item-checkbox task-rows-checkbox',
+		attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status },
+	});
+	box.checked = kind !== 'todo';
+	box.indeterminate = kind === 'in-progress';
+	box.addEventListener('click', (ev) => {
+		ev.preventDefault(); // the checkbox shows the note's state, which changes only after the write
+		if (box.disabled) return;
+		box.disabled = true;
+		void input.toggleTask(task).finally(() => {
+			box.disabled = false;
+		});
+	});
 	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'task-rows-open', attr: { title: task.text } });
 	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
 	link.addEventListener('click', (ev) => {
