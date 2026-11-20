@@ -138,7 +138,7 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	for (const prop of input.columns) input.renderValue(el.createDiv({ cls: 'tasklines-prop', attr: { role: 'cell' } }), row.entry, prop);
 }
 
-/** Click (or Enter) on the cell swaps in an input; change commits, Escape or blur cancels. */
+/** Click (or Enter) on the cell swaps in an input. Dropdowns save on change; dates save on Enter or blur. Escape cancels. */
 function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['task'], input: RenderInput): void {
 	cell.addClass('tasklines-editable');
 	cell.setAttr('tabindex', '0');
@@ -188,8 +188,15 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 				})();
 			}
 		};
-		control.addEventListener('change', () => close(true));
-		control.addEventListener('blur', () => close(false));
+		if (column.editor === 'date') {
+			// A date input reports a change after every typed segment ("1" of "12" already
+			// makes a valid date), so save only on Enter or when focus leaves the field.
+			control.addEventListener('blur', () => close(true));
+		} else {
+			// Dropdowns report a change once, when an option is picked.
+			control.addEventListener('change', () => close(true));
+			control.addEventListener('blur', () => close(false));
+		}
 		control.addEventListener('keydown', (ev) => {
 			const key = (ev as KeyboardEvent).key;
 			if (key === 'Escape') close(false);
