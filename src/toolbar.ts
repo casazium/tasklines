@@ -146,7 +146,7 @@ export class TaskToolbar {
 		const group = this.select(order, 'Group tasks by', groupChoices, q.group);
 		group.addEventListener('change', () => this.set({ group: group.value }));
 
-		const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: '+ New task' });
+		const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
 		add.addEventListener('click', () => this.onAdd());
 		const reset = order.createEl('button', { cls: 'tasklines-btn tasklines-reset', text: 'Reset' });
 		reset.addEventListener('click', () =>

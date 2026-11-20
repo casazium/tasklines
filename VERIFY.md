@@ -33,6 +33,20 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 - [ ] Ticking a task while the same note is open in an editor: the editor updates, and undo in the editor still works.
 - [ ] Double-clicking a checkbox quickly toggles once, not twice.
 
+## Milestone 4: v1
+- [ ] Click a **Due** cell, pick a date, press Enter: only that line changes, in its own style (try `Write announcement` (emoji), `Dataview style` and a plain task).
+- [ ] Clear a due date: the date token disappears and nothing else on the line changes.
+- [ ] **Priority** and **Status** cells open a dropdown. Setting status to Done adds `✅ <today>`, and setting it back removes it.
+- [ ] Escape or clicking away cancels an edit without writing.
+- [ ] Add a custom status in Settings (e.g. `b | Blocked | in-progress`). It appears in the Status editor, and a `- [b]` task shows "Blocked" and counts as open.
+- [ ] **New task** into `Alpha`: it lands after the last task in the Edge cases section (after the nested bullet), in Tasks emoji style. Into `NoTasks`: it lands at the end after a blank line.
+- [ ] Switch on the computed columns. Overdue shows days late, Subtasks shows `done/total` on `Parent with nested bullet`, and Note progress matches the note.
+- [ ] Group headers show `N open · N overdue · N done (x%)`.
+- [ ] The completed-task window hides tasks completed more than N days ago.
+- [ ] Add `Templates` to **Excluded folders**: the `Templates/Weekly.md` task disappears from any base that includes it.
+- [ ] In `Dataview queries.md`, run the convert command in each block. A `.base` opens with the expected filters, and the second one lists the parts it couldn't convert. The note is unchanged.
+- [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, the toolbar wraps, and the grid scrolls sideways.
+
 ## MVP acceptance
 - [ ] A 10,000-task vault renders and filters without visible lag.
 - [ ] Disable the plugin: every note opens normally, and `Project tasks.base` still opens (Bases shows the unknown view type, or falls back) with no YAML errors. Re-enabling restores the views.

@@ -57,3 +57,20 @@
 .tasklines-checkbox:disabled { opacity: 0.5; }
 .tasklines-text { display: flex; align-items: center; }
 .tasklines-text .tasklines-open { overflow: hidden; text-overflow: ellipsis; }
+
+/* Touch devices: larger targets; keep the toolbar compact. */
+.tasklines-touch .tasklines-checkbox { width: 22px; height: 22px; }
+.tasklines-touch .tasklines-chip, .tasklines-touch .tasklines-btn { padding: 6px 10px; }
+.tasklines-touch .tasklines-input { width: 100%; }
+.tasklines-touch .tasklines-reset { margin-inline-start: 0; }
+
+/* Inline editing */
+.tasklines-editable { cursor: pointer; }
+.tasklines-editable:hover { background: var(--background-modifier-hover); border-radius: var(--radius-s); }
+.tasklines-editable:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+.tasklines-editable.is-saving { opacity: 0.5; }
+.tasklines-cell-input { width: 100%; font-size: var(--font-ui-smaller); }
+.tasklines-group { gap: var(--size-4-2); }
+.tasklines-group-summary { color: var(--text-muted); font-weight: normal; font-size: var(--font-ui-smaller); }
+.tasklines-summary { color: var(--text-normal); }
+.tasklines-status-setting { width: 100%; font-family: var(--font-monospace); }

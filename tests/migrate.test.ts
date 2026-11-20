@@ -56,7 +56,7 @@ test('generated .base is readable back into the same query', () => {
 	const m = translateDataviewTask(src);
 	const base = migrationToBase(m, 'Open tasks', src);
 	assert.match(base, /^# Created by Tasklines/);
-	assert.match(base, /#   - LIMIT 5/);
+	assert.match(base, /# {3}- LIMIT 5/);
 	assert.match(base, /- "file.inFolder\(\\"Projects\\"\)"/);
 	// Pull the taskQuery block back out with a tiny YAML subset reader to check round-trip.
 	const block = base.slice(base.indexOf('    taskQuery:'));

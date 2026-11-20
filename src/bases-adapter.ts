@@ -8,6 +8,7 @@ import {
 	BasesView,
 	debounce,
 	Notice,
+	Platform,
 	NullValue,
 	Plugin,
 	QueryController,
@@ -22,7 +23,7 @@ import type { TaskWriter } from './writer.ts';
 import { applyQuery, normalizeQuery, summarize, type TaskQuery } from './query.ts';
 import { TaskToolbar, type PropChoice } from './toolbar.ts';
 import { localDate, renderRows, type RowSource, type ViewRow } from './view.ts';
-import { VirtualList } from './virtual-list.ts';
+import { ROW_HEIGHT, TOUCH_ROW_HEIGHT, VirtualList } from './virtual-list.ts';
 
 export const VIEW_TYPE = 'tasklines';
 const QUERY_KEY = 'taskQuery';
@@ -89,7 +90,8 @@ class TasklinesView extends BasesView {
 		this.rootEl = parentEl.createDiv({ cls: 'tasklines-view' });
 		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask());
 		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
-		this.list = new VirtualList(this.rootEl);
+		this.list = new VirtualList(this.rootEl, Platform.isMobile ? TOUCH_ROW_HEIGHT : ROW_HEIGHT);
+		this.rootEl.toggleClass('tasklines-touch', Platform.isMobile);
 		// Bases may not call onDataUpdated when only a note's body changes (no property
 		// changed), so re-render ourselves when a note in the current result set changes.
 		// Subscribed here rather than in onload() because the docs do not say whether
