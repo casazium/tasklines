@@ -97,6 +97,8 @@ Anything else (`OR` inside `WHERE`, `LIMIT`, `FLATTEN`, link sources, custom fun
 
 ## Development
 
+Needs Node 22.18 or newer: the tests import the TypeScript sources directly. CI builds, lints and runs the tests on Node 22 and 24.
+
 ```bash
 npm install
 npm run build   # type-check (src and tests) and bundle to main.js
