@@ -3,5 +3,8 @@
 .task-rows-group { margin: var(--size-4-4) 0 var(--size-4-1); }
 .task-rows-table { width: 100%; border-collapse: collapse; font-size: var(--font-ui-small); }
 .task-rows-table th, .task-rows-table td { text-align: left; padding: 2px 8px; border-bottom: 1px solid var(--background-modifier-border); }
-.task-rows-status { font-family: var(--font-monospace); color: var(--text-muted); }
+.task-rows-col-status { font-family: var(--font-monospace); color: var(--text-muted); }
 .task-rows-status-done a, .task-rows-status-cancelled a { text-decoration: line-through; color: var(--text-faint); }
+.task-rows-empty { color: var(--text-muted); padding: var(--size-4-4) 0; }
+.task-rows-text { min-width: 16em; }
+.task-rows-col-due, .task-rows-col-scheduled, .task-rows-col-start, .task-rows-col-created, .task-rows-col-done, .task-rows-col-line { white-space: nowrap; font-variant-numeric: tabular-nums; }

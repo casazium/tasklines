@@ -14,3 +14,13 @@ views:
     hideCompleted: true
     taskSort: due
     taskGroup: bases
+    taskCol_section: true
+  - type: task-rows
+    name: All tasks by section
+    order:
+      - file.name
+      - note.owner
+    taskGroup: section
+    taskCol_tags: true
+    taskCol_recurrence: true
+    taskCol_line: true

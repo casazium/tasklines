@@ -1,6 +1,6 @@
 import { Notice, Plugin, TAbstractFile } from 'obsidian';
-import { registerTaskRowsView } from './bases-adapter';
-import { TaskIndex } from './indexer';
+import { registerTaskRowsView } from './bases-adapter.ts';
+import { TaskIndex } from './indexer.ts';
 
 export default class TaskRowsPlugin extends Plugin {
 	private index!: TaskIndex;

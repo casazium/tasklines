@@ -1,15 +1,7 @@
-import { App, ListItemCache, TAbstractFile, TFile } from 'obsidian';
-import { parseTaskLine, ParsedTask } from './parser';
+import type { App, TAbstractFile, TFile } from 'obsidian';
+import { extractTasks, type IndexedTask } from './extract.ts';
 
-export interface IndexedTask extends ParsedTask {
-	path: string;
-	/** 0-based line number in the file. */
-	line: number;
-	/** Line of the parent list item if it is also a task, else undefined. */
-	parentLine?: number;
-	/** Nearest heading above the task. */
-	section?: string;
-}
+export type { IndexedTask } from './extract.ts';
 
 interface FileEntry {
 	mtime: number;
@@ -31,13 +23,22 @@ export interface IndexStats {
  */
 export class TaskIndex {
 	private files = new Map<string, FileEntry>();
+	private listeners = new Set<(paths: string[]) => void>();
 	lastStats: IndexStats = { filesSeen: 0, filesSkippedNoTasks: 0, filesRead: 0, cacheHits: 0, ms: 0 };
 
 	constructor(private app: App) {}
 
+	/** Drop a file's cached tasks and tell open views which paths changed. */
 	invalidate(file: TAbstractFile, oldPath?: string): void {
-		this.files.delete(file.path);
-		if (oldPath) this.files.delete(oldPath);
+		const paths = oldPath ? [file.path, oldPath] : [file.path];
+		for (const p of paths) this.files.delete(p);
+		for (const fn of this.listeners) fn(paths);
+	}
+
+	/** Subscribe to invalidations. Returns an unsubscribe function. */
+	onInvalidate(fn: (paths: string[]) => void): () => void {
+		this.listeners.add(fn);
+		return () => this.listeners.delete(fn);
 	}
 
 	async tasksFor(files: TFile[]): Promise<Map<string, IndexedTask[]>> {
@@ -55,8 +56,8 @@ export class TaskIndex {
 					return;
 				}
 				const meta = this.app.metadataCache.getFileCache(file);
-				const taskItems = (meta?.listItems ?? []).filter((li) => li.task !== undefined);
-				if (taskItems.length === 0) {
+				const items = meta?.listItems ?? [];
+				if (!items.some((li) => li.task !== undefined)) {
 					stats.filesSkippedNoTasks++;
 					this.files.set(file.path, { mtime: file.stat.mtime, tasks: [] });
 					out.set(file.path, []);
@@ -64,7 +65,7 @@ export class TaskIndex {
 				}
 				stats.filesRead++;
 				const content = await this.app.vault.cachedRead(file);
-				const tasks = extractTasks(file.path, content, taskItems, meta?.headings ?? []);
+				const tasks = extractTasks(file.path, content, items, meta?.headings ?? []);
 				this.files.set(file.path, { mtime: file.stat.mtime, tasks });
 				out.set(file.path, tasks);
 			}),
@@ -74,35 +75,4 @@ export class TaskIndex {
 		this.lastStats = stats;
 		return out;
 	}
-}
-
-function extractTasks(
-	path: string,
-	content: string,
-	items: ListItemCache[],
-	headings: Array<{ heading: string; position: { start: { line: number } } }>,
-): IndexedTask[] {
-	const lines = content.split('\n');
-	const taskLines = new Set(items.map((i) => i.position.start.line));
-	const tasks: IndexedTask[] = [];
-	for (const item of items) {
-		const lineNo = item.position.start.line;
-		const raw = (lines[lineNo] ?? '').replace(/\r$/, '');
-		const parsed = parseTaskLine(raw);
-		// The cache said "task" but the line does not parse: skip rather than guess.
-		if (!parsed) continue;
-		let section: string | undefined;
-		for (const h of headings) {
-			if (h.position.start.line < lineNo) section = h.heading;
-			else break;
-		}
-		tasks.push({
-			...parsed,
-			path,
-			line: lineNo,
-			parentLine: item.parent >= 0 && taskLines.has(item.parent) ? item.parent : undefined,
-			section,
-		});
-	}
-	return tasks;
 }
