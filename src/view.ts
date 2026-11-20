@@ -27,6 +27,8 @@ export interface RenderInput {
 	taskColumns: TaskColumn[];
 	context: ColumnContext;
 	stats: IndexStats;
+	/** All notes the base selects, and how many of them have at least one task. */
+	notes: { total: number; withTasks: number };
 	openTask: (path: string, line: number, newTab: boolean) => void;
 	/** Toggle a task in its note; resolves true if the note changed. */
 	toggleTask: (task: QueryRow['task']) => Promise<boolean>;
@@ -49,8 +51,8 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 	statsEl.createSpan({ cls: 'tasklines-summary', text: formatSummary(summarize([...new Set(shownRows)], today)) });
 	statsEl.createSpan({
 		text:
-			`${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${s.filesSeen} notes ` +
-			`(${s.filesRead} read, ${s.cacheHits} cached, ${s.filesSkippedNoTasks} without tasks) · ${s.ms.toFixed(0)} ms`,
+			`${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${input.notes.total} notes ` +
+			`(${input.notes.total - input.notes.withTasks} without tasks; ${s.filesRead} read, ${s.cacheHits} cached) · ${s.ms.toFixed(0)} ms`,
 	});
 
 	const items: Item[] = [];
@@ -136,7 +138,7 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	for (const prop of input.columns) input.renderValue(el.createDiv({ cls: 'tasklines-prop', attr: { role: 'cell' } }), row.entry, prop);
 }
 
-/** Click (or Enter) on the cell swaps in an input; change commits, Escape or blur cancels. */
+/** Click (or Enter) on the cell swaps in an input. Dropdowns save on change; dates save on Enter or blur. Escape cancels. */
 function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['task'], input: RenderInput): void {
 	cell.addClass('tasklines-editable');
 	cell.setAttr('tabindex', '0');
@@ -186,8 +188,15 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 				})();
 			}
 		};
-		control.addEventListener('change', () => close(true));
-		control.addEventListener('blur', () => close(false));
+		if (column.editor === 'date') {
+			// A date input reports a change after every typed segment ("1" of "12" already
+			// makes a valid date), so save only on Enter or when focus leaves the field.
+			control.addEventListener('blur', () => close(true));
+		} else {
+			// Dropdowns report a change once, when an option is picked.
+			control.addEventListener('change', () => close(true));
+			control.addEventListener('blur', () => close(false));
+		}
 		control.addEventListener('keydown', (ev) => {
 			const key = (ev as KeyboardEvent).key;
 			if (key === 'Escape') close(false);

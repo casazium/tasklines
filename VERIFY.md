@@ -54,6 +54,8 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 - [ ] Tasks in **emoji format**: ticking `Recurring (Dataview)` is refused with the "different task format" notice, and the file is unchanged. Ticking `Dataview style` (not recurring) still completes it with `[completion:: …]`.
 - [ ] A recurring task with `🏁 delete`: completing it from the view gives the same result as completing it in the editor. Note what Tasks does.
 
+Findings from the first runs (0.9.0, Obsidian 1.15.1, Tasks 8.6.0): Tasks inserts the next occurrence **above** the completed line; callout tasks are indexed; the Settings window keeps the plugin code it was opened with, so **quit and reopen Obsidian** (not just Force Reload) after changing settings code.
+
 ## MVP acceptance
 - [ ] A 10,000-task vault renders and filters without visible lag.
 - [ ] Disable the plugin: every note opens normally, and `Project tasks.base` still opens (Bases shows the unknown view type, or falls back) with no YAML errors. Re-enabling restores the views.

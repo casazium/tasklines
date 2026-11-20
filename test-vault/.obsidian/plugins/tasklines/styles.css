@@ -48,7 +48,7 @@
 .tasklines-row:hover { background: var(--background-modifier-hover); }
 .tasklines-group { display: flex; align-items: flex-end; padding: 0 8px 4px; font-weight: var(--font-semibold); color: var(--text-normal); border-bottom-color: var(--background-modifier-border-hover); }
 .tasklines-empty { color: var(--text-muted); padding: var(--size-4-4) 8px; }
-.tasklines-col-status { font-family: var(--font-monospace); color: var(--text-muted); }
+.tasklines-col-status { color: var(--text-muted); }
 .tasklines-col-due, .tasklines-col-scheduled, .tasklines-col-start, .tasklines-col-created, .tasklines-col-done, .tasklines-col-line { font-variant-numeric: tabular-nums; }
 .tasklines-status-done .tasklines-open, .tasklines-status-cancelled .tasklines-open { text-decoration: line-through; color: var(--text-faint); }
 /* Property values rendered by Bases (lists, links) must stay on one line to keep row height fixed. */
@@ -73,7 +73,6 @@
 .tasklines-group { gap: var(--size-4-2); }
 .tasklines-group-summary { color: var(--text-muted); font-weight: normal; font-size: var(--font-ui-smaller); }
 .tasklines-summary { color: var(--text-normal); }
-.tasklines-status-setting { width: 100%; font-family: var(--font-monospace); }
 
 /* Recurring tasks */
 .tasklines-recurs { margin-inline-start: 6px; font-size: var(--font-ui-smaller); flex: none; }
@@ -84,4 +83,17 @@
 .tasklines-spacer { height: var(--tasklines-total-height, 0px); }
 .tasklines-window { transform: translateY(var(--tasklines-offset, 0px)); }
 .tasklines-item { height: var(--tasklines-row-height, 30px); }
-.tasklines-text { padding-inline-start: calc(8px + var(--tasklines-depth, 0) * 1.25em); }
+/* Must out-rank `.tasklines-grid > div`, which sets padding on every cell. */
+.tasklines-grid > .tasklines-text { padding-inline-start: calc(8px + var(--tasklines-depth, 0) * 1.25em); }
+
+/* Multi-line settings: description above, full-width box below, one entry per line. */
+.setting-item.tasklines-setting-stacked { flex-direction: column; align-items: stretch; gap: var(--size-4-2); }
+.setting-item.tasklines-setting-stacked .setting-item-control { width: 100%; justify-content: flex-start; }
+.setting-item.tasklines-setting-stacked textarea.tasklines-status-setting {
+	width: 100%;
+	min-height: 14em;
+	font-family: var(--font-monospace);
+	white-space: pre;
+	overflow-wrap: normal;
+	overflow-x: auto;
+}

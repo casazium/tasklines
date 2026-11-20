@@ -1,3 +1,13 @@
 node_modules
 main.js
 test-vault/.obsidian/plugins/*/main.js
+
+# Obsidian per-machine state in the test vault
+test-vault/.obsidian/workspace*.json
+test-vault/.obsidian/app.json
+test-vault/.obsidian/appearance.json
+test-vault/.obsidian/types.json
+test-vault/.obsidian/plugins/tasklines/data.json
+# Other plugins installed while testing (e.g. Tasks) are not part of this repo
+test-vault/.obsidian/plugins/*
+!test-vault/.obsidian/plugins/tasklines/

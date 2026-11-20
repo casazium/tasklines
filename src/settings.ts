@@ -85,6 +85,7 @@ export class TasklinesSettingTab extends PluginSettingTab {
 			);
 
 		const statusSetting = new Setting(containerEl)
+			.setClass('tasklines-setting-stacked')
 			.setName('Task statuses')
 			.setDesc('One per line: character | name | kind. Kind is todo, in-progress, done, cancelled or other. Space, x and - always mean to do, done and cancelled.');
 		const errorsEl = containerEl.createDiv({ cls: 'setting-item-description mod-warning' });
