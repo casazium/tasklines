@@ -7,12 +7,14 @@ import {
 	BasesPropertyId,
 	BasesView,
 	debounce,
+	Notice,
 	NullValue,
 	Plugin,
 	QueryController,
 	TFile,
 	type Value,
 } from 'obsidian';
+import { AddTaskModal } from './add-task-modal.ts';
 import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
 import type { IndexedTask } from './extract.ts';
 import { ALL_PATHS, type TaskIndex } from './indexer.ts';
@@ -85,7 +87,7 @@ class TasklinesView extends BasesView {
 		this.index = index;
 		this.writer = writer;
 		this.rootEl = parentEl.createDiv({ cls: 'tasklines-view' });
-		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q));
+		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask());
 		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
 		this.list = new VirtualList(this.rootEl);
 		// Bases may not call onDataUpdated when only a note's body changes (no property
@@ -191,6 +193,25 @@ class TasklinesView extends BasesView {
 				},
 			});
 		});
+	}
+
+	private lastAddPath: string | null = null;
+
+	private openAddTask(): void {
+		const notes = [...this.paths]
+			.filter((p) => p.endsWith('.md'))
+			.map((path) => ({ path, label: path.replace(/\.md$/, '') }))
+			.sort((a, b) => a.label.localeCompare(b.label));
+		if (!notes.length) {
+			new Notice('Tasklines: this base has no notes to add a task to.');
+			return;
+		}
+		const fallback = this.notes[0]?.entry.file.path ?? notes[0]?.path ?? '';
+		const initial = this.lastAddPath && this.paths.has(this.lastAddPath) ? this.lastAddPath : fallback;
+		new AddTaskModal(this.app, notes, initial, (path, task) => {
+			this.lastAddPath = path;
+			void this.writer.add(path, task);
+		}).open();
 	}
 
 	private propChoices(): PropChoice[] {

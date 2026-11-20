@@ -7,7 +7,7 @@ import type { TaskEdit } from './edit.ts';
 import type { TaskIndex } from './indexer.ts';
 import type { TasklinesSettings } from './settings.ts';
 import { localDate } from './view.ts';
-import { editInContent, toggleInContent, type ToggleOptions } from './writeback.ts';
+import { editInContent, insertTaskInContent, toggleInContent, type NewTask, type ToggleOptions } from './writeback.ts';
 
 export interface TaskTarget {
 	path: string;
@@ -80,6 +80,24 @@ export class TaskWriter {
 	async edit(target: TaskTarget, edit: TaskEdit): Promise<boolean> {
 		const opts = this.options();
 		return this.run(target, (data) => editInContent(data, target, edit, opts));
+	}
+
+	/**
+	 * Add a task to a note, after its last task (so it joins that list) or at the end if the
+	 * note has none. The anchor task is verified like any edit before the line is inserted.
+	 */
+	async add(path: string, task: NewTask): Promise<boolean> {
+		const file = this.app.vault.getAbstractFileByPath(path);
+		if (!(file instanceof TFile)) {
+			new Notice('Tasklines: that note no longer exists.');
+			return false;
+		}
+		const tasks = (await this.index.tasksFor([file])).get(path) ?? [];
+		const last = tasks.reduce<(typeof tasks)[number] | undefined>((a, t) => (!a || t.line > a.line ? t : a), undefined);
+		const anchor = last ? { path, line: last.line, raw: last.raw } : null;
+		const opts = this.options();
+		const target = anchor ?? { path, line: -1, raw: '' };
+		return this.run(target, (data) => insertTaskInContent(data, anchor, task, opts));
 	}
 
 	private async run(target: TaskTarget, compute: (data: string, precheck: boolean) => Computed): Promise<boolean> {

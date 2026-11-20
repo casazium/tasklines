@@ -52,6 +52,7 @@ export class TaskToolbar {
 		parent: HTMLElement,
 		query: TaskQuery,
 		private onChange: (q: TaskQuery) => void,
+		private onAdd: () => void,
 	) {
 		this.el = parent.createDiv({ cls: 'tasklines-toolbar' });
 		this.query = query;
@@ -145,6 +146,8 @@ export class TaskToolbar {
 		const group = this.select(order, 'Group tasks by', groupChoices, q.group);
 		group.addEventListener('change', () => this.set({ group: group.value }));
 
+		const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: '+ New task' });
+		add.addEventListener('click', () => this.onAdd());
 		const reset = order.createEl('button', { cls: 'tasklines-btn tasklines-reset', text: 'Reset' });
 		reset.addEventListener('click', () =>
 			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', doneWithinDays: null, sort: [], group: 'bases' }),

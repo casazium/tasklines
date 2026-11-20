@@ -132,3 +132,80 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 function detectEol(lines: Array<{ eol: string }>): string {
 	return lines.find((l) => l.eol)?.eol ?? '\n';
 }
+
+export interface NewTask {
+	text: string;
+	due?: string;
+	priority?: import('./parser.ts').Priority;
+}
+
+export type InsertResult =
+	| { ok: true; content: string; line: number; newLine: string }
+	| { ok: false; reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'invalid-edit'; detail: string };
+
+/** Build the markdown for a new task, in the given style. */
+export function buildTaskLine(task: NewTask, indent: string, opts: EditOptions, style?: 'tasks-emoji' | 'dataview'): string {
+	const text = task.text.replace(/[\r\n]+/g, ' ').trim();
+	if (!text) throw new Error('the task needs some text');
+	let line = `${indent}- [ ] ${text}`;
+	const editOpts: EditOptions = { ...opts, newFieldFormat: style ?? opts.newFieldFormat };
+	const reparse = () => {
+		const p = parseTaskLine(line);
+		if (!p) throw new Error('the task text could not be parsed');
+		return p;
+	};
+	if (task.priority && task.priority !== 'none') line = applyEdit(line, reparse(), { kind: 'priority', value: task.priority }, editOpts);
+	if (task.due) line = applyEdit(line, reparse(), { kind: 'date', field: 'due', value: task.due }, editOpts);
+	reparse();
+	return line;
+}
+
+/**
+ * Insert a new task line after `after` (verified like any edit), or at the end of the file
+ * when `after` is null. Adds exactly one line; every existing byte is kept.
+ */
+export function insertTaskInContent(content: string, after: TaskRef | null, task: NewTask, opts: EditOptions): InsertResult {
+	const lines = splitLines(content);
+	let style: 'tasks-emoji' | 'dataview' | undefined;
+	let quote = '';
+	let index: number;
+	if (after) {
+		const found = locate(content, after);
+		if (!found.ok) return found;
+		if (found.task.format === 'dataview') style = 'dataview';
+		else if (found.task.format !== 'plain') style = 'tasks-emoji';
+		// Keep a blockquote/callout prefix so the new task stays inside it.
+		quote = /^(?:\s*>)+\s?/.exec(found.task.indent)?.[0] ?? '';
+		// Skip lines that belong to the anchor's list item (nested bullets, continuation
+		// text), so they do not become children of the new task.
+		index = after.line + 1;
+		const nestedIn = (text: string) => text.trim() !== '' && text.startsWith(quote) && /^\s/.test(text.slice(quote.length)) && text.slice(quote.length).trim() !== '';
+		while (lines[index] && nestedIn(lines[index]?.text ?? '')) index++;
+	} else {
+		index = lines.length;
+	}
+	let newLine: string;
+	try {
+		newLine = buildTaskLine(task, quote, opts, style);
+	} catch (err) {
+		return { ok: false, reason: 'invalid-edit', detail: err instanceof Error ? err.message : String(err) };
+	}
+	const eol = detectEol(lines);
+	if (index >= lines.length) {
+		// Append at the end. Existing bytes are kept; only a line ending and, after prose,
+		// one blank line are added before the new task.
+		if (content === '') return { ok: true, content: newLine, line: 0, newLine };
+		const endsWithEol = /(?:\r\n|\n|\r)$/.test(content);
+		const base = endsWithEol ? content : content + eol;
+		const lastText = [...lines].reverse().find((l) => l.text.trim() !== '')?.text;
+		const endsWithBlank = /(?:\r\n|\n|\r)[ \t]*(?:\r\n|\n|\r)$/.test(base);
+		const gap = !after && lastText !== undefined && !parseTaskLine(lastText) && !endsWithBlank ? eol : '';
+		const before = base + gap;
+		return { ok: true, content: before + newLine + (endsWithEol ? eol : ''), line: splitLines(before).length - 1, newLine };
+	}
+	const out = lines.map((l) => ({ ...l }));
+	const prev = out[index - 1];
+	if (prev && !prev.eol) prev.eol = eol;
+	out.splice(index, 0, { text: newLine, eol });
+	return { ok: true, content: out.map((l) => l.text + l.eol).join(''), line: index, newLine };
+}
