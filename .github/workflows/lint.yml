@@ -1,8 +1,10 @@
 name: Build, lint and test
 
 on:
+    # Branch pushes are covered by pull_request; running on push too would
+    # build every PR commit twice.
     push:
-        branches: ['**']
+        branches: [main]
     pull_request:
         branches: ['**']
 
