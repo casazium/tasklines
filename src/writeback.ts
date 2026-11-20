@@ -1,6 +1,7 @@
 // Pure write-back logic: compute the new file content for a task toggle, touching only
 // the target line. No Obsidian imports, so the fixture suite can check every byte.
 
+import { applyEdit, type EditOptions, type TaskEdit } from './edit.ts';
 import { parseTaskLine, statusKind, type ParsedTask } from './parser.ts';
 
 /** What the view knew about the task when it was indexed. */
@@ -9,14 +10,9 @@ export interface TaskRef {
 	raw: string;
 }
 
-export type CompletionDate = 'auto' | 'off';
+export type CompletionDate = EditOptions['completionDate'];
 
-export interface ToggleOptions {
-	/** YYYY-MM-DD used for the completion date. */
-	today: string;
-	completionDate: CompletionDate;
-	/** Whether a plain task (no metadata) gets a Tasks-style ✅ date. True when Tasks is installed. */
-	plainGetsEmojiDate: boolean;
+export interface ToggleOptions extends EditOptions {
 	/**
 	 * Optional external toggler (the Tasks plugin). Returns the replacement text, which may
 	 * be two lines for a recurring task, or the input unchanged if it did not handle it.
@@ -42,39 +38,49 @@ export function splitLines(content: string): Array<{ text: string; eol: string }
 	return out;
 }
 
-const DONE_EMOJI = /\s*✅️?\s*\d{4}-\d{2}-\d{2}/u;
-const DONE_FIELD = /\s*[[(]completion::\s*[^\])]*[\])]/iu;
-const BLOCK_ID_TAIL = /(\s+\^[\w-]+\s*)$/u;
-
-/** Built-in toggle of one task line. Changes the status character and the completion date only. */
-export function toggleTaskLine(raw: string, task: ParsedTask, opts: ToggleOptions): string {
+/** Built-in toggle of one task line: open → done (with completion date), done/cancelled → open. */
+export function toggleTaskLine(raw: string, task: ParsedTask, opts: EditOptions): string {
 	const kind = statusKind(task.status);
 	const completing = kind !== 'done' && kind !== 'cancelled';
-	const prefixLen = raw.indexOf('[') + 1; // index of the status character
-	let line = raw.slice(0, prefixLen) + (completing ? 'x' : ' ') + raw.slice(prefixLen + 1);
+	return applyEdit(raw, task, { kind: 'status', value: completing ? 'x' : ' ' }, opts);
+}
 
-	if (!completing) {
-		// Un-ticking: remove the completion date in whichever format the parser found it.
-		if (task.done === undefined) return line;
-		if ('completion' in task.fields) return line.replace(DONE_FIELD, '');
-		return line.replace(DONE_EMOJI, '');
+export type EditResult =
+	| { ok: true; content: string; changed: boolean; newLine: string }
+	| { ok: false; reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'invalid-edit'; detail: string };
+
+/** Find and verify the indexed line. Shared by toggles and edits. */
+function locate(content: string, ref: TaskRef) {
+	const lines = splitLines(content);
+	const target = lines[ref.line];
+	if (!target) return { ok: false as const, reason: 'line-missing' as const, detail: `line ${ref.line + 1} no longer exists` };
+	if (target.text !== ref.raw) return { ok: false as const, reason: 'line-changed' as const, detail: `line ${ref.line + 1} changed since it was indexed` };
+	const task = parseTaskLine(target.text);
+	if (!task) return { ok: false as const, reason: 'not-a-task' as const, detail: `line ${ref.line + 1} is not a task` };
+	return { ok: true as const, lines, target, task };
+}
+
+/**
+ * Apply a field edit (status, date, priority) to the task at `ref.line`. Same safety rules
+ * as toggling: the line must be exactly as indexed, and only that line changes.
+ */
+export function editInContent(content: string, ref: TaskRef, edit: TaskEdit, opts: EditOptions): EditResult {
+	const found = locate(content, ref);
+	if (!found.ok) return found;
+	const { lines, target, task } = found;
+	let newLine: string;
+	try {
+		newLine = applyEdit(target.text, task, edit, opts);
+	} catch (err) {
+		return { ok: false, reason: 'invalid-edit', detail: err instanceof Error ? err.message : String(err) };
 	}
-	if (opts.completionDate === 'off' || task.done) return line;
-
-	let marker: string | null = null;
-	if (task.format === 'dataview') marker = `[completion:: ${opts.today}]`;
-	else if (task.format === 'tasks-emoji' || task.format === 'mixed') marker = `✅ ${opts.today}`;
-	else if (opts.plainGetsEmojiDate) marker = `✅ ${opts.today}`;
-	if (!marker) return line;
-
-	// Insert before a trailing ^block-id so block links keep working; drop trailing spaces first.
-	const tail = BLOCK_ID_TAIL.exec(line);
-	if (tail) {
-		const body = line.slice(0, tail.index).replace(/\s+$/, '');
-		return `${body} ${marker}${tail[1] ?? ''}`;
+	const after = parseTaskLine(newLine);
+	if (!after || after.indent !== task.indent || after.marker !== task.marker) {
+		return { ok: false, reason: 'invalid-edit', detail: 'the edit would break the task line' };
 	}
-	line = line.replace(/\s+$/, '');
-	return `${line} ${marker}`;
+	if (newLine === target.text) return { ok: true, content, changed: false, newLine };
+	const next = lines.map((l, i) => (i === ref.line ? newLine : l.text) + l.eol).join('');
+	return { ok: true, content: next, changed: true, newLine };
 }
 
 /**
@@ -82,14 +88,9 @@ export function toggleTaskLine(raw: string, task: ParsedTask, opts: ToggleOption
  * still be exactly what was indexed. Every other byte of the file is left unchanged.
  */
 export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptions): ToggleResult {
-	const lines = splitLines(content);
-	const target = lines[ref.line];
-	if (!target) return { ok: false, reason: 'line-missing', detail: `line ${ref.line + 1} no longer exists` };
-	if (target.text !== ref.raw) {
-		return { ok: false, reason: 'line-changed', detail: `line ${ref.line + 1} changed since it was indexed` };
-	}
-	const task = parseTaskLine(target.text);
-	if (!task) return { ok: false, reason: 'not-a-task', detail: `line ${ref.line + 1} is not a task` };
+	const found = locate(content, ref);
+	if (!found.ok) return found;
+	const { lines, target, task } = found;
 
 	let newLines: string[] | null = null;
 	let via: 'tasks-plugin' | 'built-in' = 'built-in';

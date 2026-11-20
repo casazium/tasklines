@@ -13,10 +13,11 @@ import {
 	TFile,
 	type Value,
 } from 'obsidian';
-import { columnOptionKey, TASK_COLUMNS } from './columns.ts';
-import type { TaskIndex } from './indexer.ts';
+import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
+import type { IndexedTask } from './extract.ts';
+import { ALL_PATHS, type TaskIndex } from './indexer.ts';
 import type { TaskWriter } from './writer.ts';
-import { applyQuery, normalizeQuery, type TaskQuery } from './query.ts';
+import { applyQuery, normalizeQuery, summarize, type TaskQuery } from './query.ts';
 import { TaskToolbar, type PropChoice } from './toolbar.ts';
 import { localDate, renderRows, type RowSource, type ViewRow } from './view.ts';
 import { VirtualList } from './virtual-list.ts';
@@ -94,7 +95,7 @@ class TasklinesView extends BasesView {
 		this.unsubscribe = this.index.onInvalidate((paths) => {
 			// If the view was torn down without onunload, stop listening instead of leaking.
 			if (!this.rootEl.isConnected && this.notes.length) return this.onunload();
-			if (paths.some((p) => this.paths.has(p))) this.rerenderSoon();
+			if (paths.some((p) => p === ALL_PATHS || this.paths.has(p))) this.rerenderSoon();
 		});
 	}
 
@@ -168,8 +169,11 @@ class TasklinesView extends BasesView {
 				}
 			}
 			const columns = this.config.getOrder().filter((p) => p !== 'file.name');
+			const today = localDate(new Date());
+			const context = columnContext(tasksByPath, today);
 			renderRows(this.statsEl, this.list, {
-				groups: applyQuery(rows, query, localDate(new Date())),
+				groups: applyQuery(rows, query, today),
+				context,
 				total: rows.length,
 				columns,
 				columnNames: columns.map((p) => this.config.getDisplayName(p)),
@@ -180,6 +184,7 @@ class TasklinesView extends BasesView {
 				stats: this.index.lastStats,
 				openTask: (path, line, newTab) => this.openTask(path, line, newTab),
 				toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
+				editTask: (task, edit) => this.writer.edit({ path: task.path, line: task.line, raw: task.raw }, edit),
 				renderValue: (el, entry, prop) => {
 					const value = entry.values.get(prop);
 					if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);
@@ -197,6 +202,22 @@ class TasklinesView extends BasesView {
 		if (!(file instanceof TFile)) return;
 		void this.app.workspace.getLeaf(newTab ? 'tab' : false).openFile(file, { eState: { line } });
 	}
+}
+
+/** Lookups for computed columns, built from all tasks in the base (before task filters). */
+function columnContext(tasksByPath: Map<string, IndexedTask[]>, today: string): ColumnContext {
+	const byLine = new Map<string, Map<number, IndexedTask>>();
+	const progress = new Map<string, { done: number; total: number }>();
+	for (const [path, tasks] of tasksByPath) {
+		byLine.set(path, new Map(tasks.map((t) => [t.line, t])));
+		const s = summarize(tasks.map((task) => ({ task })), today);
+		progress.set(path, { done: s.done, total: s.open + s.done });
+	}
+	return {
+		today,
+		taskAt: (path, line) => byLine.get(path)?.get(line),
+		noteProgress: (path) => progress.get(path) ?? { done: 0, total: 0 },
+	};
 }
 
 function snapshotEntry(entry: BasesEntry, props: Iterable<BasesPropertyId>): RowSource {

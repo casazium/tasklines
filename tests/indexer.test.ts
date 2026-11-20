@@ -76,3 +76,24 @@ test('peek returns fresh cache only', async () => {
 	v.write('B.md', '- [ ] now has a task\n');
 	assert.equal(index.peek(v.get('B.md')), undefined, 'stale after mtime change');
 });
+
+test('excluded folders are never indexed or read', async () => {
+	const v = new FakeVault();
+	v.write('Projects/A.md', '- [ ] keep');
+	v.write('Templates/T.md', '- [ ] template task');
+	v.write('Templates2/U.md', '- [ ] similar prefix, not excluded');
+	const excluded = ['Templates'];
+	const index = new TaskIndex(v.app(), () => excluded);
+	const out = await index.tasksFor(v.all());
+	assert.equal(out.has('Templates/T.md'), false);
+	assert.equal(out.get('Templates2/U.md')?.length, 1);
+	assert.equal(v.reads, 2);
+});
+
+test('refreshAll notifies with the all-paths marker', () => {
+	const index = new TaskIndex(new FakeVault().app());
+	const seen: string[][] = [];
+	index.onInvalidate((p) => seen.push(p));
+	index.refreshAll();
+	assert.deepEqual(seen, [['*']]);
+});

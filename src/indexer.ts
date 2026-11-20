@@ -3,6 +3,9 @@ import { extractTasks, type IndexedTask } from './extract.ts';
 
 export type { IndexedTask } from './extract.ts';
 
+/** Passed to invalidation listeners to mean "everything changed". */
+export const ALL_PATHS = '*';
+
 interface FileEntry {
 	mtime: number;
 	tasks: IndexedTask[];
@@ -27,9 +30,17 @@ export class TaskIndex {
 	lastStats: IndexStats = { filesSeen: 0, filesSkippedNoTasks: 0, filesRead: 0, cacheHits: 0, ms: 0 };
 
 	private app: App;
+	private excluded: () => string[];
 
-	constructor(app: App) {
+	/** `excluded` returns folder paths whose notes are never indexed (read on every query). */
+	constructor(app: App, excluded: () => string[] = () => []) {
 		this.app = app;
+		this.excluded = excluded;
+	}
+
+	/** Tell every open view to re-render, e.g. after a settings change. */
+	refreshAll(): void {
+		for (const fn of this.listeners) fn([ALL_PATHS]);
 	}
 
 	/** Drop a file's cached tasks and tell open views which paths changed. */
@@ -61,9 +72,12 @@ export class TaskIndex {
 		const stats: IndexStats = { filesSeen: files.length, filesSkippedNoTasks: 0, filesRead: 0, cacheHits: 0, ms: 0 };
 		const out = new Map<string, IndexedTask[]>();
 
+		const excluded = this.excluded();
+		const isExcluded = (path: string) => excluded.some((f) => path === f || path.startsWith(`${f}/`));
+
 		await Promise.all(
 			files.map(async (file) => {
-				if (file.extension !== 'md') return;
+				if (file.extension !== 'md' || isExcluded(file.path)) return;
 				const cached = this.files.get(file.path);
 				if (cached && cached.mtime === file.stat.mtime) {
 					stats.cacheHits++;

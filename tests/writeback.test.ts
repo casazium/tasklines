@@ -4,7 +4,7 @@ import { readFileSync } from 'node:fs';
 import { parseTaskLine } from '../src/parser.ts';
 import { toggleInContent, splitLines, type ToggleOptions } from '../src/writeback.ts';
 
-const OPTS: ToggleOptions = { today: '2026-11-20', completionDate: 'auto', plainGetsEmojiDate: false };
+const OPTS: ToggleOptions = { today: '2026-11-20', completionDate: 'auto', plainGetsEmojiDate: false, newFieldFormat: 'tasks-emoji' };
 const fixtures = (JSON.parse(readFileSync(new URL('./fixtures/task-lines.json', import.meta.url), 'utf8')) as Array<{ name: string; line: string }>);
 
 function toggle(line: string, opts: Partial<ToggleOptions> = {}): string {

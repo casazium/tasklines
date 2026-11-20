@@ -14,6 +14,8 @@ export interface IndexedTask extends ParsedTask {
 	depth: number;
 	/** Nearest heading above the task. */
 	section?: string;
+	/** Lines of direct subtasks (tasks whose nearest task ancestor is this one). */
+	children: number[];
 }
 
 type ListItemLike = Pick<ListItemCache, 'task' | 'parent'> & { position: { start: { line: number } } };
@@ -41,20 +43,32 @@ export function extractTasks(path: string, content: string, items: ListItemLike[
 		}
 
 		// Walk up through list parents; plain bullets between tasks do not count as depth.
+		// A root item's parent is -(first line of the list), which is 0 for a list on line 0,
+		// so "parent >= 0" alone is ambiguous. A real parent is always indented less.
 		let depth = 0;
 		let parentLine: number | undefined;
+		let child = lineNo;
 		let p = item.parent;
-		while (p >= 0) {
+		while (p >= 0 && p !== child && parentOf.has(p) && indentWidth(lines[p] ?? '') < indentWidth(lines[child] ?? '')) {
 			if (taskLines.has(p)) {
 				parentLine ??= p;
 				depth++;
 			}
-			const next = parentOf.get(p);
-			if (next === undefined || next === p) break;
-			p = next;
+			child = p;
+			p = parentOf.get(p) ?? -1;
 		}
 
-		tasks.push({ ...parsed, path, line: lineNo, parentLine, depth, section });
+		tasks.push({ ...parsed, path, line: lineNo, parentLine, depth, section, children: [] });
 	}
+	const byLine = new Map(tasks.map((t) => [t.line, t]));
+	for (const t of tasks) if (t.parentLine !== undefined) byLine.get(t.parentLine)?.children.push(t.line);
 	return tasks;
+}
+
+/** Visual indent of a list line: tabs count as 4 columns; blockquote markers count too. */
+function indentWidth(line: string): number {
+	const lead = /^[\s>]*/.exec(line)?.[0] ?? '';
+	let w = 0;
+	for (const ch of lead) w += ch === '\t' ? 4 : 1;
+	return w;
 }

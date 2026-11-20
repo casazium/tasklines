@@ -1,7 +1,7 @@
 import { Notice, Plugin, TAbstractFile } from 'obsidian';
 import { registerTasklinesView } from './bases-adapter.ts';
 import { TaskIndex } from './indexer.ts';
-import { DEFAULT_SETTINGS, TasklinesSettingTab, type TasklinesSettings } from './settings.ts';
+import { applyStatusSetting, DEFAULT_SETTINGS, excludedFolders, TasklinesSettingTab, type TasklinesSettings } from './settings.ts';
 import { TaskWriter } from './writer.ts';
 
 export default class TasklinesPlugin extends Plugin {
@@ -11,9 +11,15 @@ export default class TasklinesPlugin extends Plugin {
 	async onload(): Promise<void> {
 		const saved = (await this.loadData()) as Partial<TasklinesSettings> | null;
 		Object.assign(this.taskSettings, saved ?? {});
-		this.addSettingTab(new TasklinesSettingTab(this.app, this, this.taskSettings, () => this.saveData(this.taskSettings)));
+		applyStatusSetting(this.taskSettings);
+		this.index = new TaskIndex(this.app, () => excludedFolders(this.taskSettings));
+		this.addSettingTab(
+			new TasklinesSettingTab(this.app, this, this.taskSettings, async () => {
+				await this.saveData(this.taskSettings);
+				this.index.refreshAll(); // statuses or exclusions may change what views show
+			}),
+		);
 
-		this.index = new TaskIndex(this.app);
 		const writer = new TaskWriter(this.app, this.index, this.taskSettings);
 
 		// Drop cached tasks when files change. Bases itself calls onDataUpdated afterwards,
