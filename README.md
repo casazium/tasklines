@@ -52,6 +52,7 @@ views:
   - **Filter** by status, priority, due date (overdue, today, next 7 or 30 days, has or has no due date, or a date range), completion window (completed today, in the last 7 or 30 days), tags (`#area` also matches `#area/home`) and task text.
   - **Sort** by up to three keys, each ascending or descending: any task date, priority, status, text, note name, base order, or any note property. Tasks with no value always sort last.
   - **Group** by the base's grouping, note, section (nearest heading), status, due bucket, priority, tag, or any note property.
+- **On phones** the toolbar folds into one **Filter, sort, group** button, which shows how many settings are active, next to **New task**, so the tasks keep the screen. Tap it to open the controls.
 - **Each view is a saved preset:** the toolbar's settings are stored in the `.base` file, so each view keeps its own. **Reset** clears them.
 - **Columns:** note properties come from the base's **Properties** menu. Task columns (status, dates, priority, recurrence, tags, section, line, note) and computed columns (Overdue, Days until due, Age, Subtasks done, Note progress) are switched on in the view's config menu, which also has **Show task toolbar** (turn it off for embedded bases).
 - **Counts:** group headers and the line above the table show open, overdue and done counts.

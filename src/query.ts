@@ -323,3 +323,17 @@ export function formatSummary(s: Summary): string {
 	if (s.cancelled) parts.push(`${s.cancelled} cancelled`);
 	return parts.join(' · ');
 }
+
+/** How many toolbar settings differ from the defaults (shown on the collapsed toolbar's button). */
+export function activeQueryCount(q: TaskQuery): number {
+	return [
+		q.statuses.length > 0,
+		q.priorities.length > 0,
+		q.due !== 'any',
+		q.doneWithinDays !== null,
+		q.tags.length > 0,
+		q.text.trim() !== '',
+		q.sort.length > 0,
+		q.group !== DEFAULT_QUERY.group,
+	].filter(Boolean).length;
+}

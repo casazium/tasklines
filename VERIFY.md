@@ -45,7 +45,7 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 - [ ] The completed-task window hides tasks completed more than N days ago.
 - [ ] Add `Templates` to **Excluded folders**: the `Templates/Weekly.md` task disappears from any base that includes it.
 - [ ] In `Dataview queries.md`, run the convert command in each block. A `.base` opens with the expected filters, and the second one lists the parts it couldn't convert. The note is unchanged.
-- [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, the toolbar wraps, and the grid scrolls sideways.
+- [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, and the grid scrolls sideways. The toolbar starts folded into one **Filter, sort, group (N)** button next to **New task**; tapping it shows all controls, and "Group" stays beside its dropdown. (Checked with `app.emulateMobile(true)` at phone width on desktop; still needs a real phone.)
 
 ## Recurring tasks
 - [ ] Recurring tasks show 🔁 with a "Repeats …" tooltip.

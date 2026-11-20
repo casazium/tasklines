@@ -1,7 +1,7 @@
 // In-view toolbar for task-level filter, sort and group. The query it edits is saved
 // in the .base view config by the adapter, so each view keeps its own preset.
 
-import { normalizeTag, PRIORITY_ORDER, STATUS_KINDS, TASK_GROUP_KEYS, TASK_SORT_KEYS, type DuePreset, type TaskQuery } from './query.ts';
+import { activeQueryCount, normalizeTag, PRIORITY_ORDER, STATUS_KINDS, TASK_GROUP_KEYS, TASK_SORT_KEYS, type DuePreset, type TaskQuery } from './query.ts';
 
 export interface PropChoice {
 	id: string;
@@ -47,15 +47,21 @@ export class TaskToolbar {
 	private query: TaskQuery;
 	private props: PropChoice[] = [];
 	private textTimer: number | undefined;
+	/** On phones the controls fold behind one button so the tasks keep the screen. */
+	private collapsible: boolean;
+	private expanded: boolean;
 
 	constructor(
 		parent: HTMLElement,
 		query: TaskQuery,
 		private onChange: (q: TaskQuery) => void,
 		private onAdd: () => void,
+		options: { collapsible?: boolean } = {},
 	) {
 		this.el = parent.createDiv({ cls: 'tasklines-toolbar' });
 		this.query = query;
+		this.collapsible = options.collapsible ?? false;
+		this.expanded = !this.collapsible;
 		this.build();
 	}
 
@@ -84,6 +90,25 @@ export class TaskToolbar {
 	private build(): void {
 		const q = this.query;
 		this.el.empty();
+		this.el.toggleClass('is-collapsed', !this.expanded);
+
+		if (this.collapsible) {
+			// Compact header: one button for all controls, plus New task.
+			const header = this.el.createDiv({ cls: 'tasklines-toolbar-row tasklines-toolbar-header' });
+			const active = activeQueryCount(q);
+			const toggle = header.createEl('button', {
+				cls: `tasklines-btn tasklines-filter-toggle${active ? ' is-active' : ''}`,
+				text: `${this.expanded ? '▾' : '▸'} Filter, sort, group${active ? ` (${active})` : ''}`,
+				attr: { 'aria-expanded': String(this.expanded) },
+			});
+			toggle.addEventListener('click', () => {
+				this.expanded = !this.expanded;
+				this.build();
+			});
+			const add = header.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
+			add.addEventListener('click', () => this.onAdd());
+			if (!this.expanded) return;
+		}
 
 		// Row 1: status and priority chips.
 		const chips = this.el.createDiv({ cls: 'tasklines-toolbar-row' });
@@ -138,16 +163,20 @@ export class TaskToolbar {
 			add.addEventListener('click', () => this.set({ sort: [...q.sort, { key: q.sort.length ? 'priority' : 'due', desc: false }] }));
 		}
 
-		order.createSpan({ cls: 'tasklines-label', text: 'Group' });
+		// Label and dropdown stay together when the row wraps.
+		const groupWrap = order.createSpan({ cls: 'tasklines-control' });
+		groupWrap.createSpan({ cls: 'tasklines-label', text: 'Group' });
 		const groupChoices: Array<[string, string]> = [
 			...TASK_GROUP_KEYS.map((k): [string, string] => [k, GROUP_LABELS[k] ?? k]),
 			...this.props.map((p): [string, string] => [`prop:${p.id}`, p.label]),
 		];
-		const group = this.select(order, 'Group tasks by', groupChoices, q.group);
+		const group = this.select(groupWrap, 'Group tasks by', groupChoices, q.group);
 		group.addEventListener('change', () => this.set({ group: group.value }));
 
-		const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
-		add.addEventListener('click', () => this.onAdd());
+		if (!this.collapsible) {
+			const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
+			add.addEventListener('click', () => this.onAdd());
+		}
 		const reset = order.createEl('button', { cls: 'tasklines-btn tasklines-reset', text: 'Reset' });
 		reset.addEventListener('click', () =>
 			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', doneWithinDays: null, sort: [], group: 'bases' }),
