@@ -108,3 +108,11 @@ test('addDays crosses month and year boundaries', () => {
 	assert.equal(addDays('2026-12-28', 7), '2027-01-04');
 	assert.equal(addDays('2028-02-28', 1), '2028-02-29');
 });
+
+test('activeQueryCount counts each setting that differs from the default', async () => {
+	const { activeQueryCount } = await import('../src/query.ts');
+	assert.equal(activeQueryCount(DEFAULT_QUERY), 0);
+	assert.equal(activeQueryCount(q({ statuses: ['todo'], due: 'overdue', text: '  ' })), 2, 'blank text does not count');
+	assert.equal(activeQueryCount(q({ priorities: ['high'], doneWithinDays: 7, tags: ['#a'], text: 'x', sort: [{ key: 'due', desc: false }], group: 'note', statuses: ['done'], due: 'today' })), 8);
+	assert.equal(activeQueryCount(normalizeQuery({ group: 'bases' })), 0);
+});

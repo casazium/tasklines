@@ -97,3 +97,11 @@
 	overflow-wrap: normal;
 	overflow-x: auto;
 }
+
+/* Collapsible toolbar (phones): one button for every control, plus New task. */
+.tasklines-toolbar-header { justify-content: space-between; flex-wrap: nowrap; }
+.tasklines-filter-toggle { flex: 1 1 auto; text-align: start; justify-content: flex-start; }
+.tasklines-filter-toggle.is-active { color: var(--text-accent); font-weight: var(--font-semibold); }
+.tasklines-toolbar-header .tasklines-add { flex: none; }
+/* A label and its control never wrap apart. */
+.tasklines-control { display: inline-flex; align-items: center; gap: 4px; white-space: nowrap; }

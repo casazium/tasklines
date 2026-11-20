@@ -88,7 +88,9 @@ class TasklinesView extends BasesView {
 		this.index = index;
 		this.writer = writer;
 		this.rootEl = parentEl.createDiv({ cls: 'tasklines-view' });
-		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask());
+		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask(), {
+			collapsible: Platform.isMobile,
+		});
 		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
 		this.list = new VirtualList(this.rootEl, Platform.isMobile ? TOUCH_ROW_HEIGHT : ROW_HEIGHT);
 		this.rootEl.toggleClass('tasklines-touch', Platform.isMobile);
