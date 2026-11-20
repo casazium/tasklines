@@ -22,7 +22,11 @@ export interface ToggleOptions extends EditOptions {
 
 export type ToggleResult =
 	| { ok: true; content: string; newLines: string[]; via: 'tasks-plugin' | 'built-in' }
-	| { ok: false; reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'bad-external-output'; detail: string };
+	| {
+			ok: false;
+			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'bad-external-output' | 'tasks-format-mismatch';
+			detail: string;
+	  };
 
 /** Split keeping each line's own ending, so CRLF, LF and a missing final newline survive. */
 export function splitLines(content: string): Array<{ text: string; eol: string }> {
@@ -36,6 +40,13 @@ export function splitLines(content: string): Array<{ text: string; eol: string }
 	}
 	out.push({ text: content.slice(start), eol: '' });
 	return out;
+}
+
+/** True if any output line uses a metadata style (emoji or Dataview) the input line did not. */
+function introducesOtherStyle(input: ParsedTask['format'], outputs: ParsedTask[]): boolean {
+	if (input === 'plain' || input === 'mixed') return false;
+	const other = input === 'dataview' ? ['tasks-emoji', 'mixed'] : ['dataview', 'mixed'];
+	return outputs.some((o) => other.includes(o.format));
 }
 
 /** Built-in toggle of one task line: open → done (with completion date), done/cancelled → open. */
@@ -94,25 +105,33 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 
 	let newLines: string[] | null = null;
 	let via: 'tasks-plugin' | 'built-in' = 'built-in';
-	if (opts.external && task.format !== 'dataview') {
+	let formatMismatch = false;
+	const completing = !['done', 'cancelled'].includes(statusKind(task.status));
+	if (opts.external) {
 		const result = opts.external(target.text);
 		if (result !== target.text) {
 			const out = result.split(/\r\n|\n|\r/);
 			// Accept only 1 or 2 task lines at the same indent; anything else is suspicious.
-			const valid =
-				out.length >= 1 &&
-				out.length <= 2 &&
-				out.every((l) => {
-					const p = parseTaskLine(l);
-					return p !== null && p.indent === task.indent;
-				});
+			const parsed = out.map((l) => parseTaskLine(l));
+			const valid = out.length >= 1 && out.length <= 2 && parsed.every((p) => p !== null && p.indent === task.indent);
 			if (!valid) return { ok: false, reason: 'bad-external-output', detail: 'the Tasks plugin returned an unexpected result' };
-			newLines = out;
-			via = 'tasks-plugin';
+			// Tasks reads one format at a time (emoji or Dataview). If it is set to the other
+			// format it does not see this line's fields and adds its own style: never accept that.
+			if (introducesOtherStyle(task.format, parsed as ParsedTask[])) formatMismatch = true;
+			else {
+				newLines = out;
+				via = 'tasks-plugin';
+			}
 		}
 	}
 	if (!newLines) {
-		const completing = !['done', 'cancelled'].includes(statusKind(task.status));
+		if (completing && task.recurrence && formatMismatch) {
+			return {
+				ok: false,
+				reason: 'tasks-format-mismatch',
+				detail: 'the Tasks plugin is set to a different task format than this line uses, so it cannot create the next occurrence',
+			};
+		}
 		if (completing && task.recurrence) {
 			return {
 				ok: false,

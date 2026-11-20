@@ -47,8 +47,10 @@ Ticking a checkbox changes only that task's line in the note, through Obsidian's
 
 - **Safety first.** Before writing, the plugin re-reads the note and checks that the line is exactly what the view showed. It checks again inside the atomic write. If anything differs (you edited the line, it moved, the note was renamed), nothing is written, you get a notice, and the view refreshes.
 - **Keeps your format.** Only the status character changes, plus a completion date in the format the line already uses: `✅ 2026-11-20` for Tasks-style lines, `[completion:: 2026-11-20]` for Dataview-style lines. A date goes before a trailing `^block-id`. Line endings (LF or CRLF) are preserved. Unticking removes the date.
-- **With the Tasks plugin (7.2.0 or later)** the plugin asks Tasks for the new line, so recurrence, done dates and custom statuses follow your Tasks settings. Completing a recurring task inserts the next occurrence just as Tasks does in the editor.
-- **Without the Tasks plugin,** completing a **recurring** task is refused with a notice, because creating the next occurrence correctly is Tasks' job. Unticking still works.
+- **With the Tasks plugin (7.2.0 or later)** the plugin asks Tasks for the new line, so recurrence, done dates and custom statuses follow your Tasks settings. Completing a recurring task inserts the next occurrence just as Tasks does in the editor. This works for emoji lines and, when Tasks is set to its Dataview format, for `[repeat:: …]` lines too.
+- **Tasks reads one format at a time.** If Tasks is set to the emoji format and the line uses Dataview fields (or the other way round), Tasks can't see the line's fields. Tasklines notices this and never writes the mixed result. A one-off task is completed by Tasklines itself in the line's own style. A recurring one is refused, so the next occurrence is never lost.
+- **Without the Tasks plugin,** completing a **recurring** task is refused, because creating the next occurrence correctly is Tasks' job. Recurring tasks show 🔁 next to their text, and their checkbox explains this before you click. Unticking still works.
+- Every refusal notice has an **Open at line** button, so the task is one click from the editor.
 - In-progress and custom statuses complete to `[x]`. Done and cancelled reopen to `[ ]`.
 
 Settings (**Settings → Tasklines**):

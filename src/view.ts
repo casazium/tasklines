@@ -33,6 +33,8 @@ export interface RenderInput {
 	/** Change one field of a task in its note. */
 	editTask: (task: QueryRow['task'], edit: TaskEdit) => Promise<boolean>;
 	renderValue: (el: HTMLElement, entry: RowSource, prop: BasesPropertyId) => void;
+	/** Whether the Tasks plugin can complete recurring tasks right now. */
+	tasksPluginAvailable: boolean;
 }
 
 type Item = { kind: 'group'; label: string; summary: string } | { kind: 'row'; row: ViewRow };
@@ -99,6 +101,11 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 		cls: 'task-list-item-checkbox tasklines-checkbox',
 		attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status },
 	});
+	const open = kind !== 'done' && kind !== 'cancelled';
+	if (task.recurrence && open && !input.tasksPluginAvailable) {
+		box.addClass('tasklines-needs-tasks');
+		box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
+	}
 	box.checked = kind !== 'todo';
 	box.indeterminate = kind === 'in-progress';
 	box.addEventListener('click', (ev) => {
@@ -111,6 +118,9 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	});
 	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
 	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
+	if (task.recurrence) {
+		textCell.createSpan({ cls: 'tasklines-recurs', text: '🔁', attr: { title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
+	}
 	link.addEventListener('click', (ev) => {
 		ev.preventDefault();
 		input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);

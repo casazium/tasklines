@@ -61,7 +61,8 @@ const PRIORITIES: Array<[Priority, string]> = [
 ];
 // Every Tasks emoji; a free-text value (recurrence, on-completion) runs until the next one.
 const TASKS_EMOJI = '📅📆🗓⏳⌛🛫➕✅❌🔺⏫🔼🔽⏬🔁🆔⛔🏁';
-const FREE_TEXT = `([^${TASKS_EMOJI}^]+?)(?=\\s*(?:[${TASKS_EMOJI}]|\\^[\\w-]+\\s*$|$))`;
+// It also stops before a Dataview inline field, e.g. `🔁 every week [completion:: …]`.
+const FREE_TEXT = `([^${TASKS_EMOJI}^]+?)(?=\\s*(?:[${TASKS_EMOJI}]|[[(][\\p{L}\\p{N}_ -]+::|\\^[\\w-]+\\s*$|$))`;
 const RECURRENCE = new RegExp(`🔁${VS}\\s*${FREE_TEXT}`, 'u');
 const ON_COMPLETION = new RegExp(`🏁${VS}\\s*([a-z]+)`, 'u');
 const TASK_ID = new RegExp(`🆔${VS}\\s*([\\w-]+)`, 'u');

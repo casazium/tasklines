@@ -74,3 +74,8 @@
 .tasklines-group-summary { color: var(--text-muted); font-weight: normal; font-size: var(--font-ui-smaller); }
 .tasklines-summary { color: var(--text-normal); }
 .tasklines-status-setting { width: 100%; font-family: var(--font-monospace); }
+
+/* Recurring tasks */
+.tasklines-recurs { margin-inline-start: 6px; font-size: var(--font-ui-smaller); flex: none; }
+.tasklines-needs-tasks { opacity: 0.55; cursor: help; }
+.tasklines-notice-btn { margin-top: var(--size-4-2); }

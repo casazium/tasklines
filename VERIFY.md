@@ -47,6 +47,13 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 - [ ] In `Dataview queries.md`, run the convert command in each block. A `.base` opens with the expected filters, and the second one lists the parts it couldn't convert. The note is unchanged.
 - [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, the toolbar wraps, and the grid scrolls sideways.
 
+## Recurring tasks
+- [ ] Recurring tasks show 🔁 with a "Repeats …" tooltip.
+- [ ] Without Tasks: the recurring task's checkbox is dimmed with an explanation. Clicking it shows a notice with **Open at line**, which opens the note at the task.
+- [ ] Tasks in **Dataview format** (Tasks settings → Task format): ticking `Recurring (Dataview)` in `Beta` creates the next occurrence in Dataview style.
+- [ ] Tasks in **emoji format**: ticking `Recurring (Dataview)` is refused with the "different task format" notice, and the file is unchanged. Ticking `Dataview style` (not recurring) still completes it with `[completion:: …]`.
+- [ ] A recurring task with `🏁 delete`: completing it from the view gives the same result as completing it in the editor. Note what Tasks does.
+
 ## MVP acceptance
 - [ ] A 10,000-task vault renders and filters without visible lag.
 - [ ] Disable the plugin: every note opens normally, and `Project tasks.base` still opens (Bases shows the unknown view type, or falls back) with no YAML errors. Re-enabling restores the views.

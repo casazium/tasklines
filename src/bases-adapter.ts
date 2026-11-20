@@ -188,6 +188,7 @@ class TasklinesView extends BasesView {
 				stats: this.index.lastStats,
 				openTask: (path, line, newTab) => this.openTask(path, line, newTab),
 				toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
+				tasksPluginAvailable: this.writer.tasksPluginAvailable(),
 				editTask: (task, edit) => this.writer.edit({ path: task.path, line: task.line, raw: task.raw }, edit),
 				renderValue: (el, entry, prop) => {
 					const value = entry.values.get(prop);

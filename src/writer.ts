@@ -26,6 +26,8 @@ const FAILURE_TEXT: Record<string, string> = {
 	'recurring-needs-tasks': 'Completing a recurring task needs the Tasks plugin (7.2.0 or later), so the next occurrence is created. Open the note to complete it there.',
 	'bad-external-output': 'The Tasks plugin returned an unexpected result.',
 	'invalid-edit': 'That edit could not be applied.',
+	'tasks-format-mismatch':
+		'The Tasks plugin is set to a different task format than this line uses (emoji or Dataview), so it cannot create the next occurrence. Change the format in the Tasks settings, or complete it in the note.',
 };
 
 export class TaskWriter {
@@ -112,7 +114,7 @@ export class TaskWriter {
 		try {
 			// Check first without writing, so a refusal never touches the file or its mtime.
 			const pre = compute(await this.app.vault.read(file), true);
-			if (!pre.ok) return this.refuse(file, pre);
+			if (!pre.ok) return this.refuse(file, pre, target.line);
 			if (pre.changed === false) return false;
 
 			// Re-verify inside the atomic write: the file may have changed since the read.
@@ -124,7 +126,7 @@ export class TaskWriter {
 			});
 			const result = outcome as Computed | null;
 			if (!result) return false;
-			if (!result.ok) return this.refuse(file, result);
+			if (!result.ok) return this.refuse(file, result, target.line);
 			return true;
 		} catch (err) {
 			console.error('Tasklines: write failed', err);
@@ -135,8 +137,17 @@ export class TaskWriter {
 		}
 	}
 
-	private refuse(file: TFile, result: Failure): false {
-		new Notice(`Tasklines: ${FAILURE_TEXT[result.reason] ?? result.detail} Nothing was changed.`, 8000);
+	private refuse(file: TFile, result: Failure, line: number): false {
+		const message = new DocumentFragment();
+		message.createDiv({ text: `Tasklines: ${FAILURE_TEXT[result.reason] ?? result.detail} Nothing was changed.` });
+		// Offer the editor, where the Tasks plugin's own handling runs, one click away.
+		if (line >= 0) {
+			const open = message.createEl('button', { text: 'Open at line', cls: 'mod-cta tasklines-notice-btn' });
+			open.addEventListener('click', () => {
+				void this.app.workspace.getLeaf(false).openFile(file, { eState: { line } });
+			});
+		}
+		new Notice(message, 10000);
 		// Re-index the note so the view shows what is really there now.
 		this.index.invalidate(file);
 		return false;
