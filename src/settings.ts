@@ -118,7 +118,7 @@ export class TasklinesSettingTab extends PluginSettingTab {
 			.setDesc('Tasks in these folders (one per line) never appear, even if a base selects their notes. Useful for templates and archives.')
 			.addTextArea((t) => {
 				t.inputEl.rows = 4;
-				t.setPlaceholder('Templates\nArchive/2024')
+				t.setPlaceholder('Templates\narchive/2024')
 					.setValue(this.settings.excludeFolders)
 					.onChange(async (v) => {
 						this.settings.excludeFolders = v;

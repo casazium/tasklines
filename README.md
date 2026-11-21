@@ -2,22 +2,23 @@
 
 **Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
 
-> **Beta.** 0.9.x releases are for testing. Install with BRAT (below) and try it on a copy of your vault first. Please report problems on the [issue tracker](https://github.com/casazium/tasklines/issues).
+![Tasks from several notes in a Tasklines view, grouped by area, with the notes' properties as columns](docs/screenshots/overview.png)
 
-<!-- Screenshots: add images from docs/screenshots/ here before 1.0.0 (see RELEASE.md). -->
+![A ticked task and a due date being edited in place](docs/screenshots/editing.png)
+
+Please report problems on the [issue tracker](https://github.com/casazium/tasklines/issues).
 
 ## Install
 
-**Beta (now), with BRAT**
+**Community plugins:** search for "Tasklines" in **Settings → Community plugins → Browse**, then install and enable it.
 
-1. Install and enable the **BRAT** community plugin.
-2. In BRAT's settings choose **Add beta plugin**, enter `casazium/tasklines`, and enable **Tasklines** in **Settings → Community plugins**.
-
-**Community plugins (from 1.0.0):** search for "Tasklines" in **Settings → Community plugins → Browse**.
+**Beta versions, with BRAT:** install and enable the **BRAT** community plugin, choose **Add beta plugin** in its settings, enter `casazium/tasklines`, and enable **Tasklines** in **Settings → Community plugins**.
 
 **Manually:** download `main.js`, `manifest.json` and `styles.css` from a [release](https://github.com/casazium/tasklines/releases) into `<vault>/.obsidian/plugins/tasklines/`, then enable the plugin.
 
 Requires Obsidian 1.10 or newer with the **Bases** core plugin turned on. Works on desktop and mobile.
+
+<img src="docs/screenshots/mobile.png" alt="The Tasklines view on a phone, with taller rows and the toolbar folded" width="270">
 
 ## Quick start
 
@@ -66,6 +67,8 @@ Every change follows the same safety rule. Tasklines re-reads the note and check
 - **Tick a checkbox** to complete or reopen a task. A completion date is added in the line's own style: `✅ 2026-11-20` or `[completion:: 2026-11-20]`. Unticking removes it.
 - **Click a Status, Due, Scheduled, Start or Priority cell** to edit it. Existing fields are changed where they are. New ones go at the end of the line, before any `^block-id`. Text in `inline code` is never touched.
 - **New task** adds one line to any note in the base, after the note's last task (and anything nested under it), in the same style and inside the same callout. A note without tasks gets it at the end.
+
+![The New task window over the view](docs/screenshots/new-task.png)
 
 ## Works with the Tasks plugin
 
@@ -125,6 +128,8 @@ Tasklines works entirely inside your vault. It makes no network requests, collec
 - Rows have a fixed height. Long text is cut off with an ellipsis, and the full text is in the tooltip.
 - Sorting and grouping by a note property use the value's displayed text, with numbers in natural order (`9` before `10`).
 - In files with old Mac line endings (CR only), a change may be refused if Obsidian numbers lines differently. Tasklines never writes to the wrong line.
+- A change to a line with repeated or competing fields (two priorities, or a date written both as an emoji and as a Dataview field) is refused if the line wouldn't read back exactly as asked. Make that change in the note.
+- Tasklines' settings don't appear in Obsidian's settings search (Obsidian 1.13 and later).
 
 ## Development
 
