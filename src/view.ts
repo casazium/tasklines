@@ -81,7 +81,7 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 		list.setItems(0, () => {});
 		return;
 	}
-	const head = list.header.createDiv({ cls: 'tasklines-grid tasklines-head', attr: { role: 'row' } });
+	const head = list.header.createDiv({ cls: 'tasklines-grid tasklines-head', attr: { role: 'row', 'aria-rowindex': '1' } });
 	head.createDiv({ text: 'Task', attr: { role: 'columnheader' } });
 	for (const c of input.taskColumns) head.createDiv({ text: c.label, attr: { role: 'columnheader' } });
 	for (const name of input.columnNames) head.createDiv({ text: name, attr: { role: 'columnheader' } });
@@ -91,8 +91,9 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 		if (!item) return;
 		if (item.kind === 'group') {
 			el.addClass('tasklines-group');
-			el.createSpan({ cls: 'tasklines-group-label', text: item.label || '(none)' });
-			el.createSpan({ cls: 'tasklines-group-summary', text: item.summary });
+			el.setAttr('role', 'row');
+			el.createSpan({ cls: 'tasklines-group-label', text: item.label || '(none)', attr: { role: 'rowheader' } });
+			el.createSpan({ cls: 'tasklines-group-summary', text: item.summary, attr: { role: 'cell' } });
 			return;
 		}
 		renderRow(el, item.row, input);
@@ -102,6 +103,8 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	const { task } = row;
 	const kind = statusKind(task.status);
+	// Lets the list put keyboard focus back on this task after a redraw.
+	el.dataset.key = `${task.path}\n${task.line}`;
 	el.addClasses(['tasklines-grid', 'tasklines-row', `tasklines-status-${kind}`]);
 	el.setAttr('role', 'row');
 	const textCell = el.createDiv({ cls: 'tasklines-text', attr: { role: 'cell' } });
@@ -109,7 +112,7 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	const box = textCell.createEl('input', {
 		type: 'checkbox',
 		cls: 'task-list-item-checkbox tasklines-checkbox',
-		attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status },
+		attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
 	});
 	const open = kind !== 'done' && kind !== 'cancelled';
 	if (task.recurrence && open && !input.tasksPluginAvailable) {
@@ -132,8 +135,9 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	});
 	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
 	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
+	link.dataset.focusKey = 'open';
 	if (task.recurrence) {
-		textCell.createSpan({ cls: 'tasklines-recurs', text: '🔁', attr: { title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
+		textCell.createSpan({ cls: 'tasklines-recurs', text: '🔁', attr: { role: 'img', title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
 	}
 	link.addEventListener('click', (ev) => {
 		ev.preventDefault();
@@ -150,6 +154,7 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['task'], input: RenderInput): void {
 	cell.addClass('tasklines-editable');
 	cell.setAttr('tabindex', '0');
+	cell.dataset.focusKey = `col-${column.key}`;
 	cell.setAttr('aria-label', `Edit ${column.label.toLowerCase()}: ${column.value(task, input.context) || 'empty'}`);
 	const open = () => {
 		if (cell.querySelector('input, select')) return;
@@ -159,18 +164,18 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 		let toEdit: () => TaskEdit | null;
 		if (column.editor === 'date') {
 			const field = column.key as 'due' | 'scheduled' | 'start';
-			const inputEl = cell.createEl('input', { type: 'date', cls: 'tasklines-cell-input' });
+			const inputEl = cell.createEl('input', { type: 'date', cls: 'tasklines-cell-input', attr: { 'aria-label': `${column.label} for ${task.text}` } });
 			inputEl.value = task[field] ?? '';
 			control = inputEl;
 			toEdit = () => (inputEl.value === (task[field] ?? '') ? null : { kind: 'date', field, value: inputEl.value || null });
 		} else if (column.editor === 'priority') {
-			const sel = cell.createEl('select', { cls: 'dropdown tasklines-cell-input' });
+			const sel = cell.createEl('select', { cls: 'dropdown tasklines-cell-input', attr: { 'aria-label': `${column.label} for ${task.text}` } });
 			for (const p of PRIORITY_ORDER) sel.createEl('option', { value: p, text: p === 'none' ? '(none)' : p });
 			sel.value = task.priority;
 			control = sel;
 			toEdit = () => (sel.value === task.priority ? null : { kind: 'priority', value: sel.value as typeof task.priority });
 		} else {
-			const sel = cell.createEl('select', { cls: 'dropdown tasklines-cell-input' });
+			const sel = cell.createEl('select', { cls: 'dropdown tasklines-cell-input', attr: { 'aria-label': `${column.label} for ${task.text}` } });
 			const defs = statusDefs();
 			if (!defs.some((d) => d.char === task.status)) sel.createEl('option', { value: task.status, text: statusName(task.status) });
 			for (const d of defs) sel.createEl('option', { value: d.char, text: `[${d.char}] ${d.name}` });
@@ -183,8 +188,11 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 			if (done) return;
 			done = true;
 			const edit = commit ? toEdit() : null;
+			const hadFocus = cell.contains(cell.ownerDocument.activeElement);
 			cell.empty();
 			cell.setText(shown);
+			// Keyboard users stay on the cell (the control they were in is gone).
+			if (hadFocus) cell.focus({ preventScroll: true });
 			if (edit) {
 				cell.addClass('is-saving');
 				void (async () => {
@@ -209,8 +217,12 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 		}
 		control.addEventListener('keydown', (ev) => {
 			const key = (ev as KeyboardEvent).key;
-			if (key === 'Escape') close(false);
-			if (key === 'Enter') close(true);
+			if (key !== 'Escape' && key !== 'Enter') return;
+			// Handled here: without this the key reaches the cell, which would reopen the editor
+			// (Enter) or let Obsidian close the pane's focus (Escape).
+			ev.preventDefault();
+			ev.stopPropagation();
+			close(key === 'Enter');
 		});
 		control.focus();
 		// Android only shows the control on focus; open its picker straight away.

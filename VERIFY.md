@@ -136,3 +136,18 @@ Found and fixed (each one is now a fixture or an edit check):
 - Edits on lines with repeated or competing fields (two priorities, a date in both styles, a repeat rule that ended at the field being changed) could leave the line reading differently. Every edit now checks that the line reads back as asked, with the description and repeat rule unchanged, and refuses otherwise. Clearing a date removes every copy of it.
 - New task refuses text that would not read back with the chosen due date or priority (for example a 🔁 typed into the text).
 
+## Accessibility
+
+Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with axe-core 4.10.3 (run from the developer console, not committed) and a keyboard-only pass logged with a focus listener.
+
+- [x] **axe-core:** no violations on the view, with the toolbar open and with a cell editor open. Before the fixes it reported a missing table role (critical), an unlabelled cell dropdown (critical) and low contrast on active chips and the New task button (serious).
+- [x] **Keyboard:** Tab and Shift+Tab move through checkbox, task link and each editable cell in order. Space ticks and reopens a task. Enter opens a cell's editor, Enter saves and Escape cancels, and focus returns to the cell. After a tick or an edit redraws the list, focus stays on the same control of the same task, even when the task moves to a new position.
+- [x] Checkboxes and task links show a clear focus ring.
+- Found and fixed:
+  - The grid now has `role="table"`, a full `aria-rowcount` and `aria-rowindex` on each drawn row (only on-screen rows exist). Group headings are rows with a row header.
+  - Cell editors are labelled ("Priority for Fix gate"), and the 🔁 marker is announced as "Repeats every week".
+  - Focus was lost to the page after every redraw. The list now restores it by task and control.
+  - The Enter that saved a cell editor reached the cell and reopened the editor.
+  - Active chips and the New task button use a darker accent so small text meets 4.5:1 contrast.
+- [ ] Not covered: listening with VoiceOver or NVDA. The roles and labels follow the ARIA table pattern, but a screen-reader pass is still worth doing.
+

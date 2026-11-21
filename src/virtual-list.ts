@@ -20,7 +20,9 @@ export class VirtualList {
 
 	constructor(parent: HTMLElement, rowHeight = ROW_HEIGHT) {
 		this.rowHeight = rowHeight;
-		this.scroller = parent.createDiv({ cls: 'tasklines-scroller' });
+		// A table to assistive tech. Only the rows near the viewport exist, so the full row count
+		// and each row's position are given explicitly (header is row 1).
+		this.scroller = parent.createDiv({ cls: 'tasklines-scroller', attr: { role: 'table', 'aria-label': 'Tasks' } });
 		this.header = this.scroller.createDiv({ cls: 'tasklines-header' });
 		this.spacer = this.scroller.createDiv({ cls: 'tasklines-spacer' });
 		this.windowEl = this.spacer.createDiv({ cls: 'tasklines-window' });
@@ -35,6 +37,7 @@ export class VirtualList {
 	setItems(count: number, renderItem: (index: number, el: HTMLElement) => void): void {
 		this.count = count;
 		this.renderItem = renderItem;
+		this.scroller.setAttr('aria-rowcount', String(count + 1));
 		this.spacer.setCssProps({ '--tasklines-total-height': `${count * this.rowHeight}px` });
 		this.drawn = [-1, -1];
 		this.draw();
@@ -56,10 +59,21 @@ export class VirtualList {
 		if (start === this.drawn[0] && end === this.drawn[1]) return;
 		this.drawn = [start, end];
 		this.windowEl.setCssProps({ '--tasklines-offset': `${start * this.rowHeight}px` });
+		// Redrawing replaces the rows; keep keyboard focus on the same control of the same item.
+		const focused = this.windowEl.ownerDocument.activeElement;
+		const inList = focused?.instanceOf(HTMLElement) && this.windowEl.contains(focused);
+		const itemKey = inList ? focused.closest<HTMLElement>('.tasklines-item')?.dataset.key : undefined;
+		// A control inside a cell (an open editor) counts as its cell.
+		const focusKey = inList ? focused.closest<HTMLElement>('[data-focus-key]')?.dataset.focusKey : undefined;
 		this.windowEl.empty();
 		for (let i = start; i < end; i++) {
-			const el = this.windowEl.createDiv({ cls: 'tasklines-item' });
+			const el = this.windowEl.createDiv({ cls: 'tasklines-item', attr: { 'aria-rowindex': String(i + 2) } });
 			this.renderItem(i, el);
+		}
+		if (itemKey && focusKey) {
+			const item = Array.from(this.windowEl.children).find((c) => c.instanceOf(HTMLElement) && c.dataset.key === itemKey);
+			const target = Array.from(item?.querySelectorAll('[data-focus-key]') ?? []).find((e): e is HTMLElement => e.instanceOf(HTMLElement) && e.dataset.focusKey === focusKey);
+			target?.focus({ preventScroll: true });
 		}
 	}
 
