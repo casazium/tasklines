@@ -163,7 +163,14 @@ Run on 2026-11-21 with `test-vault/Task calendar.base`. Fable reviewed the code 
   - **Pick a date…** opened Android's date picker. Saving the 27th wrote `[due:: 2026-11-27]`, and **Undo** put the 22nd back.
   - Today rescheduled an overdue recurring task.
   - In the month layout the whole month scrolls as one page, with No date below. Scheduling a task from the tray added `⏳` in the line's style.
-- [ ] Not covered: the calendar on iPhone and Windows, a real mouse drag, and VoiceOver.
+- [x] **iPhone** (same day, Obsidian 1.15.1 for iOS, through iPhone Mirroring). The vault was reset over iCloud to the original notes and the build from `main`, and Obsidian was reloaded once the files had synced. The notes were diffed on the Mac afterwards: exactly the intended lines changed.
+  - **Automatic** opened as the agenda.
+  - The **⋯** menu sheet matched Android, and a recurring task's only date had no "Remove date".
+  - **Pick a date…** opened iOS's calendar picker straight away. Choosing the 27th enabled **Save**, and saving moved the task; **Undo** put it back.
+  - Tomorrow rescheduled an overdue recurring task.
+  - Month layout: **›** and **Today** change month, and the page scrolls as one, with No date below. Scheduling from the tray added `⏳ <date>` before the `^block-id`.
+  - Found and fixed: the date field in **Pick a date** ran past the window's right edge on iOS. It now counts its padding in its width (`box-sizing: border-box`). The fix isn't rechecked on iOS yet.
+- [ ] Not covered: the calendar on Windows, a real mouse drag, and VoiceOver.
 
 ## Fuzz testing
 
