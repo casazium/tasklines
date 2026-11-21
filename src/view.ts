@@ -8,7 +8,7 @@ import type { IndexStats } from './indexer.ts';
 import { statusDefs, statusKind, statusName } from './parser.ts';
 import { formatSummary, PRIORITY_ORDER, summarize, type QueryRow, type RowGroup } from './query.ts';
 import type { VirtualList } from './virtual-list.ts';
-import { drawSelectBox, type SelectionHooks } from './selection-bar.ts';
+import { drawGroupSelect, drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 export interface RowSource {
 	file: TFile;
@@ -44,7 +44,7 @@ export interface RenderInput {
 	selection?: SelectionHooks;
 }
 
-type Item = { kind: 'group'; label: string; summary: string } | { kind: 'row'; row: ViewRow };
+type Item = { kind: 'group'; label: string; summary: string; rows: ViewRow[] } | { kind: 'row'; row: ViewRow };
 
 export function renderRows(statsEl: HTMLElement, list: VirtualList, input: RenderInput): void {
 	const today = input.context.today;
@@ -62,7 +62,7 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 
 	const items: Item[] = [];
 	for (const g of input.groups) {
-		if (g.label !== null) items.push({ kind: 'group', label: g.label, summary: formatSummary(summarize(g.rows, today)) });
+		if (g.label !== null) items.push({ kind: 'group', label: g.label, summary: formatSummary(summarize(g.rows, today)), rows: g.rows });
 		for (const row of g.rows) items.push({ kind: 'row', row });
 	}
 
@@ -97,6 +97,7 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 			el.setAttr('role', 'row');
 			el.createSpan({ cls: 'tasklines-group-label', text: item.label || '(none)', attr: { role: 'rowheader' } });
 			el.createSpan({ cls: 'tasklines-group-summary', text: item.summary, attr: { role: 'cell' } });
+			if (input.selection?.active) drawGroupSelect(el, item.rows.map((r) => r.task), input.selection, item.label);
 			return;
 		}
 		renderRow(el, item.row, input);

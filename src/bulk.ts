@@ -184,3 +184,30 @@ export function describePlan(verb: string, steps: PlannedStep[]): { writes: numb
 	if (toggles) text += ` ${plural(toggles, 'recurring task')} will be completed through the Tasks plugin, which adds the next occurrence; Undo can't take those back.`;
 	return { writes: writes.length, notes, toggles, text };
 }
+
+/**
+ * Shift-click: the keys from `anchor` to `target` in the order the view shows them, both ends
+ * included. Null when either is not shown (then the click selects just the one task).
+ */
+export function rangeKeys(order: string[], anchor: string, target: string): string[] | null {
+	const a = order.indexOf(anchor);
+	const b = order.indexOf(target);
+	if (a < 0 || b < 0) return null;
+	return order.slice(Math.min(a, b), Math.max(a, b) + 1);
+}
+
+/** "links": a plain list, one task per item with a link to its note. "lines": the task lines as written. */
+export type CopyMode = 'links' | 'lines';
+
+/**
+ * Text for the clipboard. The list form leaves out the checkbox, so pasting it doesn't make
+ * copies of the tasks; the line form is the line itself, without its indent or callout prefix.
+ */
+export function copyText(tasks: IndexedTask[], mode: CopyMode, link: (task: IndexedTask) => string): string {
+	return tasks
+		.map((t) => {
+			if (mode === 'lines') return t.raw.slice(t.indent.length).replace(/\r$/, '');
+			return `- ${t.text.trim() || '(empty)'} (${link(t)})`;
+		})
+		.join('\n');
+}

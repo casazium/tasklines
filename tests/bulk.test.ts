@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { describePlan, describeSummary, orderForWrite, planBulk, planStep, shiftRecords, summarize, type BulkAction, type UndoRecord } from '../src/bulk.ts';
+import { copyText, describePlan, describeSummary, orderForWrite, planBulk, planStep, rangeKeys, shiftRecords, summarize, type BulkAction, type UndoRecord } from '../src/bulk.ts';
 import { applyEdit, type EditOptions } from '../src/edit.ts';
 import type { IndexedTask } from '../src/extract.ts';
 import { parseTaskLine, statusKind } from '../src/parser.ts';
@@ -168,3 +168,31 @@ for (const f of fixtures) {
 		}
 	});
 }
+
+test('rangeKeys: from the anchor to the clicked task in screen order, either direction', () => {
+	const order = ['a', 'b', 'c', 'd', 'e'];
+	assert.deepEqual(rangeKeys(order, 'b', 'd'), ['b', 'c', 'd']);
+	assert.deepEqual(rangeKeys(order, 'd', 'b'), ['b', 'c', 'd']);
+	assert.deepEqual(rangeKeys(order, 'c', 'c'), ['c']);
+	assert.equal(rangeKeys(order, 'x', 'b'), null, 'an anchor no longer shown selects just the one task');
+	assert.equal(rangeKeys(order, 'b', 'x'), null);
+});
+
+test('date field: scheduled and start are planned and written in the line\'s own format', () => {
+	for (const field of ['scheduled', 'start'] as const) {
+		const op = planStep(task('- [ ] a ⏫'), { kind: 'set-date', field, value: '2026-12-01' }, TODAY);
+		assert.deepEqual(op, { kind: 'edit', edit: { kind: 'date', field, value: '2026-12-01' } });
+		const t = task('- [ ] a [due:: 2026-11-01]');
+		const written = applyEdit(t.raw, t, { kind: 'date', field, value: '2026-12-01' }, OPTS);
+		assert.ok(written && written.includes(`[${field}:: 2026-12-01]`), `a Dataview line gets a Dataview ${field} field: ${written}`);
+		assert.ok(written.includes('[due:: 2026-11-01]'), 'the due date stays');
+	}
+});
+
+test('copyText: a plain list with links, or the task lines as written', () => {
+	const tasks = [task('- [ ] Fix gate ⏫ 📅 2026-11-18', 3, 'Projects/Beta.md'), { ...task('> - [x] In a callout ✅ 2026-11-02 ^blk', 7, 'Projects/Alpha.md') }, task('\t- [/] Nested [due:: 2026-11-30]', 9, 'B.md')];
+	const link = (t: IndexedTask) => `[[${t.path.replace(/\.md$/, '')}${t.blockId ? `#^${t.blockId}` : ''}]]`;
+	assert.equal(copyText(tasks, 'links', link), ['- Fix gate ([[Projects/Beta]])', '- In a callout ([[Projects/Alpha#^blk]])', '- Nested ([[B]])'].join('\n'));
+	assert.equal(copyText(tasks, 'lines', link), ['- [ ] Fix gate ⏫ 📅 2026-11-18', '- [x] In a callout ✅ 2026-11-02 ^blk', '- [/] Nested [due:: 2026-11-30]'].join('\n'));
+	assert.ok(!copyText(tasks, 'links', link).includes('['.concat(' ]')), 'the list form has no checkboxes, so pasting it makes no new tasks');
+});

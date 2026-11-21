@@ -235,7 +235,6 @@
 /* Bulk actions: select mode and its action bar */
 .tasklines-selection-bar { padding: var(--size-4-2); border: 1px solid var(--interactive-accent); border-radius: var(--radius-m); background: var(--background-secondary); }
 .tasklines-selection-count { font-weight: var(--font-semibold); font-size: var(--font-ui-small); margin-inline-end: var(--size-4-2); font-variant-numeric: tabular-nums; }
-.tasklines-selection-done { margin-inline-start: auto; }
 .tasklines-view input.tasklines-select-box { margin: 0; flex: none; accent-color: var(--interactive-accent); width: 16px; height: 16px; }
 .tasklines-touch input.tasklines-select-box { width: 22px; height: 22px; }
 .tasklines-select-text { overflow: hidden; text-overflow: ellipsis; cursor: pointer; flex: 1 1 auto; min-width: 0; }
@@ -244,3 +243,23 @@
 .tasklines-row.is-selected, .tasklines-card.is-selected { background: var(--background-modifier-active-hover); }
 .tasklines-card.is-selected { border-color: var(--interactive-accent); }
 .tasklines-status-done .tasklines-select-text, .tasklines-status-cancelled .tasklines-select-text { text-decoration: line-through; color: var(--text-faint); }
+/* The group checkbox: first in its heading, in line with the tasks' boxes; the label's padding widens the tap target without moving the box. */
+.tasklines-group-select { display: inline-flex; align-items: center; flex: none; align-self: center; padding: 4px; margin: -4px; cursor: pointer; }
+.tasklines-touch .tasklines-group-select { padding: 11px; margin: -11px; }
+.tasklines-view.is-selecting .tasklines-column-head, .tasklines-view.is-selecting .tasklines-agenda-head { justify-content: flex-start; align-items: center; gap: var(--size-4-2); }
+.tasklines-view.is-selecting .tasklines-column-head .tasklines-column-count, .tasklines-view.is-selecting .tasklines-agenda-head .tasklines-column-count { margin-inline-start: auto; }
+/* The bar: what's selected | actions | Undo and Done. It stays in view while the tasks scroll. */
+.tasklines-selection-bar { position: sticky; top: 0; z-index: 3; }
+.tasklines-selection-bar .tasklines-toolbar-row { column-gap: var(--size-4-4); }
+.tasklines-selection-group, .tasklines-selection-actions, .tasklines-selection-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-4-2); }
+.tasklines-selection-end { margin-inline-start: auto; }
+/* Phones: two rows that never change shape. What's selected, Undo and Done on top; the three actions below, side by side. */
+.tasklines-selection-bar.is-compact .tasklines-toolbar-row { row-gap: var(--size-4-2); }
+.tasklines-selection-bar.is-compact .tasklines-selection-end { order: 1; }
+.tasklines-selection-bar.is-compact .tasklines-selection-actions { order: 2; flex: 1 1 100%; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.tasklines-selection-bar.is-compact .tasklines-selection-actions > * { width: 100%; min-width: 0; }
+.tasklines-view .tasklines-select-mode.is-active { background-color: var(--background-modifier-active-hover); color: var(--text-accent); box-shadow: inset 0 0 0 1px var(--interactive-accent); }
+/* Some of the group selected: Obsidian's checkbox style draws no half-tick, so draw a dash. */
+.tasklines-view input.tasklines-select-box:indeterminate { background: linear-gradient(var(--text-on-accent), var(--text-on-accent)) center / 55% 2px no-repeat, var(--interactive-accent); border-color: var(--interactive-accent); }
+.tasklines-view input.tasklines-select-box:indeterminate::after { display: none; }
+.tasklines-view.is-selecting .tasklines-group { align-items: center; }

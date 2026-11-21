@@ -53,6 +53,8 @@ export class TaskToolbar {
 	private showGroup: boolean;
 	/** Starts select mode for bulk actions, if the view has it. */
 	private onSelect: (() => void) | undefined;
+	/** Select mode is on: the Select button shows as pressed, and pressing it again leaves. */
+	private selecting = false;
 
 	constructor(
 		parent: HTMLElement,
@@ -194,8 +196,21 @@ export class TaskToolbar {
 
 	private selectButton(parent: HTMLElement): void {
 		if (!this.onSelect) return;
-		const b = parent.createEl('button', { cls: 'tasklines-btn tasklines-select-mode', text: 'Select', attr: { 'aria-label': 'Select tasks to change several at once', 'data-focus-key': 'select' } });
+		const b = parent.createEl('button', { cls: 'tasklines-btn tasklines-select-mode', text: 'Select', attr: { 'data-focus-key': 'select' } });
+		this.showSelecting(b);
 		b.addEventListener('click', () => this.onSelect?.());
+	}
+
+	/** Show whether select mode is on, on every Select button (the header and the folded toolbar both have one). */
+	setSelecting(on: boolean): void {
+		this.selecting = on;
+		this.el.querySelectorAll<HTMLElement>('.tasklines-select-mode').forEach((b) => this.showSelecting(b));
+	}
+
+	private showSelecting(b: HTMLElement): void {
+		b.toggleClass('is-active', this.selecting);
+		b.setAttr('aria-pressed', String(this.selecting));
+		b.setAttr('aria-label', this.selecting ? 'Leave select mode' : 'Select tasks to change several at once');
 	}
 
 	/** Put keyboard focus back on Select (after leaving select mode). */

@@ -216,6 +216,40 @@ Fable reviewed the design before it was built; its must-change and should-change
   - hypatia was cleaned up afterwards: Obsidian stopped, `C:\Users\casaz\tasklines` removed, and the vault list restored.
 - [ ] Not covered: VoiceOver.
 
+### Selecting more at once, choosing the date, and Copy
+
+Checked on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol). Nothing was logged as an error, and every note was byte for byte as before at the end.
+
+- [x] **Tests** (`tests/bulk.test.ts`): Shift-click ranges in either direction (and a single task when the first one is no longer shown); scheduled and start dates planned and written in each line's own format; Copy as a list with links (block links where a task has a `^block-id`, no checkboxes) and as task lines without indent or callout prefix.
+- [x] **List**: **Select** on the "home" group selected its 6 tasks and turned into **Unselect**, which cleared them. Ticking the 2nd row and Shift-clicking the 5th selected rows 2–5. Unticking the 4th and Shift-unticking the 3rd left 2 selected.
+- [x] **Copy**: "List with links" gave `- Recurring: water plants ([[Beta]])` lines; "Task lines" gave the lines as written. Read back from the clipboard.
+- [x] **Date to change**: choosing Scheduled kept keyboard focus on the picker and renamed Remove to "Remove scheduled date". **Tomorrow** added `⏳ 2026-11-22` to an emoji line and `[scheduled:: 2026-11-22]` to a Dataview line, keeping the due dates. Undo put both back.
+- [x] **Board**: To do, In progress and Done had **Select** beside their counts (none on the empty Cancelled column); To do's selected its 13 tasks.
+- [x] **Calendar agenda**: Overdue and days with tasks had **Select**; empty days had none. The date picker started on the calendar's field.
+- [x] **Android** (emulator, calendar agenda): the bar wraps to four rows with nothing cut off. Overdue's **Select** selected its 4 tasks and turned into **Unselect**. The date picker and **Change date** open as Android's lists. Start date → **Tomorrow** added `🛫 2026-11-22` to three emoji lines and `[start:: 2026-11-22]` to a Dataview line, keeping the due dates. The bar's **Undo** left every note byte for byte as before. **Copy → List with links** showed "copied 1 task.", and pasting gave `- Fix gate ([[Beta]])`.
+- [x] Opening select mode focuses **Select all**: the date picker is off until a task is selected, like the menus.
+
+#### After a UI review
+
+The review found: the bar changed shape when Undo appeared, a tall phone bar that could scroll away, a two-part date control, drop hints while dragging was off, group "Select" buttons far from their headings, a Select button that didn't show the mode, small touch targets, and selection and actions mixed in the bar. Rechecked on 2026-11-21:
+
+- [x] **Desktop**: the bar is the same 48 px tall before a batch, after it and after Undo. Undo stays in place, greyed out when there's nothing to undo, and named "Undo the last change (6 tasks)". The order is selection | actions | Undo and Done. **Change date** is one menu with Due, Scheduled and Start groups of six; "Scheduled date → Tomorrow" on a group of 6 wrote `⏳`/`[scheduled:: ]` and the notice read "Set the scheduled date to tomorrow on 6 of 6 tasks." Undo restored every note.
+- [x] **Group checkboxes** come first in list groups, board columns and agenda days, in line with the tasks' boxes. They show all, none and a dash for some, and selecting a group when only some were selected selects the rest. Ticking a single task redraws them, and keyboard focus stays on that task's box in the list, board and agenda.
+- [x] **Select** is highlighted (without matching New task's colour) and announced as pressed in select mode; pressing it again leaves, with focus back on it.
+- [x] An empty board column says "No tasks" in select mode, and "Drop tasks here" again after.
+- [x] **Android**: the bar is two rows that keep their shape through a batch and Undo, and stays put while the agenda scrolls. **Date** and **More** open as Android lists with group headings. Overdue's checkbox selected 4, and unticking one showed the dash. Scheduled → Tomorrow on 3 tasks, then the bar's Undo, left every note byte for byte. **More → Copy → List with links** copied `- Draft spec #spec ([[Alpha]])`. The group checkboxes have 44 px tap areas.
+- [x] **iPhone** (iCloud vault, through iPhone Mirroring; "Reload app" kept the old plugin until Obsidian was quit and reopened, which makes it fetch the vault's files from iCloud). List view: the two-row bar fits, and the group checkboxes line up with the tasks' boxes. Ticking "home" then unticking Fix gate showed the dash with 5 selected. **Date** opens as iOS's menu with "Due date" and "Scheduled date" headings. Scheduled → Tomorrow wrote `⏳ 2026-11-22` and `[scheduled:: 2026-11-22]` on the 5 lines (before `^beta-block` where there was one) and left Fix gate alone. The bar kept its shape, and its **Undo** ("undid 5 of 5 changes") closed the batch notice and left the notes byte for byte as before. **More → Copy → List with links** copied `- Dataview style ([[Beta]])`, read back on the Mac through Universal Clipboard. Pressing **Select** again left select mode.
+- [x] **Windows** (hypatia, Obsidian 1.15.1 with Tasks, headless over SSH and the DevTools protocol; the vault had a CRLF copy of `Beta.md`). Nothing was logged as an error.
+  - **Select** was announced as pressed, and the bar read Select all 20, Clear | Complete, Reopen, Status, Priority, Change date, Copy | Undo (off), Done.
+  - The group checkboxes came first in both groups. "home" selected 12, unticking one task showed the dash with 11, ticking the group again selected all, and once more cleared it.
+  - Focus stayed on the ticked task's box. A Shift-click on the 5th row's text selected rows 2–5.
+  - Copy gave `- Fix gate ([[Windows CRLF]])` etc. as a list and the task lines as written.
+  - Select all (20) then Scheduled → Tomorrow changed 20 lines in three notes (no confirmation, as 20 is not more than 20), including 6 on the CRLF note in their own formats.
+  - The bar stayed the same height (134 px in this narrower window) before, after and after Undo ("Undo the last change (20 tasks)", "undid 20 of 20 changes"). Every note was byte for byte as before, and the CRLF note kept 15 CRLF endings with no lone LF or CR.
+  - Pressing **Select** again left select mode with focus on it.
+  - Board: the three columns with tasks had checkboxes, and the empty Cancelled column said "No tasks" in select mode and "Drop tasks here" after.
+  - hypatia was cleaned up afterwards.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.
