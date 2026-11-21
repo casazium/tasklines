@@ -19,7 +19,7 @@ const ALLOWED: Record<string, Array<keyof ParsedTask>> = {
 	due: ['due', 'fields', 'format'],
 	scheduled: ['scheduled', 'fields', 'format'],
 	priority: ['priority', 'fields', 'format'],
-	status: ['status', 'done', 'fields', 'format'],
+	status: ['status', 'done', 'cancelled', 'fields', 'format'],
 };
 const EDITS: Array<[string, TaskEdit, (t: ParsedTask) => void]> = [
 	['due', { kind: 'date', field: 'due', value: '2030-01-02' }, (t) => assert.equal(t.due, '2030-01-02')],
@@ -98,4 +98,16 @@ test('invalid edits are refused, file unchanged', () => {
 test('a no-op edit reports changed: false', () => {
 	const r = editInContent('- [ ] A ⏫', { line: 0, raw: '- [ ] A ⏫' }, { kind: 'priority', value: 'high' }, OPTS);
 	assert.ok(r.ok && !r.changed);
+});
+
+test('status: cancelled dates follow the cancelled status, in the line’s style', () => {
+	assert.equal(edit('- [ ] A 📅 2026-01-01', { kind: 'status', value: '-' }), '- [-] A 📅 2026-01-01 ❌ 2026-11-20');
+	assert.equal(edit('- [ ] A [due:: 2026-01-01]', { kind: 'status', value: '-' }), '- [-] A [due:: 2026-01-01] [cancelled:: 2026-11-20]');
+	assert.equal(edit('- [ ] Plain', { kind: 'status', value: '-' }), '- [-] Plain', 'plain lines get no date without Tasks');
+	assert.equal(edit('- [ ] Plain', { kind: 'status', value: '-' }, { completionDate: 'off', plainGetsEmojiDate: true }), '- [-] Plain');
+	assert.equal(edit('- [-] A ❌ 2026-11-01', { kind: 'status', value: ' ' }), '- [ ] A');
+	assert.equal(edit('- [-] A ❌ 2026-11-01 📅 2026-01-01', { kind: 'status', value: 'x' }), '- [x] A 📅 2026-01-01 ✅ 2026-11-20', 'cancelled to done swaps the date');
+	assert.equal(edit('- [-] A [cancelled:: 2026-11-01]', { kind: 'status', value: ' ' }), '- [ ] A');
+	assert.equal(edit('- [x] A ✅ 2026-11-01', { kind: 'status', value: '-' }), '- [-] A ❌ 2026-11-20', 'done to cancelled swaps the date');
+	assert.equal(edit('- [-] A `❌ 2026-11-01`', { kind: 'status', value: ' ' }), '- [ ] A `❌ 2026-11-01`', 'never inside inline code');
 });

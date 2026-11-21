@@ -1,6 +1,6 @@
 # Tasklines
 
-**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
+**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects, and a task board with the same tasks as cards. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
 
 ![Tasks from several notes in a Tasklines view, grouped by area, with the notes' properties as columns](docs/screenshots/overview.png)
 
@@ -60,11 +60,34 @@ views:
 - **Open a task:** click its text to open the note at that line; Cmd/Ctrl-click opens a new tab.
 - **Large vaults:** only the rows on screen are drawn, and each note is read once and cached until it changes.
 
+## Task board
+
+Add a view with the **Task board** layout to see the same tasks as cards in columns. In the view's config menu, **Columns** picks the field: **Status**, **Priority** or **Due date**. The task toolbar filters and sorts the cards, and sorting applies within each column.
+
+- **Move a card** by dragging it to another column, or with its **⋯** menu (on phones, and from the keyboard). A move is one ordinary change to that one line, with the same checks as everywhere else:
+  - **Status:** To do, In progress, Done and Cancelled. Moving to Done adds the completion date. A recurring task moved to Done is completed through the Tasks plugin, so it gets its next occurrence.
+  - **Priority:** one column per priority, including No priority.
+  - **Due date:** dropping on **Today** or **Tomorrow** sets the due date, and **No due date** clears it. **Overdue**, **Next 7 days** and **Later** cover ranges of dates, so they show tasks but don't accept drops. Finished tasks with a past due date sit in their own column instead of Overdue.
+- **Undo:** after a move, the notice has an **Undo** button that puts the line back exactly as it was (unless it has changed since). Completing a recurring task can't be undone this way, because it adds the next occurrence.
+- Custom statuses keep their place: a `[!]` task stays in To do. They aren't a drop target of their own, so moving it to another status replaces the custom status.
+- Long columns show 100 cards at a time, with a **Show more** button.
+
+A board view in a `.base` file:
+
+```yaml
+views:
+  - type: tasklines-board
+    name: Board
+    boardField: status
+    taskQuery:
+      doneWithinDays: 7
+```
+
 ## Completing, editing and adding tasks
 
 Every change follows the same safety rule. Tasklines re-reads the note and checks that the line is still exactly what the view showed. It then writes through Obsidian's atomic `Vault.process`, changing only that line. If anything differs (you edited the line, it moved, the note was renamed), nothing is written, and a notice with an **Open at line** button appears.
 
-- **Tick a checkbox** to complete or reopen a task. A completion date is added in the line's own style: `✅ 2026-11-20` or `[completion:: 2026-11-20]`. Unticking removes it.
+- **Tick a checkbox** to complete or reopen a task. A completion date is added in the line's own style: `✅ 2026-11-20` or `[completion:: 2026-11-20]`. Unticking removes it. Cancelling a task adds a cancelled date the same way (`❌ 2026-11-20` or `[cancelled:: 2026-11-20]`), and reopening it removes that date.
 - **Click a Status, Due, Scheduled, Start or Priority cell** to edit it. Existing fields are changed where they are. New ones go at the end of the line, before any `^block-id`. Text in `inline code` is never touched.
 - **New task** adds one line to any note in the base, after the note's last task (and anything nested under it), in the same style and inside the same callout. A note without tasks gets it at the end.
 

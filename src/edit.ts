@@ -31,6 +31,7 @@ const DATE_EMOJI_RE: Record<DateField, RegExp> = {
 const PRIORITY_EMOJI: Record<Priority, string> = { highest: '🔺', high: '⏫', medium: '🔼', none: '', low: '🔽', lowest: '⏬' };
 const PRIORITY_EMOJI_RE = /\s*(?:🔺|⏫|🔼|🔽|⏬)️?/u;
 const DONE_EMOJI_RE = /\s*✅️?\s*\d{4}-\d{2}-\d{2}/u;
+const CANCELLED_EMOJI_RE = /\s*❌️?\s*\d{4}-\d{2}-\d{2}/u;
 const BLOCK_ID_TAIL = /\s+\^[\w-]+\s*$/u;
 
 const fieldRe = (key: string): RegExp => new RegExp(`\\s*[[(]${key}::\\s*(?:\\[\\[[^\\]]*\\]\\]|[^\\[\\]()])*[\\])]`, 'iu');
@@ -117,19 +118,27 @@ function setStatus(line: string, task: ParsedTask, value: string, opts: EditOpti
 	let out = line.slice(0, pos) + value + line.slice(pos + 1);
 	const was = statusKind(task.status);
 	const now = statusKind(value);
-	if (now === 'done' && was !== 'done') return addCompletion(out, task, opts);
-	if (now !== 'done' && was === 'done' && task.done !== undefined) {
-		const dv = find(out, fieldRe('completion'));
-		const hit = dv ?? find(out, DONE_EMOJI_RE);
-		if (hit) out = replaceAt(out, hit, '');
-	}
+	// A finishing date belongs to the status that set it: drop it when leaving that status.
+	if (now !== 'done' && was === 'done' && task.done !== undefined) out = removeFirst(out, fieldRe('completion'), DONE_EMOJI_RE);
+	if (now !== 'cancelled' && was === 'cancelled' && task.cancelled !== undefined) out = removeFirst(out, fieldRe('cancelled'), CANCELLED_EMOJI_RE);
+	if (now === 'done' && was !== 'done') return addFinishDate(out, task, 'done', opts);
+	if (now === 'cancelled' && was !== 'cancelled') return addFinishDate(out, task, 'cancelled', opts);
 	return out;
 }
 
-function addCompletion(line: string, task: ParsedTask, opts: EditOptions): string {
-	if (opts.completionDate === 'off' || task.done !== undefined) return line;
-	if (task.format === 'dataview') return insertToken(line, `[completion:: ${opts.today}]`);
-	if (task.format === 'tasks-emoji' || task.format === 'mixed' || opts.plainGetsEmojiDate) return insertToken(line, `✅ ${opts.today}`);
+/** Remove the Dataview field if present, otherwise the emoji token. */
+function removeFirst(line: string, dvRe: RegExp, emojiRe: RegExp): string {
+	const hit = find(line, dvRe) ?? find(line, emojiRe);
+	return hit ? replaceAt(line, hit, '') : line;
+}
+
+/** Add a ✅ completion or ❌ cancelled date in the line's style, as the Tasks plugin does. */
+function addFinishDate(line: string, task: ParsedTask, kind: 'done' | 'cancelled', opts: EditOptions): string {
+	if (opts.completionDate === 'off' || task[kind] !== undefined) return line;
+	const dvKey = kind === 'done' ? 'completion' : 'cancelled';
+	const emoji = kind === 'done' ? '✅' : '❌';
+	if (task.format === 'dataview') return insertToken(line, `[${dvKey}:: ${opts.today}]`);
+	if (task.format === 'tasks-emoji' || task.format === 'mixed' || opts.plainGetsEmojiDate) return insertToken(line, `${emoji} ${opts.today}`);
 	return line;
 }
 

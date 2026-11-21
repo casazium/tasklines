@@ -55,7 +55,7 @@ export class TasklinesSettingTab extends PluginSettingTab {
 				items: [
 					{
 						name: 'Add a completion date when ticking a task',
-						desc: 'Uses the format the task already has: ✅ for Tasks-style lines, [completion:: …] for Dataview-style lines. Plain lines get ✅ only when the Tasks plugin is installed.',
+						desc: 'Uses the format the task already has: ✅ for Tasks-style lines, [completion:: …] for Dataview-style lines. Plain lines get ✅ only when the Tasks plugin is installed. Cancelling a task adds a ❌ or [cancelled:: …] date the same way.',
 						control: { type: 'toggle', key: 'completionDate' },
 					},
 					{

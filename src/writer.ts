@@ -7,7 +7,7 @@ import type { TaskEdit } from './edit.ts';
 import type { TaskIndex } from './indexer.ts';
 import type { TasklinesSettings } from './settings.ts';
 import { localDate } from './view.ts';
-import { editInContent, insertTaskInContent, toggleInContent, type NewTask, type ToggleOptions } from './writeback.ts';
+import { editInContent, insertTaskInContent, replaceLineInContent, toggleInContent, type NewTask, type ToggleOptions } from './writeback.ts';
 
 export interface TaskTarget {
 	path: string;
@@ -17,7 +17,7 @@ export interface TaskTarget {
 
 type TasksApi = { executeToggleTaskDoneCommand?: (line: string, path: string) => string };
 type Failure = { ok: false; reason: string; detail: string };
-type Computed = { ok: true; content: string; changed?: boolean } | Failure;
+type Computed = { ok: true; content: string; changed?: boolean; newLine?: string } | Failure;
 
 const FAILURE_TEXT: Record<string, string> = {
 	'line-missing': 'The task is no longer in the note.',
@@ -27,6 +27,7 @@ const FAILURE_TEXT: Record<string, string> = {
 	'bad-external-output': 'The Tasks plugin returned an unexpected result.',
 	'recurring-outside-global-filter':
 		'This recurring task does not contain your Tasks global filter, so the Tasks plugin would complete it without creating the next occurrence. Add the filter to the line, or complete it in the note.',
+	'not-completed': 'The Tasks plugin would move this task to a status other than done (it follows your Tasks status cycle). Complete it in the note instead.',
 	'invalid-edit': 'That change could not be made safely on this line (it has repeated or ambiguous fields). Make it in the note instead.',
 	'tasks-format-mismatch':
 		'The Tasks plugin is set to a different task format than this line uses (emoji or Dataview), so it cannot create the next occurrence. Change the format in the Tasks settings, or complete it in the note.',
@@ -77,9 +78,9 @@ export class TaskWriter {
 	}
 
 	/** Toggle one task done/open. Returns true if the note was changed. */
-	async toggle(target: TaskTarget): Promise<boolean> {
+	async toggle(target: TaskTarget, expectDone = false): Promise<boolean> {
 		const tasks = this.tasksToggle();
-		const opts = this.options();
+		const opts: ToggleOptions = { ...this.options(), expectDone };
 		const tasksGlobalFilter = tasks ? await this.tasksGlobalFilter() : undefined;
 		const withTasks: ToggleOptions = { ...opts, tasksGlobalFilter, external: tasks ? (line) => tasks(line, target.path) : undefined };
 		return this.run(target, (data, precheck) => {
@@ -95,8 +96,27 @@ export class TaskWriter {
 
 	/** Change one field (status, date or priority) of one task. */
 	async edit(target: TaskTarget, edit: TaskEdit): Promise<boolean> {
+		return (await this.editLine(target, edit)) !== null;
+	}
+
+	/** Like edit(), but resolves to the line as written (for undo), or null if nothing changed. */
+	async editLine(target: TaskTarget, edit: TaskEdit): Promise<string | null> {
 		const opts = this.options();
-		return this.run(target, (data) => editInContent(data, target, edit, opts));
+		let written: string | null = null;
+		const ok = await this.run(target, (data) => {
+			const r = editInContent(data, target, edit, opts);
+			if (r.ok) written = r.newLine;
+			return r;
+		});
+		return ok ? written : null;
+	}
+
+	/**
+	 * Put a line back as it was (undo of a board move). Only if the line is still exactly what
+	 * the move wrote; otherwise it refuses like any other change.
+	 */
+	async restore(target: TaskTarget, original: string): Promise<boolean> {
+		return this.run(target, (data) => replaceLineInContent(data, target, original));
 	}
 
 	/**
