@@ -174,3 +174,13 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) in the perf vault (5,000 notes) wit
 - [x] **Heap** rose and fell with garbage collection (79–166 MB) and ended at 85–101 MB, with no steady climb.
 - [x] **Plugin turned off and on 30 times with a view open:** the open view keeps the old code until closed (a known Bases behaviour), but nothing accumulates. Closing it returns to the starting state, and a fresh view has exactly 1 listener.
 
+## Oldest supported Obsidian
+
+`manifest.json` declares `minAppVersion` 1.10.0. The oldest public 1.10 release is 1.10.3 (1.10.0 to 1.10.2 were early-access builds). Run on 2026-11-20 on the Windows 11 test PC with Obsidian 1.10.3 (official installer, version confirmed from the running app) and Tasklines 0.9.9, driven over the Chrome DevTools Protocol. No errors or exceptions were logged.
+
+- [x] The plugin and the Tasks plugin load. The view renders with its columns, table semantics and stats line.
+- [x] Tick, recurring completion through Tasks (next occurrence above), and due date (Enter), priority and status edits each changed only their line, and the CRLF note kept CRLF throughout.
+- [x] Toolbar: the Done chip and group by status work.
+- [x] Newer calls used by Tasklines (the cross-window `instanceOf()`, run on every redraw) exist in 1.10.3. `showPicker()` is only called on phones and is guarded.
+- Not covered on 1.10.3: notices and modals (off-screen session). They use the same Obsidian APIs as on 1.15.1.
+
