@@ -40,7 +40,7 @@ Status as of 0.9.9 (checked against the docs on 2026-11-20): ✅ done · ⬜ nee
 **Repository and files**
 - ✅ `README.md` explains what the plugin does and how to use it, with screenshots, install, quick start, settings, privacy and limits.
 - ✅ `LICENSE`: MIT, © 2026 Bob Casazza.
-- ✅ `manifest.json` at the repository root. `id` `tasklines`: lowercase, doesn't contain "obsidian" or end in "plugin", unique. `name` `Tasklines`: Basic Latin, no "Obsidian", "Plugin" or core feature name. `author` Casazium, `authorUrl` the GitHub organization (not the repository). `minAppVersion` `1.10.0`, tested on 1.10.3 (see VERIFY.md). `isDesktopOnly` false.
+- ✅ `manifest.json` at the repository root. `id` `tasklines`: lowercase, doesn't contain "obsidian" or end in "plugin", unique. `name` `Tasklines`: Basic Latin, no "Obsidian", "Plugin" or core feature name. `author` Casazium, `authorUrl` the GitHub organization (not the repository). `minAppVersion` `1.13.0` from 1.0.3, for the declarative settings API; 1.0.0 to 1.0.2 support 1.10.0 and were tested on 1.10.3 (see VERIFY.md), and `versions.json` sends older apps to 1.0.2. `isDesktopOnly` false.
 - ✅ `versions.json` maps each version to its minimum app version.
 - ✅ Screenshots in `docs/screenshots/`, used by the README.
 - ✅ The repository is public.
@@ -58,7 +58,7 @@ Status as of 0.9.9 (checked against the docs on 2026-11-20): ✅ done · ⬜ nee
 - ✅ Mobile-safe: no Node or Electron APIs in `src/`, no regex lookbehind.
 - ✅ Sentence case: lint passes. Product names (Tasklines, Dataview, Bases, Obsidian) are declared as brands in `eslint.config.mts`, and strings naming the Tasks plugin are exempt because "tasks" is also an ordinary word.
 - ✅ `app.plugins` is read only to find the Tasks plugin's documented public API (`apiV1`) and its saved global filter.
-- Known lint warnings, not errors: `prefer-setting-definitions` and the deprecated `display()`. Obsidian 1.13 added a declarative settings API, which makes settings searchable. Adopting it while keeping 1.10 support means providing both; it's a follow-up, listed in the README's known limits.
+- ✅ Settings use the declarative settings API (`getSettingDefinitions()`, Obsidian 1.13+), so they appear in settings search. There is no `display()`. Lint reports no warnings.
 - The **Submission requirements** and **Developer policies** pages returned "not found" when last checked. Re-read them if they reappear.
 
 ### Steps

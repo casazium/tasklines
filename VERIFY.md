@@ -184,3 +184,13 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) in the perf vault (5,000 notes) wit
 - [x] Newer calls used by Tasklines (the cross-window `instanceOf()`, run on every redraw) exist in 1.10.3. `showPicker()` is only called on phones and is guarded.
 - Not covered on 1.10.3: notices and modals (off-screen session). They use the same Obsidian APIs as on 1.15.1.
 
+## Declarative settings (1.0.3)
+
+From 1.0.3 the settings tab uses `getSettingDefinitions()` (Obsidian 1.13+) and `minAppVersion` is 1.13.0. Checked on 2026-11-20 in Obsidian 1.15.1 (macOS), after quitting Obsidian so the Settings window loaded the new code:
+
+- [x] Settings search finds Tasklines' settings ("excluded folders", "completion date") and jumps to them.
+- [x] The tab shows the three headed groups, the format dropdown, the wide statuses box with its reset button, and the excluded-folders box.
+- [x] Each control saves: the completion-date toggle writes `auto`/`off`, the Tasks toggle writes `true`/`false`, and excluded folders saves its text. An invalid status line shows its warning as you type, and the reset button restores the defaults and clears it.
+- [x] Lint reports no warnings.
+- Obsidian 1.10 to 1.12 keep 1.0.2 through `versions.json`.
+
