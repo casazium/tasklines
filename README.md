@@ -62,7 +62,9 @@ views:
 
 ## Task board
 
-Add a view with the **Task board** layout to see the same tasks as cards in columns. In the view's config menu, **Columns** picks the field: **Status**, **Priority** or **Due date**. The task toolbar filters and sorts the cards, and sorting applies within each column.
+Add a view with the **Task board** layout to see the same tasks as cards in columns.
+
+![The task board with To do, In progress, Done and Cancelled columns; overdue dates in red](docs/screenshots/board.png) In the view's config menu, **Columns** picks the field: **Status**, **Priority** or **Due date**. The task toolbar filters and sorts the cards, and sorting applies within each column.
 
 - **Move a card** by dragging it to another column, or with its **⋯** menu (on phones, and from the keyboard). A move is one ordinary change to that one line, with the same checks as everywhere else:
   - **Status:** To do, In progress, Done and Cancelled. Moving to Done adds the completion date. A recurring task moved to Done is completed through the Tasks plugin, so it gets its next occurrence.
@@ -85,7 +87,9 @@ views:
 
 ## Task calendar
 
-Add a view with the **Task calendar** layout to see tasks on the days of their dates. In the view's config menu:
+Add a view with the **Task calendar** layout to see tasks on the days of their dates.
+
+![The task calendar's month view, with tasks on their due dates, overdue ones outlined, and a No date tray](docs/screenshots/calendar.png) In the view's config menu:
 - **Date** picks which date places a task: **Due**, **Scheduled** or **Start**.
 - **Layout** picks **Month**, **Agenda** or **Automatic**. Automatic, the default, shows the agenda on phones and the month elsewhere, so one base suits both.
 
