@@ -250,6 +250,16 @@ The review found: the bar changed shape when Undo appeared, a tall phone bar tha
   - Board: the three columns with tasks had checkboxes, and the empty Cancelled column said "No tasks" in select mode and "Drop tasks here" after.
   - hypatia was cleaned up afterwards.
 
+## Select mode: keyboard and accessibility tree
+
+Run on 2026-11-21 on the Mac (Obsidian 1.15.1) with real key events and Chromium's accessibility tree over the DevTools protocol.
+
+- [x] **Keyboard.** Enter on **Select** turns on select mode and puts focus on **Select all**. Tab then goes Done → each group checkbox → that group's tasks, in screen order; controls that are off (nothing selected, nothing to undo) are skipped. Space on a group checkbox selected its 6 tasks; Space on a task unticked it and kept focus there. Escape left select mode with focus back on **Select**.
+- [x] **Accessibility tree.** The bar is a toolbar named "Bulk actions"; its buttons and menus are named (Select all 14 shown tasks, Clear the selection, Complete, Reopen, Status, Priority, Change date, Copy). Undo with nothing to undo is disabled and named "Nothing to undo". The group checkboxes are named "Select all in home" etc. and report `checked: mixed` when some of their tasks are selected; task boxes are "Select: <task>". The toolbar's Select reports `pressed: true` in select mode and is named "Leave select mode". The count is a polite live region.
+- [x] **Fixed:** Done was named "Leave select mode", which leaves out the word on the button, so "click Done" in speech control wouldn't find it (WCAG 2.5.3, label in name). It's now "Done: leave select mode".
+- [x] **Ticking without a redraw, on Android** (emulator, agenda): with Overdue selected, unticking Fix gate showed the dash at once, ticking it again showed the full tick, and the group checkbox then unselected all four.
+- [x] **Ticking without a redraw, on iPhone** (iCloud vault, Obsidian quit and reopened to load the build): ticking "home" then unticking Fix gate showed the dash with 5 selected, ticking it again showed the full tick with 6, and the group checkbox then unselected all.
+
 ## Bulk actions on a large vault
 
 Run on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol) in `perf-vault` (`npm run bench`'s synthetic vault: 5,003 notes, 10,511 tasks), with a temporary board and calendar base. Times run from the action until the view had been still for 150 ms; "blocked" is the longest stretch the main thread was busy (long tasks over 50 ms). The vault was backed up first and was byte for byte as before at the end (checksum of every note).

@@ -165,7 +165,7 @@ export class SelectionBar {
 		const end = row.createDiv({ cls: 'tasklines-selection-end' });
 		button(end, 'Undo', 'undo', () => h.undo(), { off: state.undoLabel === null, label: state.undoLabel ? `Undo the last change (${state.undoLabel})` : 'Nothing to undo' });
 		if (busy) button(end, 'Cancel', 'end', () => h.cancel(), { cls: 'tasklines-btn tasklines-selection-done' }).disabled = false;
-		else button(end, 'Done', 'end', () => h.exit(), { cls: 'tasklines-btn tasklines-selection-done', label: 'Leave select mode' });
+		else button(end, 'Done', 'end', () => h.exit(), { cls: 'tasklines-btn tasklines-selection-done', label: 'Done: leave select mode' });
 	}
 
 	/** One date menu, grouped by date (the view's own first): "Due date → Tomorrow", "Scheduled date → Remove", … */
