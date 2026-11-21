@@ -1,3 +1,3 @@
 # Screenshots
 
-PNG screenshots for the README go here. See the shot list in [RELEASE.md](../../RELEASE.md#screenshots-to-take).
+Used by the README. Taken in `test-vault/` with the default theme in light mode (desktop window about 1630×950, saved at 1600 px wide), and on the Android emulator for `mobile.png`. See [RELEASE.md](../../RELEASE.md#screenshots) to retake them.

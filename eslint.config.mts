@@ -30,6 +30,14 @@ export default defineConfig(
 	},
 	...obsidianmd.configs.recommended,
 	{
+		// Product names keep their capitals in otherwise sentence-case UI text.
+		files: ['src/**/*.ts'],
+		rules: {
+			// "Tasks" is also an ordinary word, so only strings naming the Tasks plugin are exempt.
+			'obsidianmd/ui/sentence-case': ['warn', { brands: ['Tasklines', 'Dataview', 'Bases', 'Obsidian'], ignoreRegex: ['\\bTasks(?: plugin|-style)'] }],
+		},
+	},
+	{
 		// Tests run under Node's test runner, not inside Obsidian.
 		files: ['tests/**/*.ts', 'bench/**/*.ts'],
 		languageOptions: { globals: { ...globals.node } },
