@@ -244,3 +244,8 @@
 .tasklines-row.is-selected, .tasklines-card.is-selected { background: var(--background-modifier-active-hover); }
 .tasklines-card.is-selected { border-color: var(--interactive-accent); }
 .tasklines-status-done .tasklines-select-text, .tasklines-status-cancelled .tasklines-select-text { text-decoration: line-through; color: var(--text-faint); }
+/* "Select" beside a group, column or day heading. Small enough for the list's fixed row height. */
+.tasklines-view .tasklines-group-select { flex: none; height: auto; padding: 1px var(--size-4-2); font-size: var(--font-ui-smaller); font-weight: normal; line-height: 1.4; }
+.tasklines-group .tasklines-group-select { margin-inline-start: auto; align-self: center; }
+.tasklines-view.is-selecting .tasklines-column-head, .tasklines-view.is-selecting .tasklines-agenda-head { justify-content: flex-start; gap: var(--size-4-2); }
+.tasklines-view.is-selecting .tasklines-column-head .tasklines-column-count, .tasklines-view.is-selecting .tasklines-agenda-head .tasklines-column-count { margin-inline-start: auto; }

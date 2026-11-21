@@ -23,7 +23,7 @@ import { BOARD_FIELD_LABELS, BOARD_FIELDS, boardColumns, moveFor, normalizeBoard
 import { TaskBoard, type MenuChoice } from './board-view.ts';
 import { CALENDAR_FIELD_LABELS, CALENDAR_FIELDS, CALENDAR_LAYOUT_CHOICES, CALENDAR_LAYOUT_LABELS, isRealDate, moveToDate, type CalendarField, normalizeCalendarField, normalizeCalendarLayout } from './calendar.ts';
 import { TaskCalendar } from './calendar-view.ts';
-import { describePlan, describeSummary, orderForWrite, planBulk, shiftRecords, summarize as summarizeBatch, type BulkAction, type StepOutcome, type UndoRecord } from './bulk.ts';
+import { copyText, describePlan, describeSummary, orderForWrite, planBulk, rangeKeys, shiftRecords, summarize as summarizeBatch, type BulkAction, type CopyMode, type StepOutcome, type UndoRecord } from './bulk.ts';
 import { SelectionBar, type SelectionHooks } from './selection-bar.ts';
 import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
 import type { TaskEdit } from './edit.ts';
@@ -132,6 +132,12 @@ abstract class TaskViewBase extends BasesView {
 	private allRows: ViewRow[] = [];
 	/** The tasks the view shows (after filters), for "Select all". Set by each view's draw. */
 	protected shownRows: ViewRow[] = [];
+	/** The shown tasks in the order they appear on screen, for Shift-click ranges and copying. Set by each view's draw. */
+	protected screenRows: ViewRow[] = [];
+	/** The last task ticked, where a Shift-click range starts. */
+	private anchorKey: string | null = null;
+	/** The date the bar's date menu changes, when chosen in the bar. */
+	private bulkField: CalendarField | null = null;
 	private selectionBar: SelectionBar;
 	/** A batch being written. Redraws wait until it ends. */
 	private batch: { cancel: boolean; done: number; total: number } | null = null;
@@ -164,6 +170,7 @@ abstract class TaskViewBase extends BasesView {
 			selectAll: () => this.selectAll(),
 			clear: () => {
 				this.selected.clear();
+				this.anchorKey = null;
 				this.render();
 			},
 			undo: () => void this.runUndo(),
@@ -171,6 +178,11 @@ abstract class TaskViewBase extends BasesView {
 				if (this.batch) this.batch.cancel = true;
 			},
 			exit: () => this.setSelecting(false),
+			setDateField: (field) => {
+				this.bulkField = field;
+				this.updateBar();
+			},
+			copy: (mode) => void this.copySelected(mode),
 		});
 		this.rootEl.addEventListener('keydown', (ev) => {
 			if (ev.key !== 'Escape' || !this.selecting || this.batch) return;
@@ -301,10 +313,31 @@ abstract class TaskViewBase extends BasesView {
 		return {
 			active: true,
 			has: (t) => this.selected.get(taskKey(t)) === t.raw,
-			toggle: (t, on) => {
-				if (on) this.selected.set(taskKey(t), t.raw);
-				else this.selected.delete(taskKey(t));
+			toggle: (t, on, range) => {
+				const key = taskKey(t);
+				const keys = range && this.anchorKey ? rangeKeys(this.screenRows.map((r) => taskKey(r.task)), this.anchorKey, key) : null;
+				this.anchorKey = key;
+				if (keys) {
+					const raws = new Map(this.screenRows.map((r) => [taskKey(r.task), r.task.raw]));
+					for (const k of keys) {
+						const raw = raws.get(k);
+						if (on && raw !== undefined) this.selected.set(k, raw);
+						else this.selected.delete(k);
+					}
+					this.render();
+					return;
+				}
+				if (on) this.selected.set(key, t.raw);
+				else this.selected.delete(key);
 				this.selectionBar.setCount(this.selected.size);
+			},
+			setMany: (tasks, on) => {
+				for (const t of tasks) {
+					if (on) this.selected.set(taskKey(t), t.raw);
+					else this.selected.delete(taskKey(t));
+				}
+				this.anchorKey = null;
+				this.render();
 			},
 		};
 	}
@@ -319,7 +352,7 @@ abstract class TaskViewBase extends BasesView {
 			active: this.selecting,
 			selected: this.selected.size,
 			shown: this.shownRows.length,
-			dateField: this.bulkDateField(),
+			dateField: this.bulkField ?? this.bulkDateField(),
 			busy: this.batch ? { done: this.batch.done, total: this.batch.total } : null,
 			undoLabel: this.lastUndo?.label ?? null,
 		});
@@ -329,6 +362,7 @@ abstract class TaskViewBase extends BasesView {
 		if (this.batch) return;
 		this.selecting = on;
 		if (!on) this.selected.clear();
+		this.anchorKey = null;
 		this.rootEl.toggleClass('is-selecting', on);
 		void this.renderAsync().then(() => (on ? this.selectionBar.focus() : this.toolbar.focusSelect()));
 	}
@@ -338,10 +372,36 @@ abstract class TaskViewBase extends BasesView {
 		this.render();
 	}
 
+	/** Copy the selected tasks, in the order they appear on screen, to the clipboard. */
+	private async copySelected(mode: CopyMode): Promise<void> {
+		const seen = new Set<string>();
+		const tasks: IndexedTask[] = [];
+		// On-screen order first; then any selected task the filters now hide.
+		for (const r of [...this.screenRows, ...this.allRows]) {
+			const key = taskKey(r.task);
+			if (seen.has(key) || this.selected.get(key) !== r.task.raw) continue;
+			seen.add(key);
+			tasks.push(r.task);
+		}
+		if (!tasks.length) return;
+		const text = copyText(tasks, mode, (t) => {
+			const file = this.app.vault.getAbstractFileByPath(t.path);
+			if (!(file instanceof TFile)) return t.path;
+			return this.app.fileManager.generateMarkdownLink(file, '', t.blockId ? `#^${t.blockId}` : undefined);
+		});
+		const n = `${tasks.length} ${tasks.length === 1 ? 'task' : 'tasks'}`;
+		try {
+			await navigator.clipboard.writeText(text);
+			new Notice(`Tasklines: copied ${n}${mode === 'lines' ? ' as task lines' : ''}.`);
+		} catch {
+			new Notice('Tasklines: could not copy to the clipboard.');
+		}
+	}
+
 	/** Run one action on every selected task: planned, confirmed, then written one line at a time. */
 	private async runBulk(choice: BulkAction | 'pick-date', verb: string): Promise<void> {
 		if (this.batch) return;
-		const field = this.bulkDateField();
+		const field = this.bulkField ?? this.bulkDateField();
 		let action: BulkAction;
 		if (choice === 'pick-date') {
 			const picked = await new Promise<string | undefined>((resolve) => new DatePickModal(this.app, undefined, resolve).open());
@@ -413,6 +473,7 @@ abstract class TaskViewBase extends BasesView {
 			this.batch = null;
 			this.writer.refresh(touched);
 			this.selected.clear();
+			this.anchorKey = null;
 			this.lastUndo = records.length ? { label: verb.replace(/:$/, ''), records } : null;
 			this.refreshAfterBatch = false;
 			await this.renderAsync();
@@ -523,6 +584,7 @@ class TasklinesView extends TaskViewBase {
 		const groups = applyQuery(rows, this.query, today);
 		// A task can appear in several tag groups; select it once.
 		this.shownRows = [...new Map(groups.flatMap((g) => g.rows).map((r) => [taskKey(r.task), r])).values()];
+		this.screenRows = this.shownRows;
 		renderRows(this.statsEl, this.list, {
 			selection: this.selectionHooks(),
 			groups,
@@ -578,9 +640,11 @@ class TaskBoardView extends TaskViewBase {
 		const field = normalizeBoardField(this.config.get(BOARD_FIELD_KEY));
 		const sorted = applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows);
 		this.shownRows = sorted;
+		const columns = boardColumns(sorted, field, today);
+		this.screenRows = [...new Map(columns.flatMap((c) => c.rows).map((r) => [taskKey(r.task), r])).values()];
 		this.board.render({
 			selection: this.selectionHooks(),
-			columns: boardColumns(sorted, field, today),
+			columns,
 			total: rows.length,
 			today,
 			field,
@@ -657,6 +721,12 @@ class TaskCalendarView extends TaskViewBase {
 	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
 		const field = normalizeCalendarField(this.config.get(CALENDAR_FIELD_KEY));
 		this.shownRows = applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows);
+		// Day by day, as the month and the agenda show them; tasks with no real date last.
+		const day = (r: ViewRow) => {
+			const d = r.task[field];
+			return d && isRealDate(d) ? d : '9999';
+		};
+		this.screenRows = this.shownRows.map((r, i) => ({ r, i })).sort((a, b) => (day(a.r) < day(b.r) ? -1 : day(a.r) > day(b.r) ? 1 : a.i - b.i)).map((x) => x.r);
 		this.calendar.render({
 			selection: this.selectionHooks(),
 			rows: this.shownRows,

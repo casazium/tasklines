@@ -1,7 +1,8 @@
 // The action bar for bulk actions: shown in select mode, above the tasks. DOM only; the adapter
 // runs the actions. Uses only types from Obsidian.
 
-import type { BulkAction } from './bulk.ts';
+import type { BulkAction, CopyMode } from './bulk.ts';
+import type { CalendarField } from './calendar.ts';
 import { statusDefs, type Priority } from './parser.ts';
 import { PRIORITY_ORDER } from './query.ts';
 
@@ -13,6 +14,9 @@ export interface SelectionBarHandlers {
 	undo: () => void;
 	cancel: () => void;
 	exit: () => void;
+	/** Which date the date menu changes. */
+	setDateField: (field: CalendarField) => void;
+	copy: (mode: CopyMode) => void;
 }
 
 export interface SelectionBarState {
@@ -20,8 +24,8 @@ export interface SelectionBarState {
 	selected: number;
 	/** Tasks shown (after filters), for "Select all". */
 	shown: number;
-	/** The date field date actions change: due, or the calendar's field. */
-	dateField: 'due' | 'scheduled' | 'start';
+	/** The date field date actions change: due, or the calendar's field, unless changed in the bar. */
+	dateField: CalendarField;
 	/** A batch is being written: everything but Cancel is off. */
 	busy: { done: number; total: number } | null;
 	/** Label of the last batch that can be undone, if any. */
@@ -54,6 +58,14 @@ export class SelectionBar {
 	}
 
 	render(state: SelectionBarState): void {
+		// Keep keyboard focus on the same control when the bar is redrawn.
+		const active = document.activeElement;
+		const focusKey = active instanceof HTMLElement && this.el.contains(active) ? active.dataset.focusKey : undefined;
+		this.draw(state);
+		if (focusKey) this.el.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(focusKey)}"]`)?.focus();
+	}
+
+	private draw(state: SelectionBarState): void {
 		this.el.empty();
 		this.el.toggle(state.active);
 		if (!state.active) return;
@@ -101,24 +113,36 @@ export class SelectionBar {
 			(p, text) => h.run({ kind: 'priority', value: p as Priority }, `Set priority ${text} on`),
 		);
 		const field = state.dateField;
-		const label = `${DATE_LABEL[field]} date`;
+		const fieldSel = row.createEl('select', { cls: 'dropdown tasklines-select', attr: { 'aria-label': 'Date to change', 'data-focus-key': 'bulk-date-field' } });
+		for (const f of ['due', 'scheduled', 'start'] as const) fieldSel.createEl('option', { value: f, text: `${DATE_LABEL[f]} date` });
+		fieldSel.value = field;
+		fieldSel.addEventListener('change', () => h.setDateField(fieldSel.value as CalendarField));
+		const name = DATE_LABEL[field].toLowerCase();
 		menu(
-			label,
+			'Change date',
 			[
 				['today', 'Today'],
 				['tomorrow', 'Tomorrow'],
 				['+1', 'One day later'],
 				['+7', 'One week later'],
 				['pick', 'Pick a date…'],
-				['remove', `Remove ${DATE_LABEL[field].toLowerCase()} date`],
+				['remove', `Remove ${name} date`],
 			],
 			(choice, text) => {
 				if (choice === 'pick') return h.run('pick-date', `Rescheduled`);
-				if (choice === 'remove') return h.run({ kind: 'set-date', field, value: null }, `Removed the ${DATE_LABEL[field].toLowerCase()} date from`);
+				if (choice === 'remove') return h.run({ kind: 'set-date', field, value: null }, `Removed the ${name} date from`);
 				if (choice === '+1' || choice === '+7') return h.run({ kind: 'shift-date', field, days: Number(choice) }, `Moved ${text.toLowerCase()}:`);
 				// Today and Tomorrow are resolved when the batch runs.
 				return h.run({ kind: 'set-date', field, value: choice }, `Rescheduled to ${text.toLowerCase()}:`);
 			},
+		);
+		menu(
+			'Copy',
+			[
+				['links', 'List with links'],
+				['lines', 'Task lines'],
+			],
+			(mode) => h.copy(mode as CopyMode),
 		);
 		button(`Select all ${state.shown}`, () => h.selectAll(), false);
 		button('Clear', () => h.clear());
@@ -131,7 +155,10 @@ export class SelectionBar {
 export interface SelectionHooks {
 	active: boolean;
 	has: (task: { path: string; line: number; raw: string }) => boolean;
-	toggle: (task: { path: string; line: number; raw: string }, selected: boolean) => void;
+	/** `range`: Shift was held, so select (or unselect) everything from the last ticked task to this one. */
+	toggle: (task: { path: string; line: number; raw: string }, selected: boolean, range?: boolean) => void;
+	/** Select or unselect every task of a group, column or day. */
+	setMany: (tasks: Array<{ path: string; line: number; raw: string }>, selected: boolean) => void;
 }
 
 /**
@@ -142,13 +169,32 @@ export function drawSelectBox(parent: HTMLElement, item: HTMLElement, task: { pa
 	const box = parent.createEl('input', { type: 'checkbox', cls: 'tasklines-select-box', attr: { 'aria-label': `Select: ${task.text}`, 'data-focus-key': 'check' } });
 	box.checked = sel.has(task);
 	item.toggleClass('is-selected', box.checked);
-	const set = (on: boolean) => {
+	const set = (on: boolean, range: boolean) => {
 		box.checked = on;
 		item.toggleClass('is-selected', on);
-		sel.toggle(task, on);
+		sel.toggle(task, on, range);
 	};
-	box.addEventListener('click', () => set(box.checked));
+	box.addEventListener('click', (ev) => set(box.checked, ev.shiftKey));
 	const text = parent.createSpan({ cls: 'tasklines-select-text', text: task.text || '(empty)', attr: { title: task.text } });
-	text.addEventListener('click', () => set(!box.checked));
+	// Shift-click selects a range, not the words.
+	text.addEventListener('mousedown', (ev) => {
+		if (ev.shiftKey) ev.preventDefault();
+	});
+	text.addEventListener('click', (ev) => set(!box.checked, ev.shiftKey));
 	return box;
+}
+
+/** "Select" (or "Unselect") for every task under a group, column or day heading. */
+export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string; line: number; raw: string }>, sel: SelectionHooks, label: string): void {
+	if (!tasks.length) return;
+	const all = tasks.every((t) => sel.has(t));
+	const b = parent.createEl('button', {
+		cls: 'tasklines-btn tasklines-group-select',
+		text: all ? 'Unselect' : 'Select',
+		attr: { 'aria-label': `${all ? 'Unselect' : 'Select'} all in ${label || '(none)'}`, 'data-focus-key': `group-select:${label}` },
+	});
+	b.addEventListener('click', (ev) => {
+		ev.stopPropagation();
+		sel.setMany(tasks, !all);
+	});
 }

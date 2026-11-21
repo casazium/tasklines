@@ -115,11 +115,19 @@ views:
 
 ## Changing several tasks at once
 
-Press **Select** in the task toolbar of any Tasklines view (list, board or calendar). Each task's checkbox becomes a selection box, and tapping a task selects it too. An action bar appears with:
+Press **Select** in the task toolbar of any Tasklines view (list, board or calendar). Each task's checkbox becomes a selection box, and tapping a task selects it too. To select several at once:
+
+- **Shift-click** a task to select (or unselect) everything from the last task you ticked to this one, in the order they appear on screen.
+- **Select** beside a list group, board column or calendar day selects every task under it; **Unselect** clears them again.
+- **Select all** selects every task the view's filters show.
+
+An action bar appears with:
 
 - **Complete** and **Reopen**.
-- **Status**, **Priority** and a **date** menu: Today, Tomorrow, One day later, One week later, Pick a date… and Remove. It changes the due date, or in a calendar the calendar's own date. "One day later" moves each task's own date (counting from today once it has passed), and skips tasks with no date.
-- **Select all** (every task the view's filters show), **Clear**, and **Done** (or Escape) to leave select mode.
+- **Status** and **Priority** menus.
+- A **date** picker (Due, Scheduled or Start date; in a calendar it starts on the calendar's own date) and a **Change date** menu: Today, Tomorrow, One day later, One week later, Pick a date… and Remove. "One day later" moves each task's own date (counting from today once it has passed), and skips tasks with no date.
+- **Copy**: the selected tasks as a plain list with a link to each task's note (no checkboxes, so pasting it doesn't make copies of the tasks), or as the task lines themselves.
+- **Clear**, and **Done** (or Escape) to leave select mode.
 
 Each selected task is still changed on its own, one line at a time, with the same checks as everywhere else. If a line changed since you selected it, that task is refused and the rest go ahead. Tasks with nothing to change are skipped. One notice reports what was done, skipped and refused, and **Undo** (in the notice and in the action bar) puts every changed line back, each only if it's still what the batch wrote.
 

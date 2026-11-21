@@ -7,7 +7,7 @@ import type { IndexStats } from './indexer.ts';
 import { statusKind } from './parser.ts';
 import { formatSummary, summarize } from './query.ts';
 import type { ViewRow } from './view.ts';
-import { drawSelectBox, type SelectionHooks } from './selection-bar.ts';
+import { drawGroupSelect, drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 /** Cards drawn per column before a "Show more" button; keeps huge columns cheap to draw. */
 export const CARD_PAGE = 100;
@@ -147,6 +147,7 @@ export class TaskBoard {
 		const count = head.createSpan({ cls: 'tasklines-column-count', text: String(n) });
 		count.createSpan({ cls: 'tasklines-sr-only', text: n === 1 ? ' task' : ' tasks' });
 		if (n) head.setAttr('title', formatSummary(summarize(column.rows, input.today)));
+		if (input.selection?.active) drawGroupSelect(head, column.rows.map((r) => r.task), input.selection, column.label);
 		if (column.note) colEl.createDiv({ cls: 'tasklines-column-note', text: column.note });
 
 		const scroll = colEl.createDiv({ cls: 'tasklines-column-cards' });

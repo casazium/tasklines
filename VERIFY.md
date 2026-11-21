@@ -216,6 +216,18 @@ Fable reviewed the design before it was built; its must-change and should-change
   - hypatia was cleaned up afterwards: Obsidian stopped, `C:\Users\casaz\tasklines` removed, and the vault list restored.
 - [ ] Not covered: VoiceOver.
 
+### Selecting more at once, choosing the date, and Copy
+
+Checked on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol). Nothing was logged as an error, and every note was byte for byte as before at the end.
+
+- [x] **Tests** (`tests/bulk.test.ts`): Shift-click ranges in either direction (and a single task when the first one is no longer shown); scheduled and start dates planned and written in each line's own format; Copy as a list with links (block links where a task has a `^block-id`, no checkboxes) and as task lines without indent or callout prefix.
+- [x] **List**: **Select** on the "home" group selected its 6 tasks and turned into **Unselect**, which cleared them. Ticking the 2nd row and Shift-clicking the 5th selected rows 2–5. Unticking the 4th and Shift-unticking the 3rd left 2 selected.
+- [x] **Copy**: "List with links" gave `- Recurring: water plants ([[Beta]])` lines; "Task lines" gave the lines as written. Read back from the clipboard.
+- [x] **Date to change**: choosing Scheduled kept keyboard focus on the picker and renamed Remove to "Remove scheduled date". **Tomorrow** added `⏳ 2026-11-22` to an emoji line and `[scheduled:: 2026-11-22]` to a Dataview line, keeping the due dates. Undo put both back.
+- [x] **Board**: To do, In progress and Done had **Select** beside their counts (none on the empty Cancelled column); To do's selected its 13 tasks.
+- [x] **Calendar agenda**: Overdue and days with tasks had **Select**; empty days had none. The date picker started on the calendar's field.
+- [ ] Not covered: phones (the bar has two more controls to wrap), Windows.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.
