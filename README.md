@@ -115,6 +115,8 @@ views:
 
 ## Changing several tasks at once
 
+![Select mode in the list: the action bar above the tasks, the "work" group fully selected, two of "home" selected with a dash on its checkbox, and the notice of the change just made with Undo](docs/screenshots/bulk.png)
+
 Press **Select** in the task toolbar of any Tasklines view (list, board or calendar); it stays highlighted while select mode is on, and pressing it again (or **Done**, or Escape) leaves. Each task's checkbox becomes a selection box, and tapping a task selects it too. To select several at once:
 
 - **Shift-click** a task to select (or unselect) everything from the last task you ticked to this one, in the order they appear on screen.

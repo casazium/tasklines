@@ -269,6 +269,16 @@ Run on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol) in `perf-vault
 - [x] **Writing.** 312 tasks in 88 notes → Scheduled tomorrow: asked first ("Change 312 tasks in 88 notes?"), then 2.1 s; Undo 1.9 s. 2,001 tasks in 2,001 notes: 13.5 s, Undo 12.9 s, so about 6.7 ms a task at either size. The count updated every ~110 ms throughout, the main thread was never blocked for more than 56 ms (at the final redraw), and every line came back on Undo.
 - [x] **Cancel.** Pressed at "Working… 65 of 256": 66 written (the one in progress finished), 190 skipped as cancelled, 56 skipped as already Low. Undo put back all 66.
 
+## Release 1.3.0
+
+Full test pass on 2026-11-21 for the batch #46–#49 (bulk actions and their follow-ups), on `main` at `fa12642` plus the version bump and screenshots.
+
+- [x] **Automated:** build, 726 tests and lint (no warnings) pass.
+- [x] **Fuzz, large run:** `FUZZ_CASES=200000 FUZZ_SEED=7`: no failures (9.4 s).
+- [x] **Desktop:** the Bulk actions sections above, plus a quick pass on this commit. In the list, ticking Write announcement wrote `✅ 2026-11-21`. On the board, dragging Confirm catering to In progress wrote `[/]` on its indented Dataview line. In the agenda, a bulk "one week later" on 4 tasks and its Undo. The notes were put back afterwards.
+- [x] **Android, iPhone, Windows:** see Bulk actions above (each platform checked, Windows with a CRLF note), and the tick check for #48 on Android and iPhone.
+- [x] **Screenshots:** `docs/screenshots/bulk.png`, and listing images `desktop-6-bulk.png` and `mobile-3-select.png`.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.
