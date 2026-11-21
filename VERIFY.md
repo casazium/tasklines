@@ -151,3 +151,11 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with axe-core 4.10.3 (run from the 
   - Active chips and the New task button use a darker accent so small text meets 4.5:1 contrast.
 - [ ] Not covered: listening with VoiceOver or NVDA. The roles and labels follow the ARIA table pattern, but a screen-reader pass is still worth doing.
 
+## Upgrade and downgrade
+
+Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with the published 0.9.0 and 0.9.9 release files, swapped into the test vault from the developer console.
+
+- [x] **Formats unchanged since 0.9.0:** the settings fields, the view options stored in `.base` files (`taskQuery`, `showToolbar`, `taskCol_…`), the saved filter's shape and the code that reads it back (`normalizeQuery`) are identical in 0.9.0 and 0.9.9.
+- [x] **0.9.0 → 0.9.9 → 0.9.0:** 0.9.0 saved non-default settings (completion date off, Tasks off, Dataview fields, an extra custom status, an excluded folder) and a customised view (Done and High chips, tag filter `#work`, group by status). After the upgrade, and again after downgrading, the settings, the saved filter, the active chips, the sort and group menus and the tag filter were identical. Neither version rewrote the other's `data.json` or `.base` file, and no errors were logged.
+- The stats line differs only where 0.9.1 changed how notes are counted, by design.
+
