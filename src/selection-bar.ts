@@ -238,13 +238,23 @@ export function drawSelectBox(parent: HTMLElement, item: HTMLElement, task: { pa
 	return box;
 }
 
+/** The tasks under each group checkbox, so ticking one task can update the checkboxes without a redraw. */
+const groupTasks = new WeakMap<HTMLInputElement, Array<{ path: string; line: number; raw: string }>>();
+
+/** Ticked when all of a group's tasks are selected, half-ticked when some are. */
+function showGroupState(box: HTMLInputElement, tasks: Array<{ path: string; line: number; raw: string }>, has: SelectionHooks['has']): void {
+	let n = 0;
+	for (const t of tasks) if (has(t)) n++;
+	box.checked = n === tasks.length;
+	box.indeterminate = n > 0 && n < tasks.length;
+}
+
 /**
  * A checkbox for every task under a group, column or day heading: ticked when all are selected,
  * half-ticked when some are. Placed first, in line with the tasks' own boxes.
  */
 export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string; line: number; raw: string }>, sel: SelectionHooks, label: string): void {
 	if (!tasks.length) return;
-	const n = tasks.filter((t) => sel.has(t)).length;
 	// The label widens the tap target without moving the box.
 	const wrap = createEl('label', { cls: 'tasklines-group-select' });
 	parent.prepend(wrap);
@@ -253,8 +263,17 @@ export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string
 		cls: 'tasklines-select-box',
 		attr: { 'aria-label': `Select all in ${label || '(none)'}`, 'data-focus-key': `group-select:${label}` },
 	});
-	box.checked = n === tasks.length;
-	box.indeterminate = n > 0 && n < tasks.length;
+	groupTasks.set(box, tasks);
+	showGroupState(box, tasks, sel.has);
 	wrap.addEventListener('click', (ev) => ev.stopPropagation());
-	box.addEventListener('click', () => sel.setMany(tasks, n !== tasks.length));
+	// Selects the rest unless all are already selected (decided at click time, not draw time).
+	box.addEventListener('click', () => sel.setMany(tasks, !tasks.every((t) => sel.has(t))));
+}
+
+/** After ticking one task: bring every group checkbox on screen up to date, without redrawing the view. */
+export function refreshGroupSelects(root: HTMLElement, has: SelectionHooks['has']): void {
+	root.querySelectorAll<HTMLInputElement>('.tasklines-group-select input').forEach((box) => {
+		const tasks = groupTasks.get(box);
+		if (tasks) showGroupState(box, tasks, has);
+	});
 }

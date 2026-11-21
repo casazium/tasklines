@@ -24,7 +24,7 @@ import { TaskBoard, type MenuChoice } from './board-view.ts';
 import { CALENDAR_FIELD_LABELS, CALENDAR_FIELDS, CALENDAR_LAYOUT_CHOICES, CALENDAR_LAYOUT_LABELS, isRealDate, moveToDate, type CalendarField, normalizeCalendarField, normalizeCalendarLayout } from './calendar.ts';
 import { TaskCalendar } from './calendar-view.ts';
 import { copyText, describePlan, describeSummary, orderForWrite, planBulk, rangeKeys, shiftRecords, summarize as summarizeBatch, type BulkAction, type CopyMode, type StepOutcome, type UndoRecord } from './bulk.ts';
-import { SelectionBar, type SelectionHooks } from './selection-bar.ts';
+import { refreshGroupSelects, SelectionBar, type SelectionHooks } from './selection-bar.ts';
 import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
 import type { TaskEdit } from './edit.ts';
 import type { IndexedTask } from './extract.ts';
@@ -329,8 +329,9 @@ abstract class TaskViewBase extends BasesView {
 				if (on) this.selected.set(key, t.raw);
 				else this.selected.delete(key);
 				this.selectionBar.setCount(this.selected.size);
-				// Redraw so the group, column and day checkboxes show all, some or none.
-				this.render();
+				// Group, column and day checkboxes show all, some or none; updated in place, since a
+				// redraw of a large calendar takes a noticeable moment on every tick.
+				refreshGroupSelects(this.rootEl, (task) => this.selected.get(taskKey(task)) === task.raw);
 			},
 			setMany: (tasks, on) => {
 				for (const t of tasks) {

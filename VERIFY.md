@@ -250,6 +250,15 @@ The review found: the bar changed shape when Undo appeared, a tall phone bar tha
   - Board: the three columns with tasks had checkboxes, and the empty Cancelled column said "No tasks" in select mode and "Drop tasks here" after.
   - hypatia was cleaned up afterwards.
 
+## Bulk actions on a large vault
+
+Run on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol) in `perf-vault` (`npm run bench`'s synthetic vault: 5,003 notes, 10,511 tasks), with a temporary board and calendar base. Times run from the action until the view had been still for 150 ms; "blocked" is the longest stretch the main thread was busy (long tasks over 50 ms). The vault was backed up first and was byte for byte as before at the end (checksum of every note).
+
+- [x] **Selecting.** With the fix below, ticking one task takes 1 ms in the list, 4–5 ms in a grouped list, 9–11 ms on the board and 4–5 ms in the agenda, with nothing blocked. Select all (10,511), a group of 2,001, a board column of 7,510, a Shift-click range of 312 rows and Clear each take 35–55 ms in the list and board, and 180–235 ms in the agenda (a full redraw of 10,511 tasks; once per action, not per tick).
+- [x] **Fixed.** Before, ticking one task redrew the whole view to keep the group checkboxes right: about 35–50 ms in the list and board, and 200 ms of blocked main thread in the agenda on every tick. Ticks now update the group, column and day checkboxes in place; a check in the test vault confirmed the same checkbox goes all → some → all in the list, board and agenda without a redraw.
+- [x] **Writing.** 312 tasks in 88 notes → Scheduled tomorrow: asked first ("Change 312 tasks in 88 notes?"), then 2.1 s; Undo 1.9 s. 2,001 tasks in 2,001 notes: 13.5 s, Undo 12.9 s, so about 6.7 ms a task at either size. The count updated every ~110 ms throughout, the main thread was never blocked for more than 56 ms (at the final redraw), and every line came back on Undo.
+- [x] **Cancel.** Pressed at "Working… 65 of 256": 66 written (the one in progress finished), 190 skipped as cancelled, 56 skipped as already Low. Undo put back all 66.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.
