@@ -40,4 +40,4 @@ npm run bench   # index/query timing on a synthetic vault
 
 ## Releasing
 
-See [RELEASE.md](RELEASE.md).
+Releases are batched: merge changes to `main` through pull requests, but release only when a batch is ready and the full test pass in [RELEASE.md](RELEASE.md) has run. Don't bump the version except to release.
