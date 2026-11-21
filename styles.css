@@ -20,7 +20,10 @@
 	height: auto;
 	border-radius: var(--radius-s);
 }
-.tasklines-chip.is-active { background: var(--interactive-accent); color: var(--text-on-accent); }
+/* Darkened so small white text on the accent meets 4.5:1 contrast; plain accent where color-mix is unsupported. */
+.tasklines-chip.is-active,
+.tasklines-btn.mod-cta { background: var(--interactive-accent); background: color-mix(in srgb, var(--interactive-accent) 72%, black); color: var(--text-on-accent); }
+.tasklines-btn.mod-cta:hover { background: var(--interactive-accent-hover); background: color-mix(in srgb, var(--interactive-accent-hover) 72%, black); }
 .tasklines-select { font-size: var(--font-ui-smaller); max-width: 14em; }
 .tasklines-input { font-size: var(--font-ui-smaller); width: 12em; }
 .tasklines-date { font-size: var(--font-ui-smaller); }
@@ -70,6 +73,9 @@
 .tasklines-editable { cursor: pointer; align-self: stretch; line-height: calc(var(--tasklines-row-height, 30px) - 1px); }
 .tasklines-editable:hover { background: var(--background-modifier-hover); border-radius: var(--radius-s); }
 .tasklines-editable:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: -2px; }
+/* A clear focus ring for keyboard users; themes often leave checkboxes and links with little or none. */
+.tasklines-view .tasklines-checkbox:focus-visible,
+.tasklines-view .tasklines-open:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; border-radius: var(--radius-s); }
 .tasklines-editable.is-saving { opacity: 0.5; }
 .tasklines-cell-input { width: 100%; font-size: var(--font-ui-smaller); }
 .tasklines-group { gap: var(--size-4-2); }
