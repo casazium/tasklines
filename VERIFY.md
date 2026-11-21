@@ -45,7 +45,7 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 - [ ] The completed-task window hides tasks completed more than N days ago.
 - [ ] Add `Templates` to **Excluded folders**: the `Templates/Weekly.md` task disappears from any base that includes it.
 - [ ] In `Dataview queries.md`, run the convert command in each block. A `.base` opens with the expected filters, and the second one lists the parts it couldn't convert. The note is unchanged.
-- [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, and the grid scrolls sideways. The toolbar starts folded into one **Filter, sort, group (N)** button next to **New task**; tapping it shows all controls, and "Group" stays beside its dropdown. (Checked with `app.emulateMobile(true)` at phone width on desktop; still needs a real phone.)
+- [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, and the grid scrolls sideways. The toolbar starts folded into one **Filter, sort, group (N)** button next to **New task**; tapping it shows all controls, and "Group" stays beside its dropdown. (Checked with `app.emulateMobile(true)` at phone width on desktop, then on a real iPhone: see below. Android not tested yet.)
 
 ## Recurring tasks
 - [ ] Recurring tasks show 🔁 with a "Repeats …" tooltip.
@@ -74,4 +74,13 @@ Run on 2026-11-20 with Tasklines 0.9.2 in Obsidian 1.15.1 (macOS), using `npm ru
 
   Only 24 to 35 rows are ever in the page.
 - [x] **Disabling the plugin leaves every note and `.base` file valid.** With Tasklines off, notes open and render normally. A base with Tasklines views still opens, and Bases shows "Unknown view type: tasklines" for those views. The `.base` file stays valid YAML.
-- [ ] Repeat on a phone.
+- [x] **Real iPhone.** Run on 2026-11-20 on an iPhone with Obsidian for iOS, driven through iPhone Mirroring, with the test vault synced by iCloud. Every edit was diffed on the Mac afterwards.
+  - The plugin loads in iOS's WebKit, and the base opens with the toolbar folded.
+  - The toolbar opens and fits the width: status chips, search and the native Group menu all work; Reset and folding work.
+  - Ticking a task, completing a recurring task through the Tasks plugin (new occurrence above), changing a due date with the iOS date picker, changing status and priority with native menus, and New task all wrote exactly the intended line. A new priority on a Dataview line was added as `[priority:: low]`, and a block ID stayed at the end.
+  - The grid scrolls sideways to reach the columns after Status.
+  - Found and fixed:
+    - Rows were only as wide as the pane, so cells scrolled in from the right could not be tapped on iOS and row lines stopped short. Rows now span the whole grid.
+    - An empty date or priority cell collapsed to zero height and could not be tapped, on any platform. Editable cells now fill the row.
+    - Grouping by status showed `todo` instead of "To do".
+  - Not covered: the on-screen keyboard (iPhone Mirroring types with the Mac's keyboard), and Android.

@@ -63,7 +63,13 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 
 	// Columns: task text, chosen task columns, then the base's note-property columns.
 	const colCount = 1 + input.taskColumns.length + input.columns.length;
-	list.scroller.setCssProps({ '--tasklines-cols': `minmax(16em, 3fr) repeat(${colCount - 1}, minmax(7em, 1fr))` });
+	// rem, not em: the header and the rows use different font sizes but must line up.
+	// The minimum width makes rows (and their tap targets) span every column when the
+	// pane is narrower than the grid and scrolls sideways, as on a phone.
+	list.scroller.setCssProps({
+		'--tasklines-cols': `minmax(16rem, 3fr) repeat(${colCount - 1}, minmax(7rem, 1fr))`,
+		'--tasklines-grid-min': `${16 + 7 * (colCount - 1)}rem`,
+	});
 	list.header.empty();
 	if (items.length === 0) {
 		list.header.createDiv({

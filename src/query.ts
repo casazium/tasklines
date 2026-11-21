@@ -5,6 +5,7 @@ import type { IndexedTask } from './extract.ts';
 import { statusKind, type Priority, type StatusKind } from './parser.ts';
 
 export const STATUS_KINDS: StatusKind[] = ['todo', 'in-progress', 'done', 'cancelled', 'other'];
+export const STATUS_LABELS: Record<StatusKind, string> = { todo: 'To do', 'in-progress': 'In progress', done: 'Done', cancelled: 'Cancelled', other: 'Other' };
 export const PRIORITY_ORDER: Priority[] = ['highest', 'high', 'medium', 'none', 'low', 'lowest'];
 export const DUE_PRESETS = ['any', 'overdue', 'today', 'next7', 'next30', 'has', 'none', 'range'] as const;
 export type DuePreset = (typeof DUE_PRESETS)[number];
@@ -230,7 +231,7 @@ function groupLabels(row: QueryRow, key: string, today: string): string[] {
 		case 'section':
 			return [t.section ?? ''];
 		case 'status':
-			return [statusKind(t.status)];
+			return [STATUS_LABELS[statusKind(t.status)]];
 		case 'priority':
 			return [t.priority];
 		case 'tag':
@@ -257,7 +258,7 @@ function groupOrder(key: string, groups: Map<string, { first: QueryRow }>): stri
 		case 'priority':
 			return fixed(PRIORITY_ORDER);
 		case 'status':
-			return fixed(STATUS_KINDS);
+			return fixed(STATUS_KINDS.map((k) => STATUS_LABELS[k]));
 		case 'bases':
 			return labels.sort((a, b) => (groups.get(a)?.first.baseGroupIndex ?? 0) - (groups.get(b)?.first.baseGroupIndex ?? 0));
 		case 'note':
