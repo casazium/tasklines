@@ -108,5 +108,9 @@ Status as of 0.9.9 (checked against the docs on 2026-11-20): ✅ done · ⬜ nee
 | `editing.png` | A ticked task and a **Due** cell being edited |
 | `new-task.png` | The **New task** window over the view |
 | `mobile.png` | The view on a phone (Android emulator), with taller rows and the folded toolbar |
+| `board.png` | `Task board.base` → **By status**: the four status columns |
+| `calendar.png` | `Task calendar.base` → **Calendar** (month on desktop), with the No date tray |
+
+`docs/listing/` holds the community directory's listing images: desktop at 1200×800 (dark theme, sidebar collapsed, window resized to 1200×800; the board at 92% zoom so its four columns fit), and phone at 900×1600 (the top 1080×1920 of an Android emulator screenshot, scaled). Upload them on the plugin's page at community.obsidian.md.
 
 To retake them: open `test-vault/` in light mode with the default theme, capture the window with `screencapture -x -o -l <window id>`, and resize with `sips -Z 1600`. Put back any notes you changed (`git checkout -- test-vault/`).
