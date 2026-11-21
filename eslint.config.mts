@@ -40,5 +40,5 @@ export default defineConfig(
 			'obsidianmd/no-tfile-tfolder-cast': 'off',
 		},
 	},
-	globalIgnores(['test-vault']),
+	globalIgnores(['test-vault', 'perf-vault', 'bench/perf-in-obsidian.js', 'bench/make-perf-vault.mjs']),
 );

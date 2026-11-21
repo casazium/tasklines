@@ -10,7 +10,8 @@
 		"version": "node version-bump.mjs && git add manifest.json versions.json",
 		"lint": "eslint .",
 		"test": "node --test \"tests/**/*.test.ts\"",
-		"bench": "node bench/bench.ts"
+		"bench": "node bench/bench.ts",
+		"perf-vault": "npm run build && node bench/make-perf-vault.mjs perf-vault 5000 && cp bench/perf-in-obsidian.js perf-vault/perf.js"
 	},
 	"keywords": [
 		"obsidian",
