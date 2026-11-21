@@ -215,7 +215,8 @@
 .tasklines-agenda-head { display: flex; justify-content: space-between; align-items: baseline; font-weight: var(--font-semibold); font-size: var(--font-ui-small); margin-bottom: var(--size-4-2); }
 .tasklines-agenda .tasklines-cal-chip { padding: var(--size-4-2); font-size: var(--font-ui-small); }
 .tasklines-agenda .tasklines-cal-chip .tasklines-card-text { white-space: normal; }
-.tasklines-date-pick { width: 100%; }
+/* iOS draws a date field wider than its box unless padding counts in the width. */
+.tasklines-date-pick { width: 100%; max-width: 100%; box-sizing: border-box; }
 /* Phones: one page that scrolls down (the whole month, then the tray); the grid scrolls sideways. */
 .tasklines-touch .tasklines-cal-body { flex-direction: column; overflow-y: auto; }
 .tasklines-touch .tasklines-cal-body > .tasklines-cal-scroll { flex: none; overflow-y: hidden; }
