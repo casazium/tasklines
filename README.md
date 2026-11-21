@@ -115,19 +115,21 @@ views:
 
 ## Changing several tasks at once
 
-Press **Select** in the task toolbar of any Tasklines view (list, board or calendar). Each task's checkbox becomes a selection box, and tapping a task selects it too. To select several at once:
+Press **Select** in the task toolbar of any Tasklines view (list, board or calendar); it stays highlighted while select mode is on, and pressing it again (or **Done**, or Escape) leaves. Each task's checkbox becomes a selection box, and tapping a task selects it too. To select several at once:
 
 - **Shift-click** a task to select (or unselect) everything from the last task you ticked to this one, in the order they appear on screen.
-- **Select** beside a list group, board column or calendar day selects every task under it; **Unselect** clears them again.
+- The checkbox at the start of a list group, board column or calendar day selects every task under it, and shows a dash when only some are selected.
 - **Select all** selects every task the view's filters show.
 
-An action bar appears with:
+An action bar appears above the tasks and stays there as they scroll. From left to right:
 
-- **Complete** and **Reopen**.
-- **Status** and **Priority** menus.
-- A **date** picker (Due, Scheduled or Start date; in a calendar it starts on the calendar's own date) and a **Change date** menu: Today, Tomorrow, One day later, One week later, Pick a date… and Remove. "One day later" moves each task's own date (counting from today once it has passed), and skips tasks with no date.
-- **Copy**: the selected tasks as a plain list with a link to each task's note (no checkboxes, so pasting it doesn't make copies of the tasks), or as the task lines themselves.
-- **Clear**, and **Done** (or Escape) to leave select mode.
+- What's selected: the count, **Select all** and **Clear**.
+- The actions: **Complete**, **Reopen**, **Status**, **Priority**, **Change date** and **Copy**.
+  - **Change date** has Today, Tomorrow, One day later, One week later, Pick a date… and Remove for each of the due, scheduled and start dates (a calendar's own date first). "One day later" moves each task's own date (counting from today once it has passed), and skips tasks with no date.
+  - **Copy** puts the selected tasks on the clipboard as a plain list with a link to each task's note (no checkboxes, so pasting it doesn't make copies of the tasks), or as the task lines themselves.
+- **Undo** and **Done**. Undo is always in the same place, and is greyed out when there's nothing to undo.
+
+On a phone the bar is two rows: the count, **Select all**, **Undo** and **Done**, then **Complete**, **Date** and **More** (Reopen, Status, Priority, Copy and Clear).
 
 Each selected task is still changed on its own, one line at a time, with the same checks as everywhere else. If a line changed since you selected it, that task is refused and the rest go ahead. Tasks with nothing to change are skipped. One notice reports what was done, skipped and refused, and **Undo** (in the notice and in the action bar) puts every changed line back, each only if it's still what the batch wrote.
 

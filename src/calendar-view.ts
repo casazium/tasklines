@@ -253,7 +253,8 @@ export class TaskCalendar {
 		const scroll = tray.createDiv({ cls: 'tasklines-column-cards', attr: { 'data-scroll': 'tray' } });
 		const list = scroll.createDiv({ cls: 'tasklines-card-list', attr: { role: 'list', 'aria-labelledby': titleId } });
 		this.drawPaged(list, scroll, rows, input, 'none', false, 'none');
-		if (!rows.length) scroll.createDiv({ cls: 'tasklines-column-empty', text: 'Drop a task here to remove its date' });
+		// Dragging is off in select mode, so the hint would promise something that can't happen.
+		if (!rows.length) scroll.createDiv({ cls: 'tasklines-column-empty', text: input.selection?.active ? 'No tasks' : 'Drop a task here to remove its date' });
 		this.dropTarget(tray, null, input);
 	}
 
@@ -276,7 +277,7 @@ export class TaskCalendar {
 			const list = sec.createDiv({ cls: 'tasklines-card-list', attr: { role: 'list', 'aria-labelledby': titleId } });
 			if (section.date === null) this.drawPaged(list, sec, section.rows, input, section.key, section.key !== 'none', section.key);
 			else for (const row of section.rows) this.drawChip(list, row, input, false, section.key);
-			if (!section.rows.length) sec.createDiv({ cls: 'tasklines-column-empty', text: section.key === 'none' ? 'Drop a task here to remove its date' : 'Nothing scheduled' });
+			if (!section.rows.length) sec.createDiv({ cls: 'tasklines-column-empty', text: section.key === 'none' && !input.selection?.active ? 'Drop a task here to remove its date' : section.key === 'none' ? 'No tasks' : 'Nothing scheduled' });
 			if (section.date !== null) this.dropTarget(sec, section.date, input);
 			else if (section.key === 'none') this.dropTarget(sec, null, input);
 		}

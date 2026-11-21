@@ -7,15 +7,13 @@ import { statusDefs, type Priority } from './parser.ts';
 import { PRIORITY_ORDER } from './query.ts';
 
 export interface SelectionBarHandlers {
-	/** Run an action on the selected tasks. `pickDate` asks for a date first. */
-	run: (action: BulkAction | 'pick-date', verb: string) => void;
+	/** Run an action on the selected tasks. `pick-date` asks for a date first. */
+	run: (action: BulkAction | { kind: 'pick-date'; field: CalendarField }, verb: string) => void;
 	selectAll: () => void;
 	clear: () => void;
 	undo: () => void;
 	cancel: () => void;
 	exit: () => void;
-	/** Which date the date menu changes. */
-	setDateField: (field: CalendarField) => void;
 	copy: (mode: CopyMode) => void;
 }
 
@@ -24,16 +22,20 @@ export interface SelectionBarState {
 	selected: number;
 	/** Tasks shown (after filters), for "Select all". */
 	shown: number;
-	/** The date field date actions change: due, or the calendar's field, unless changed in the bar. */
+	/** The view's own date field (due, or the calendar's), listed first in the date menu. */
 	dateField: CalendarField;
 	/** A batch is being written: everything but Cancel is off. */
 	busy: { done: number; total: number } | null;
-	/** Label of the last batch that can be undone, if any. */
+	/** What Undo would put back (e.g. "3 tasks"), or null when there is nothing to undo. */
 	undoLabel: string | null;
+	/** Phones: the main action and the date menu, with the rest folded into More. */
+	compact: boolean;
 }
 
 const DATE_LABEL = { due: 'Due', scheduled: 'Scheduled', start: 'Start' } as const;
 const cap = (s: string) => (s[0]?.toUpperCase() ?? '') + s.slice(1);
+
+type MenuItem = [value: string, text: string] | { group: string; items: Array<[value: string, text: string]> };
 
 export class SelectionBar {
 	readonly el: HTMLElement;
@@ -58,44 +60,50 @@ export class SelectionBar {
 	}
 
 	render(state: SelectionBarState): void {
-		// Keep keyboard focus on the same control when the bar is redrawn.
+		// Keep keyboard focus on the same control when the bar is redrawn; while a batch runs
+		// every control but Cancel is off, so focus goes there.
 		const active = document.activeElement;
-		const focusKey = active instanceof HTMLElement && this.el.contains(active) ? active.dataset.focusKey : undefined;
+		const inside = active instanceof HTMLElement && this.el.contains(active);
+		const focusKey = inside ? active.dataset.focusKey : undefined;
 		this.draw(state);
-		if (focusKey) this.el.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(focusKey)}"]`)?.focus();
+		if (!inside) return;
+		const target = this.el.querySelector<HTMLElement>(`[data-focus-key="${CSS.escape(focusKey ?? '')}"]:not([disabled])`) ?? (state.busy ? this.el.querySelector<HTMLElement>('[data-focus-key="bulk-end"]') : null);
+		target?.focus();
 	}
 
+	/**
+	 * Always the same controls in the same places, so nothing moves under a finger: what is
+	 * selected, then the actions, then Undo and Done (Cancel while a batch runs).
+	 */
 	private draw(state: SelectionBarState): void {
 		this.el.empty();
 		this.el.toggle(state.active);
+		this.el.toggleClass('is-compact', state.compact);
 		if (!state.active) return;
 		const h = this.handlers;
+		const busy = state.busy !== null;
 		const row = this.el.createDiv({ cls: 'tasklines-toolbar-row' });
-		this.count = row.createSpan({ cls: 'tasklines-selection-count', attr: { 'aria-live': 'polite' } });
 
-		if (state.busy) {
-			this.count.setText(`Working… ${state.busy.done} of ${state.busy.total}`);
-			const cancel = row.createEl('button', { cls: 'tasklines-btn', text: 'Cancel', attr: { 'data-focus-key': 'bulk-cancel' } });
-			cancel.addEventListener('click', () => h.cancel());
-			return;
-		}
-		this.count.setText(`${state.selected} selected`);
-
-		const button = (text: string, onClick: () => void, needsSelection = true, cls = 'tasklines-btn') => {
-			const b = row.createEl('button', { cls, text, attr: { 'data-focus-key': `bulk-${text}` } });
-			if (needsSelection) {
-				b.dataset.needsSelection = '1';
-				b.disabled = state.selected === 0;
-			}
+		const button = (parent: HTMLElement, text: string, key: string, onClick: () => void, opts: { needsSelection?: boolean; cls?: string; label?: string; off?: boolean } = {}) => {
+			const b = parent.createEl('button', { cls: opts.cls ?? 'tasklines-btn', text, attr: { 'data-focus-key': `bulk-${key}` } });
+			if (opts.label) b.setAttr('aria-label', opts.label);
+			if (opts.needsSelection) b.dataset.needsSelection = '1';
+			b.disabled = busy || opts.off === true || (opts.needsSelection === true && state.selected === 0);
 			b.addEventListener('click', onClick);
 			return b;
 		};
-		const menu = (label: string, choices: Array<[string, string]>, onPick: (value: string, text: string) => void) => {
-			const sel = row.createEl('select', { cls: 'dropdown tasklines-select', attr: { 'aria-label': label, 'data-focus-key': `bulk-${label}` } });
+		const menu = (parent: HTMLElement, label: string, items: MenuItem[], onPick: (value: string, text: string) => void, shown = label) => {
+			const sel = parent.createEl('select', { cls: 'dropdown tasklines-select', attr: { 'aria-label': label, 'data-focus-key': `bulk-${label}` } });
 			sel.dataset.needsSelection = '1';
-			sel.disabled = state.selected === 0;
-			sel.createEl('option', { value: '', text: label });
-			for (const [value, text] of choices) sel.createEl('option', { value, text });
+			sel.disabled = busy || state.selected === 0;
+			sel.createEl('option', { value: '', text: shown });
+			for (const item of items) {
+				if (Array.isArray(item)) sel.createEl('option', { value: item[0], text: item[1] });
+				else {
+					const group = sel.createEl('optgroup', { attr: { label: item.group } });
+					for (const [value, text] of item.items) group.createEl('option', { value, text });
+				}
+			}
 			sel.addEventListener('change', () => {
 				const value = sel.value;
 				const text = sel.selectedOptions[0]?.text ?? value;
@@ -104,53 +112,96 @@ export class SelectionBar {
 			});
 		};
 
-		button('Complete', () => h.run({ kind: 'complete' }, 'Completed'), true, 'tasklines-btn mod-cta');
-		button('Reopen', () => h.run({ kind: 'reopen' }, 'Reopened'));
-		menu('Status', statusDefs().map((d) => [d.char, `[${d.char}] ${d.name}`]), (char, text) => h.run({ kind: 'status', char }, `Set status ${text} on`));
+		// What is selected.
+		const which = row.createDiv({ cls: 'tasklines-selection-group' });
+		this.count = which.createSpan({ cls: 'tasklines-selection-count', attr: { 'aria-live': 'polite' } });
+		this.count.setText(state.busy ? `Working… ${state.busy.done} of ${state.busy.total}` : `${state.selected} selected`);
+		button(which, `Select all ${state.shown}`, 'select-all', () => h.selectAll(), { label: `Select all ${state.shown} shown tasks` });
+		if (!state.compact) button(which, 'Clear', 'clear', () => h.clear(), { needsSelection: true, label: 'Clear the selection' });
+
+		// What to do with it.
+		const actions = row.createDiv({ cls: 'tasklines-selection-actions' });
+		button(actions, 'Complete', 'complete', () => h.run({ kind: 'complete' }, 'Completed'), { needsSelection: true, cls: 'tasklines-btn mod-cta' });
+		const statuses: Array<[string, string]> = statusDefs().map((d) => [d.char, `[${d.char}] ${d.name}`]);
+		const priorities: Array<[string, string]> = PRIORITY_ORDER.map((p): [string, string] => [p, p === 'none' ? 'No priority' : cap(p)]);
+		const copies: Array<[string, string]> = [
+			['links', 'List with links'],
+			['lines', 'Task lines (as written)'],
+		];
+		const runStatus = (char: string, text: string) => h.run({ kind: 'status', char }, `Set status ${text} on`);
+		const runPriority = (p: string, text: string) => h.run({ kind: 'priority', value: p as Priority }, `Set priority ${text} on`);
+		if (!state.compact) {
+			button(actions, 'Reopen', 'reopen', () => h.run({ kind: 'reopen' }, 'Reopened'), { needsSelection: true });
+			menu(actions, 'Status', statuses, runStatus);
+			menu(actions, 'Priority', priorities, runPriority);
+		}
+		this.dateMenu(actions, state, menu);
+		if (!state.compact) menu(actions, 'Copy', copies, (mode) => h.copy(mode as CopyMode));
+		else {
+			const prefix = (p: string, list: Array<[string, string]>): Array<[string, string]> => list.map(([v, t]) => [`${p}:${v}`, t]);
+			menu(
+				actions,
+				'More',
+				[
+					['reopen', 'Reopen'],
+					{ group: 'Status', items: prefix('status', statuses) },
+					{ group: 'Priority', items: prefix('priority', priorities) },
+					{ group: 'Copy', items: prefix('copy', copies) },
+					['clear', 'Clear the selection'],
+				],
+				(value, text) => {
+					const i = value.indexOf(':');
+					const [kind, rest] = i < 0 ? [value, ''] : [value.slice(0, i), value.slice(i + 1)];
+					if (kind === 'reopen') h.run({ kind: 'reopen' }, 'Reopened');
+					else if (kind === 'status') runStatus(rest, text);
+					else if (kind === 'priority') runPriority(rest, text);
+					else if (kind === 'copy') h.copy(rest as CopyMode);
+					else if (kind === 'clear') h.clear();
+				},
+			);
+		}
+
+		// Undo stays in place (off when there's nothing to undo), so the bar never changes shape.
+		const end = row.createDiv({ cls: 'tasklines-selection-end' });
+		button(end, 'Undo', 'undo', () => h.undo(), { off: state.undoLabel === null, label: state.undoLabel ? `Undo the last change (${state.undoLabel})` : 'Nothing to undo' });
+		if (busy) button(end, 'Cancel', 'end', () => h.cancel(), { cls: 'tasklines-btn tasklines-selection-done' }).disabled = false;
+		else button(end, 'Done', 'end', () => h.exit(), { cls: 'tasklines-btn tasklines-selection-done', label: 'Leave select mode' });
+	}
+
+	/** One date menu, grouped by date (the view's own first): "Due date → Tomorrow", "Scheduled date → Remove", … */
+	private dateMenu(
+		parent: HTMLElement,
+		state: SelectionBarState,
+		menu: (parent: HTMLElement, label: string, items: MenuItem[], onPick: (value: string, text: string) => void, shown?: string) => void,
+	): void {
+		const h = this.handlers;
+		const fields = [state.dateField, ...(['due', 'scheduled', 'start'] as const).filter((f) => f !== state.dateField)];
 		menu(
-			'Priority',
-			PRIORITY_ORDER.map((p): [string, string] => [p, p === 'none' ? 'No priority' : cap(p)]),
-			(p, text) => h.run({ kind: 'priority', value: p as Priority }, `Set priority ${text} on`),
-		);
-		const field = state.dateField;
-		const fieldSel = row.createEl('select', { cls: 'dropdown tasklines-select', attr: { 'aria-label': 'Date to change', 'data-focus-key': 'bulk-date-field' } });
-		for (const f of ['due', 'scheduled', 'start'] as const) fieldSel.createEl('option', { value: f, text: `${DATE_LABEL[f]} date` });
-		fieldSel.value = field;
-		// Off until something is selected, like the menus, so opening select mode focuses the first real choice.
-		fieldSel.dataset.needsSelection = '1';
-		fieldSel.disabled = state.selected === 0;
-		fieldSel.addEventListener('change', () => h.setDateField(fieldSel.value as CalendarField));
-		const name = DATE_LABEL[field].toLowerCase();
-		menu(
+			parent,
 			'Change date',
-			[
-				['today', 'Today'],
-				['tomorrow', 'Tomorrow'],
-				['+1', 'One day later'],
-				['+7', 'One week later'],
-				['pick', 'Pick a date…'],
-				['remove', `Remove ${name} date`],
-			],
-			(choice, text) => {
-				if (choice === 'pick') return h.run('pick-date', `Rescheduled`);
-				if (choice === 'remove') return h.run({ kind: 'set-date', field, value: null }, `Removed the ${name} date from`);
-				if (choice === '+1' || choice === '+7') return h.run({ kind: 'shift-date', field, days: Number(choice) }, `Moved ${text.toLowerCase()}:`);
+			fields.map((f) => ({
+				group: `${DATE_LABEL[f]} date`,
+				items: [
+					[`${f}:today`, 'Today'],
+					[`${f}:tomorrow`, 'Tomorrow'],
+					[`${f}:+1`, 'One day later'],
+					[`${f}:+7`, 'One week later'],
+					[`${f}:pick`, 'Pick a date…'],
+					[`${f}:remove`, `Remove ${DATE_LABEL[f].toLowerCase()} date`],
+				],
+			})),
+			(value, text) => {
+				const [f, choice] = value.split(':') as [CalendarField, string];
+				const name = `the ${DATE_LABEL[f].toLowerCase()} date`;
+				if (choice === 'pick') return h.run({ kind: 'pick-date', field: f }, `Set ${name} on`);
+				if (choice === 'remove') return h.run({ kind: 'set-date', field: f, value: null }, `Removed ${name} from`);
+				if (choice === '+1' || choice === '+7') return h.run({ kind: 'shift-date', field: f, days: Number(choice) }, `Moved ${name} ${text.toLowerCase()} on`);
 				// Today and Tomorrow are resolved when the batch runs.
-				return h.run({ kind: 'set-date', field, value: choice }, `Rescheduled to ${text.toLowerCase()}:`);
+				return h.run({ kind: 'set-date', field: f, value: choice }, `Set ${name} to ${text.toLowerCase()} on`);
 			},
+			// A third of a phone's width fits "Date", not "Change date".
+			state.compact ? 'Date' : 'Change date',
 		);
-		menu(
-			'Copy',
-			[
-				['links', 'List with links'],
-				['lines', 'Task lines'],
-			],
-			(mode) => h.copy(mode as CopyMode),
-		);
-		button(`Select all ${state.shown}`, () => h.selectAll(), false);
-		button('Clear', () => h.clear());
-		if (state.undoLabel) button(`Undo: ${state.undoLabel}`, () => h.undo(), false);
-		button('Done', () => h.exit(), false, 'tasklines-btn tasklines-selection-done');
 	}
 }
 
@@ -187,17 +238,23 @@ export function drawSelectBox(parent: HTMLElement, item: HTMLElement, task: { pa
 	return box;
 }
 
-/** "Select" (or "Unselect") for every task under a group, column or day heading. */
+/**
+ * A checkbox for every task under a group, column or day heading: ticked when all are selected,
+ * half-ticked when some are. Placed first, in line with the tasks' own boxes.
+ */
 export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string; line: number; raw: string }>, sel: SelectionHooks, label: string): void {
 	if (!tasks.length) return;
-	const all = tasks.every((t) => sel.has(t));
-	const b = parent.createEl('button', {
-		cls: 'tasklines-btn tasklines-group-select',
-		text: all ? 'Unselect' : 'Select',
-		attr: { 'aria-label': `${all ? 'Unselect' : 'Select'} all in ${label || '(none)'}`, 'data-focus-key': `group-select:${label}` },
+	const n = tasks.filter((t) => sel.has(t)).length;
+	// The label widens the tap target without moving the box.
+	const wrap = createEl('label', { cls: 'tasklines-group-select' });
+	parent.prepend(wrap);
+	const box = wrap.createEl('input', {
+		type: 'checkbox',
+		cls: 'tasklines-select-box',
+		attr: { 'aria-label': `Select all in ${label || '(none)'}`, 'data-focus-key': `group-select:${label}` },
 	});
-	b.addEventListener('click', (ev) => {
-		ev.stopPropagation();
-		sel.setMany(tasks, !all);
-	});
+	box.checked = n === tasks.length;
+	box.indeterminate = n > 0 && n < tasks.length;
+	wrap.addEventListener('click', (ev) => ev.stopPropagation());
+	box.addEventListener('click', () => sel.setMany(tasks, n !== tasks.length));
 }

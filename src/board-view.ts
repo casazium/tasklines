@@ -203,7 +203,7 @@ export class TaskBoard {
 				if (this.input) this.render(this.input);
 			});
 		}
-		if (n === 0) scroll.createDiv({ cls: 'tasklines-column-empty', text: column.target ? 'Drop tasks here' : 'No tasks' });
+		if (n === 0) scroll.createDiv({ cls: 'tasklines-column-empty', text: column.target && !input.selection?.active ? 'Drop tasks here' : 'No tasks' });
 	}
 
 	private drawCard(parent: HTMLElement, row: ViewRow, input: BoardInput): HTMLElement {

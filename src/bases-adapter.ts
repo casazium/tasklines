@@ -136,13 +136,13 @@ abstract class TaskViewBase extends BasesView {
 	protected screenRows: ViewRow[] = [];
 	/** The last task ticked, where a Shift-click range starts. */
 	private anchorKey: string | null = null;
-	/** The date the bar's date menu changes, when chosen in the bar. */
-	private bulkField: CalendarField | null = null;
 	private selectionBar: SelectionBar;
 	/** A batch being written. Redraws wait until it ends. */
 	private batch: { cancel: boolean; done: number; total: number } | null = null;
 	private refreshAfterBatch = false;
 	private lastUndo: { label: string; records: UndoRecord[] } | null = null;
+	/** The batch's notice, closed when Undo is pressed in the bar so its own Undo isn't left doing nothing. */
+	private undoNotice: Notice | null = null;
 	private dayTimer: number;
 	private rerenderSoon = debounce(
 		() => {
@@ -162,7 +162,7 @@ abstract class TaskViewBase extends BasesView {
 		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask(), {
 			collapsible: Platform.isMobile,
 			showGroup: toolbar.showGroup,
-			onSelect: () => this.setSelecting(true),
+			onSelect: () => this.setSelecting(!this.selecting),
 		});
 		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
 		this.selectionBar = new SelectionBar(this.rootEl, this.statsEl, {
@@ -173,15 +173,14 @@ abstract class TaskViewBase extends BasesView {
 				this.anchorKey = null;
 				this.render();
 			},
-			undo: () => void this.runUndo(),
+			undo: () => {
+				this.undoNotice?.hide();
+				void this.runUndo();
+			},
 			cancel: () => {
 				if (this.batch) this.batch.cancel = true;
 			},
 			exit: () => this.setSelecting(false),
-			setDateField: (field) => {
-				this.bulkField = field;
-				this.updateBar();
-			},
 			copy: (mode) => void this.copySelected(mode),
 		});
 		this.rootEl.addEventListener('keydown', (ev) => {
@@ -330,6 +329,8 @@ abstract class TaskViewBase extends BasesView {
 				if (on) this.selected.set(key, t.raw);
 				else this.selected.delete(key);
 				this.selectionBar.setCount(this.selected.size);
+				// Redraw so the group, column and day checkboxes show all, some or none.
+				this.render();
 			},
 			setMany: (tasks, on) => {
 				for (const t of tasks) {
@@ -352,9 +353,10 @@ abstract class TaskViewBase extends BasesView {
 			active: this.selecting,
 			selected: this.selected.size,
 			shown: this.shownRows.length,
-			dateField: this.bulkField ?? this.bulkDateField(),
+			dateField: this.bulkDateField(),
 			busy: this.batch ? { done: this.batch.done, total: this.batch.total } : null,
-			undoLabel: this.lastUndo?.label ?? null,
+			undoLabel: this.lastUndo ? `${this.lastUndo.records.length} ${this.lastUndo.records.length === 1 ? 'task' : 'tasks'}` : null,
+			compact: Platform.isPhone,
 		});
 	}
 
@@ -363,6 +365,7 @@ abstract class TaskViewBase extends BasesView {
 		this.selecting = on;
 		if (!on) this.selected.clear();
 		this.anchorKey = null;
+		this.toolbar.setSelecting(on);
 		this.rootEl.toggleClass('is-selecting', on);
 		void this.renderAsync().then(() => (on ? this.selectionBar.focus() : this.toolbar.focusSelect()));
 	}
@@ -399,15 +402,14 @@ abstract class TaskViewBase extends BasesView {
 	}
 
 	/** Run one action on every selected task: planned, confirmed, then written one line at a time. */
-	private async runBulk(choice: BulkAction | 'pick-date', verb: string): Promise<void> {
+	private async runBulk(choice: BulkAction | { kind: 'pick-date'; field: CalendarField }, verb: string): Promise<void> {
 		if (this.batch) return;
-		const field = this.bulkField ?? this.bulkDateField();
 		let action: BulkAction;
-		if (choice === 'pick-date') {
+		if (choice.kind === 'pick-date') {
 			const picked = await new Promise<string | undefined>((resolve) => new DatePickModal(this.app, undefined, resolve).open());
 			if (picked === undefined) return;
-			action = { kind: 'set-date', field, value: picked };
-			verb = `Rescheduled to ${picked}:`;
+			action = { kind: 'set-date', field: choice.field, value: picked };
+			verb = verb.replace(/ on$/, ` to ${picked} on`);
 		} else action = choice;
 		const ctx = await this.writer.batchContext();
 		// Today and Tomorrow mean the day the batch runs.
@@ -488,6 +490,7 @@ abstract class TaskViewBase extends BasesView {
 		if (undoable) {
 			const undo = message.createEl('button', { text: 'Undo', cls: 'tasklines-notice-btn' });
 			const notice = new Notice(message, 15000);
+			this.undoNotice = notice;
 			undo.addEventListener('click', () => {
 				notice.hide();
 				void this.runUndo();
