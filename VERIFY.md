@@ -164,3 +164,13 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with the published 0.9.0 and 0.9.9 
 - [x] **0.9.0 → 0.9.9 → 0.9.0:** 0.9.0 saved non-default settings (completion date off, Tasks off, Dataview fields, an extra custom status, an excluded folder) and a customised view (Done and High chips, tag filter `#work`, group by status). After the upgrade, and again after downgrading, the settings, the saved filter, the active chips, the sort and group menus and the tag filter were identical. Neither version rewrote the other's `data.json` or `.base` file, and no errors were logged.
 - The stats line differs only where 0.9.1 changed how notes are counted, by design.
 
+## Soak test (memory and listeners)
+
+Run on 2026-11-20 in Obsidian 1.15.1 (macOS) in the perf vault (5,000 notes) with 0.9.9, from the developer console. Measured after each batch: live change listeners, cached notes, Tasklines views, rows and page elements, and JavaScript heap.
+
+- [x] **300 opens and closes of the base:** 0 listeners and 0 views afterwards, and page elements back to the starting count.
+- [x] **2,000 note edits with a view open:** 1 listener, 1 view and the same number of rows and elements throughout.
+- [x] **200 notes created, renamed and deleted with a view open:** the cache stayed at one entry per note (deleted and renamed paths dropped).
+- [x] **Heap** rose and fell with garbage collection (79–166 MB) and ended at 85–101 MB, with no steady climb.
+- [x] **Plugin turned off and on 30 times with a view open:** the open view keeps the old code until closed (a known Bases behaviour), but nothing accumulates. Closing it returns to the starting state, and a fresh view has exactly 1 listener.
+
