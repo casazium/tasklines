@@ -115,3 +115,12 @@ Run on 2026-11-20 with Tasks 8.6.0 in the test vault. For each setting, a fresh 
 - [x] **Global filter `#task`** (also with "remove global filter" on): tagged tasks complete as usual. An untagged one-off is toggled the way Tasks toggles a plain checkbox (no ✅).
 - [x] Found and fixed: an untagged **recurring** task was completed without its next occurrence, because Tasks treats a line without the global filter as a plain checkbox. Tasklines now refuses it, changes nothing and explains why (add the filter to the line, or complete it in the note).
 
+## Windows
+
+Run on 2026-11-20 on a Windows 11 test PC with Obsidian 1.15.1 (installed with winget) and Tasklines 0.9.7, driven over the Chrome DevTools Protocol from an SSH session. The test vault included a copy of Beta.md saved with Windows (CRLF) line endings, and the note was diffed on the Mac afterwards.
+
+- [x] The plugin loads, the view renders with the Windows title bar, and grouping, the toolbar and the stats line work.
+- [x] On the CRLF note: tick (✅ added), recurring completion through Tasks (next occurrence above), due date (Enter), priority and status edits each changed only their line. Every line kept CRLF, Tasks' two-line output was joined with CRLF, no bare LF appeared, and the file still ends with CRLF.
+- [x] A Dataview-format recurring task with Tasks in emoji mode was refused, and the note was unchanged.
+- [ ] Not covered: notices, the New task window and other modals. Obsidian's own command palette did not open either in that off-screen session, so these need a run on the visible desktop. Inserting a task into a CRLF note is covered by unit tests.
+
