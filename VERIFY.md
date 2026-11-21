@@ -206,7 +206,8 @@ Fable reviewed the design before it was built; its must-change and should-change
   - A selected task whose line was edited outside the view dropped out of the selection rather than being applied to the changed line.
   - Calendar: the date menu acts on the view's field ("Scheduled date"). "Tomorrow" added `⏳` before a `^block-id`, and Undo removed it.
 - [x] **Android** (emulator): **Select** sits beside New task in the folded toolbar, and the action bar wraps. Tapping task text selects. The date menu opens as Android's list. "Tomorrow" rescheduled an emoji line and a Dataview line, each in its own style, and the bar's **Undo** left both notes byte for byte as before.
-- [ ] Not covered: iPhone, Windows, a batch large enough to need Cancel, and VoiceOver.
+- [x] **iPhone** (iCloud vault, through iPhone Mirroring): **Select** sits beside New task in the calendar and list toolbars, and the action bar wraps to three rows. Tapping task text selects, as does the box. The date menu opens as iOS's popup. "One week later" moved an overdue emoji task and an overdue Dataview recurring task to today + 7, each in its own style. The bar's **Undo** ("undid 2 of 2 changes") left the note byte for byte as before. **Done** left select mode.
+- [ ] Not covered: Windows, a batch large enough to need Cancel, and VoiceOver.
 
 ## Fuzz testing
 
