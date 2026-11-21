@@ -213,7 +213,7 @@ Fable reviewed the design before it was built; its must-change and should-change
   - Escape from a selection box left select mode, and focus returned to **Select**. Tasklines' editable cells were off in select mode.
   - Board: the cards had no ⋯ menu and couldn't be dragged in select mode. Completing a plain task and a recurring task on the CRLF note asked first ("1 recurring task will be completed through the Tasks plugin…"). Tasks completed the recurring task and added the next occurrence. **Undo** reopened the plain task and left the recurring completion.
   - The CRLF note kept CRLF throughout: 15 CRLF endings before, 16 after the recurring completion added a line, no lone LF or CR, and still ending in CRLF.
-  - hypatia was cleaned up afterwards: Obsidian stopped, `C:\\Users\\casaz\\tasklines` removed, and the vault list restored.
+  - hypatia was cleaned up afterwards: Obsidian stopped, `C:\Users\casaz\tasklines` removed, and the vault list restored.
 - [ ] Not covered: VoiceOver.
 
 ## Fuzz testing
