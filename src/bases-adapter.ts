@@ -360,7 +360,8 @@ class TaskBoardView extends TaskViewBase {
 		const message = new DocumentFragment();
 		message.createSpan({ text: `Moved to ${column.label}. ` });
 		const undo = message.createEl('button', { text: 'Undo', cls: 'tasklines-notice-btn' });
-		const notice = new Notice(message, 6000);
+		// Long enough to reach Undo on a phone.
+		const notice = new Notice(message, 8000);
 		undo.addEventListener('click', () => {
 			notice.hide();
 			void this.writer.restore({ path: task.path, line: task.line, raw: written }, task.raw);

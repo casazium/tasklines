@@ -123,15 +123,10 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	box.indeterminate = kind === 'in-progress';
 	box.addEventListener('click', (ev) => {
 		ev.preventDefault(); // the checkbox shows the note's state, which changes only after the write
-		if (box.disabled) return;
-		box.disabled = true;
-		void (async () => {
-			try {
-				await input.toggleTask(task);
-			} finally {
-				box.disabled = false;
-			}
-		})();
+		// Marked busy rather than disabled: disabling the focused checkbox drops keyboard focus.
+		if (box.getAttr('aria-disabled') === 'true') return;
+		box.setAttr('aria-disabled', 'true');
+		void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
 	});
 	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
 	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);

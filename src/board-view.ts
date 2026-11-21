@@ -217,11 +217,10 @@ export class TaskBoard {
 		box.indeterminate = kind === 'in-progress';
 		box.addEventListener('click', (ev) => {
 			ev.preventDefault(); // shows the note's state, which changes only after the write
-			if (box.disabled) return;
-			box.disabled = true;
-			void input.toggleTask(task).finally(() => {
-				box.disabled = false;
-			});
+			// Marked busy rather than disabled: disabling the focused checkbox drops keyboard focus.
+			if (box.getAttr('aria-disabled') === 'true') return;
+			box.setAttr('aria-disabled', 'true');
+			void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
 		});
 		const link = top.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open tasklines-card-text', attr: { title: task.text, draggable: 'false' } });
 		link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
@@ -270,7 +269,7 @@ export class TaskBoard {
 	private focusIn(key: string, focusKey: string): boolean {
 		const card = Array.from(this.el.querySelectorAll<HTMLElement>('.tasklines-card')).find((c) => c.dataset.key === key);
 		const target = Array.from(card?.querySelectorAll<HTMLElement>('[data-focus-key]') ?? []).find((e) => e.dataset.focusKey === focusKey);
-		target?.focus({ preventScroll: false });
+		if (target) reveal(target);
 		return !!target;
 	}
 
@@ -295,7 +294,17 @@ export class TaskBoard {
 		const cards = from ? Array.from(from.querySelectorAll<HTMLElement>('.tasklines-card')) : [];
 		const next = cards[Math.min(r.index, cards.length - 1)];
 		const target = next?.querySelector<HTMLElement>('[data-focus-key="menu"]') ?? this.el.querySelector<HTMLElement>(`.tasklines-column-head[data-column="${r.from}"]`);
-		target?.focus();
+		if (target) reveal(target);
 		return !!target;
 	}
+}
+
+/**
+ * Focus a control on the board, first bringing its whole column (and card) into view. Focusing
+ * alone scrolls only as far as the control itself, which leaves a column half off screen.
+ */
+function reveal(el: HTMLElement): void {
+	el.closest<HTMLElement>('.tasklines-column')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	el.closest<HTMLElement>('.tasklines-card')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+	el.focus({ preventScroll: true });
 }
