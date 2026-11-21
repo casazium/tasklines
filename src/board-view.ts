@@ -140,7 +140,9 @@ export class TaskBoard {
 		// tooltip, which would pop up over every card.
 		const titleId = `tasklines-column-${++columnCount}`;
 		head.createSpan({ cls: 'tasklines-column-title', text: column.label, attr: { id: titleId } });
-		head.createSpan({ cls: 'tasklines-column-count', text: String(n), attr: { 'aria-label': `${n} ${n === 1 ? 'task' : 'tasks'}` } });
+		// Hidden words, not aria-label: Obsidian shows an aria-label as a tooltip.
+		const count = head.createSpan({ cls: 'tasklines-column-count', text: String(n) });
+		count.createSpan({ cls: 'tasklines-sr-only', text: n === 1 ? ' task' : ' tasks' });
 		if (n) head.setAttr('title', formatSummary(summarize(column.rows, input.today)));
 		if (column.note) colEl.createDiv({ cls: 'tasklines-column-note', text: column.note });
 
@@ -262,7 +264,10 @@ export class TaskBoard {
 		const meta = card.createDiv({ cls: 'tasklines-card-meta' });
 		meta.createSpan({ cls: 'tasklines-card-note', text: row.noteName });
 		if (task.due && input.field !== 'due') {
-			meta.createSpan({ cls: `tasklines-card-due${open && task.due < input.today ? ' is-overdue' : ''}`, text: `📅 ${task.due}` });
+			const overdue = open && task.due < input.today;
+			const due = meta.createSpan({ cls: `tasklines-card-due${overdue ? ' is-overdue' : ''}`, text: `📅 ${task.due}` });
+			// Red alone doesn't reach a screen reader.
+			if (overdue) due.createSpan({ cls: 'tasklines-sr-only', text: ' (overdue)' });
 		}
 		const mark = PRIORITY_MARK[task.priority];
 		if (mark && input.field !== 'priority') meta.createSpan({ text: mark, attr: { role: 'img', 'aria-label': `${task.priority} priority`, title: `${task.priority} priority` } });
