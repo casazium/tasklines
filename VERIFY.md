@@ -170,7 +170,12 @@ Run on 2026-11-21 with `test-vault/Task calendar.base`. Fable reviewed the code 
   - Tomorrow rescheduled an overdue recurring task.
   - Month layout: **›** and **Today** change month, and the page scrolls as one, with No date below. Scheduling from the tray added `⏳ <date>` before the `^block-id`.
   - Found and fixed: the date field in **Pick a date** ran past the window's right edge on iOS. It now counts its padding in its width (`box-sizing: border-box`). The fix isn't rechecked on iOS yet.
-- [ ] Not covered: the calendar on Windows, a real mouse drag, and VoiceOver.
+- [x] **Real mouse drag** (same day, macOS, Obsidian 1.15.1, with the real pointer through computer use):
+  - Month: dragging a task shows its preview, dims the original, and outlines the day under the pointer. Dropping on the 26th moved it ("Moved to Thursday, November 26 · Undo"), and a real click on **Undo** put it back on the 22nd. A task dragged from No date onto the 24th got that date.
+  - Agenda: a task dragged from Overdue onto Monday the 23rd (an empty day shown as a drop target) moved there. A recurring task dropped on the Overdue section was refused: no outline, nothing changed.
+  - The drag log (`dragstart`, `drop`, `dragend` with each day) matched what was seen on screen.
+  - Not covered here: a drop on the month's No date tray, which a window of another app covered on screen; it's covered by the DevTools run above. The notes weren't diffed after this run (the same write path was diffed in the desktop, Android and iPhone runs).
+- [ ] Not covered: the calendar on Windows, and VoiceOver.
 
 ## Fuzz testing
 
