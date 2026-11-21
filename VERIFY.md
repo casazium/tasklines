@@ -216,4 +216,20 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
   - The status board opened in 115 ms; the list view of the same vault took 148 ms. Each column draws 100 cards, about 1,900 DOM nodes in all.
   - Each "Show more" redraws the whole board: 17 ms with 300 cards on screen, rising to 42 ms with 900. Changing a note showed on the board 126 ms later.
   - The due-date board opened in 115 ms.
-- [ ] Not covered: a real mouse drag (only synthetic events), phones, and a screen reader.
+- [x] **Android** (2026-11-21, Android Studio emulator, API 37, Obsidian 1.15.1, Tasks enabled). The vault was copied in and out with `adb`, and the notes were diffed on the Mac afterwards: every change was exactly one intended line.
+  - Columns are most of the screen wide with the next one peeking in, and the toolbar folds into "Filter, sort (N)".
+  - The **⋯** menu opens as Obsidian's bottom sheet, with the card's own column disabled. On the due-date board it lists only Today, Tomorrow and No due date.
+  - Menu moves worked:
+    - To do to In progress.
+    - In progress to Done, which added `[completion:: …]`, and **Undo** in the notice put the line back exactly.
+    - Overdue to Tomorrow.
+    - Medium to Highest, kept before `^beta-block`.
+  - A recurring task moved to Done from the menu was completed by Tasks, with the next occurrence above it and no Undo offered.
+  - Unticking a done card reopened it and removed its ✅ date.
+  - Found and fixed:
+    - After a menu move, focus followed the card by focusing its **⋯** button. That scrolled the board only as far as the button, which left columns half off screen. The whole column and card are now scrolled into view first.
+    - On phones a sideways swipe could also stop between columns. It now settles on a whole column (scroll snap).
+    - The Undo notice now stays 8 seconds instead of 6, to give time to reach it on a phone.
+    - Found while checking the scrolling fix on desktop: ticking a checkbox, in the board or the list, dropped keyboard focus to the page. The checkbox was disabled while the change was saved, and Obsidian 1.15.1's Chromium moves focus away from a disabled element. It is now marked busy (`aria-disabled`) instead. Focus stays on the checkbox and follows the task after the redraw, which the accessibility check above expects.
+  - Not a Tasklines problem: the emulator's Play Store updated Android WebView in the background, and Android closed Obsidian for the update (`killDueToPackageUpdate` in the device log).
+- [ ] Not covered: a real mouse drag (only synthetic events), an iPhone, and a screen reader.

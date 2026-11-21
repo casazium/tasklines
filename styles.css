@@ -63,7 +63,7 @@
 .tasklines-prop > * { display: inline; white-space: nowrap; }
 /* Themes restyle task checkboxes, margins included; the gap belongs to the cell instead. */
 .tasklines-view .tasklines-text > input.tasklines-checkbox { margin: 0; vertical-align: middle; flex: none; }
-.tasklines-checkbox:disabled { opacity: 0.5; }
+.tasklines-checkbox[aria-disabled="true"] { opacity: 0.5; }
 .tasklines-text { display: flex; align-items: center; gap: 6px; }
 .tasklines-text .tasklines-open { overflow: hidden; text-overflow: ellipsis; }
 
@@ -177,7 +177,9 @@
 .tasklines-card-meta { display: flex; flex-wrap: wrap; gap: 2px var(--size-4-2); margin-top: 4px; color: var(--text-muted); font-size: var(--font-ui-smaller); }
 .tasklines-card-due { font-variant-numeric: tabular-nums; }
 .tasklines-card-due.is-overdue { color: var(--text-error); }
-.tasklines-touch .tasklines-column { flex-basis: min(85vw, 20rem); }
+.tasklines-touch .tasklines-column { flex-basis: min(85vw, 20rem); scroll-snap-align: start; }
+/* Phones: a sideways swipe settles on a whole column. */
+.tasklines-touch .tasklines-board { scroll-snap-type: x mandatory; scroll-padding-inline: var(--size-4-4); }
 .tasklines-touch .tasklines-card-menu { padding: 4px 10px; }
 /* Read by screen readers, not shown. */
 .tasklines-sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
