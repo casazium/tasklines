@@ -239,7 +239,16 @@ The review found: the bar changed shape when Undo appeared, a tall phone bar tha
 - [x] An empty board column says "No tasks" in select mode, and "Drop tasks here" again after.
 - [x] **Android**: the bar is two rows that keep their shape through a batch and Undo, and stays put while the agenda scrolls. **Date** and **More** open as Android lists with group headings. Overdue's checkbox selected 4, and unticking one showed the dash. Scheduled → Tomorrow on 3 tasks, then the bar's Undo, left every note byte for byte. **More → Copy → List with links** copied `- Draft spec #spec ([[Alpha]])`. The group checkboxes have 44 px tap areas.
 - [x] **iPhone** (iCloud vault, through iPhone Mirroring; "Reload app" kept the old plugin until Obsidian was quit and reopened, which makes it fetch the vault's files from iCloud). List view: the two-row bar fits, and the group checkboxes line up with the tasks' boxes. Ticking "home" then unticking Fix gate showed the dash with 5 selected. **Date** opens as iOS's menu with "Due date" and "Scheduled date" headings. Scheduled → Tomorrow wrote `⏳ 2026-11-22` and `[scheduled:: 2026-11-22]` on the 5 lines (before `^beta-block` where there was one) and left Fix gate alone. The bar kept its shape, and its **Undo** ("undid 5 of 5 changes") closed the batch notice and left the notes byte for byte as before. **More → Copy → List with links** copied `- Dataview style ([[Beta]])`, read back on the Mac through Universal Clipboard. Pressing **Select** again left select mode.
-- [ ] Not covered: Windows.
+- [x] **Windows** (hypatia, Obsidian 1.15.1 with Tasks, headless over SSH and the DevTools protocol; the vault had a CRLF copy of `Beta.md`). Nothing was logged as an error.
+  - **Select** was announced as pressed, and the bar read Select all 20, Clear | Complete, Reopen, Status, Priority, Change date, Copy | Undo (off), Done.
+  - The group checkboxes came first in both groups. "home" selected 12, unticking one task showed the dash with 11, ticking the group again selected all, and once more cleared it.
+  - Focus stayed on the ticked task's box. A Shift-click on the 5th row's text selected rows 2–5.
+  - Copy gave `- Fix gate ([[Windows CRLF]])` etc. as a list and the task lines as written.
+  - Select all (20) then Scheduled → Tomorrow changed 20 lines in three notes (no confirmation, as 20 is not more than 20), including 6 on the CRLF note in their own formats.
+  - The bar stayed the same height (134 px in this narrower window) before, after and after Undo ("Undo the last change (20 tasks)", "undid 20 of 20 changes"). Every note was byte for byte as before, and the CRLF note kept 15 CRLF endings with no lone LF or CR.
+  - Pressing **Select** again left select mode with focus on it.
+  - Board: the three columns with tasks had checkboxes, and the empty Cancelled column said "No tasks" in select mode and "Drop tasks here" after.
+  - hypatia was cleaned up afterwards.
 
 ## Fuzz testing
 
