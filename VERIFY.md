@@ -122,7 +122,12 @@ Run on 2026-11-20 on a Windows 11 test PC with Obsidian 1.15.1 (installed with w
 - [x] The plugin loads, the view renders with the Windows title bar, and grouping, the toolbar and the stats line work.
 - [x] On the CRLF note: tick (✅ added), recurring completion through Tasks (next occurrence above), due date (Enter), priority and status edits each changed only their line. Every line kept CRLF, Tasks' two-line output was joined with CRLF, no bare LF appeared, and the file still ends with CRLF.
 - [x] A Dataview-format recurring task with Tasks in emoji mode was refused, and the note was unchanged.
-- [ ] Not covered: notices, the New task window and other modals. Obsidian's own command palette did not open either in that off-screen session, so these need a run on the visible desktop. Inserting a task into a CRLF note is covered by unit tests.
+- [x] **On the visible desktop** (rerun the same day in the casaz Remote Desktop session with 0.9.9, Obsidian started there by a one-off scheduled task):
+  - The refusal notice appears with its text, and the note is unchanged.
+  - **Open at line** opens the note with the cursor on the refused task.
+  - The New task window opens with the cursor in the text box. Both **Add task** and Enter add the task, with a 📅 date where given, and the window closes.
+  - The Tasklines settings tab renders in Obsidian's separate Settings window.
+- Note: Obsidian itself rewrites a note to LF line endings when it opens the note in its editor. Tasklines keeps CRLF in notes that are not open in the editor. Obsidian's `vault.adapter.read` also reports CRLF as LF, so line endings must be checked on disk.
 
 ## Fuzz testing
 
