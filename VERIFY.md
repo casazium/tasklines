@@ -226,7 +226,9 @@ Checked on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol). Nothing w
 - [x] **Date to change**: choosing Scheduled kept keyboard focus on the picker and renamed Remove to "Remove scheduled date". **Tomorrow** added `⏳ 2026-11-22` to an emoji line and `[scheduled:: 2026-11-22]` to a Dataview line, keeping the due dates. Undo put both back.
 - [x] **Board**: To do, In progress and Done had **Select** beside their counts (none on the empty Cancelled column); To do's selected its 13 tasks.
 - [x] **Calendar agenda**: Overdue and days with tasks had **Select**; empty days had none. The date picker started on the calendar's field.
-- [ ] Not covered: phones (the bar has two more controls to wrap), Windows.
+- [x] **Android** (emulator, calendar agenda): the bar wraps to four rows with nothing cut off. Overdue's **Select** selected its 4 tasks and turned into **Unselect**. The date picker and **Change date** open as Android's lists. Start date → **Tomorrow** added `🛫 2026-11-22` to three emoji lines and `[start:: 2026-11-22]` to a Dataview line, keeping the due dates. The bar's **Undo** left every note byte for byte as before. **Copy → List with links** showed "copied 1 task.", and pasting gave `- Fix gate ([[Beta]])`.
+- [x] Opening select mode focuses **Select all**: the date picker is off until a task is selected, like the menus.
+- [ ] Not covered: iPhone, Windows.
 
 ## Fuzz testing
 

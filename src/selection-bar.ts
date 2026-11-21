@@ -116,6 +116,9 @@ export class SelectionBar {
 		const fieldSel = row.createEl('select', { cls: 'dropdown tasklines-select', attr: { 'aria-label': 'Date to change', 'data-focus-key': 'bulk-date-field' } });
 		for (const f of ['due', 'scheduled', 'start'] as const) fieldSel.createEl('option', { value: f, text: `${DATE_LABEL[f]} date` });
 		fieldSel.value = field;
+		// Off until something is selected, like the menus, so opening select mode focuses the first real choice.
+		fieldSel.dataset.needsSelection = '1';
+		fieldSel.disabled = state.selected === 0;
 		fieldSel.addEventListener('change', () => h.setDateField(fieldSel.value as CalendarField));
 		const name = DATE_LABEL[field].toLowerCase();
 		menu(
