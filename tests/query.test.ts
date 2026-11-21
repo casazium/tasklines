@@ -68,6 +68,15 @@ test('group by due bucket in fixed order', () => {
 	assert.deepEqual(out.map((g) => g.label), ['Overdue', 'Today', 'Next 7 days', 'Later', 'No due date']);
 });
 
+test('group by status uses readable labels in status order', () => {
+	const out = applyQuery(ROWS, q({ statuses: [], group: 'status' }), TODAY);
+	const labels = out.map((g) => g.label);
+	assert.ok(labels.length > 1);
+	assert.ok(labels.every((l) => ['To do', 'In progress', 'Done', 'Cancelled', 'Other'].includes(l ?? '')), labels.join());
+	const order = ['To do', 'In progress', 'Done', 'Cancelled', 'Other'];
+	assert.deepEqual(labels, [...labels].sort((a, b) => order.indexOf(a ?? '') - order.indexOf(b ?? '')));
+});
+
 test('group by note property, empty last', () => {
 	const out = applyQuery(ROWS, q({ group: 'prop:note.owner' }), TODAY);
 	assert.deepEqual(out.map((g) => g.label), ['Ana', 'Bob', '']);

@@ -1,14 +1,13 @@
 // In-view toolbar for task-level filter, sort and group. The query it edits is saved
 // in the .base view config by the adapter, so each view keeps its own preset.
 
-import { activeQueryCount, normalizeTag, PRIORITY_ORDER, STATUS_KINDS, TASK_GROUP_KEYS, TASK_SORT_KEYS, type DuePreset, type TaskQuery } from './query.ts';
+import { activeQueryCount, normalizeTag, PRIORITY_ORDER, STATUS_KINDS, STATUS_LABELS, TASK_GROUP_KEYS, TASK_SORT_KEYS, type DuePreset, type TaskQuery } from './query.ts';
 
 export interface PropChoice {
 	id: string;
 	label: string;
 }
 
-const STATUS_LABELS: Record<string, string> = { todo: 'To do', 'in-progress': 'In progress', done: 'Done', cancelled: 'Cancelled', other: 'Other' };
 const DUE_LABELS: Record<DuePreset, string> = {
 	any: 'Any due date',
 	overdue: 'Overdue',
