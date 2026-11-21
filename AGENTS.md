@@ -18,6 +18,7 @@ npm run bench   # index/query timing on a synthetic vault
 - **Notes change only through `Vault.process`, one line at a time.** `src/writeback.ts` and `src/edit.ts` are pure functions that compute the new content. They refuse rather than guess when the line no longer matches what was indexed. `src/writer.ts` does a precheck read and then re-verifies inside `Vault.process`. Adding a task inserts exactly one line.
 - **Keep each line's format.** Edits use the style the line already has (Tasks emoji or Dataview fields). Never convert a line between formats. Never touch text inside inline code.
 - **Parser fixtures are the test oracle.** Add a case to `tests/fixtures/task-lines.json` for every parsing bug. Every fixture is automatically run through the byte-safety, toggle and edit suites.
+- **The fuzz test guards the same rules on random lines** (`tests/fuzz.test.ts`, 3,000 cases in `npm test`). Before a release that touches the parser or write-back, run it larger, e.g. `FUZZ_CASES=200000 FUZZ_SEED=7 node --test tests/fuzz.test.ts`, and turn any failure into a fixture.
 - **Mobile:** no Node APIs in `src/`, and no regex lookbehind (unsupported on iOS before 16.4). Keep `isDesktopOnly: false`.
 - **Pure modules stay importable by Node:** use `.ts` import extensions, `import type` for type-only imports, and no TypeScript parameter properties in files that tests import.
 - No network access, telemetry, reminders, time tracking or new task syntax.

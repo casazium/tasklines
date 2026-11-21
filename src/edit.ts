@@ -1,7 +1,7 @@
 // Pure single-line task edits: status, dates and priority. Each edit keeps the line's
 // existing metadata style (Tasks emoji or Dataview fields) and changes nothing else.
 
-import { statusKind, type ParsedTask, type Priority } from './parser.ts';
+import { parseTaskLine, statusKind, type ParsedTask, type Priority } from './parser.ts';
 
 export type FieldFormat = 'tasks-emoji' | 'dataview';
 export type DateField = 'due' | 'scheduled' | 'start';
@@ -50,6 +50,15 @@ function find(line: string, re: RegExp): { index: number; text: string } | null 
 	return { index, text: line.slice(index, index + hit[0].length) };
 }
 
+/** Remove every match of `re` (outside inline code) that starts at or after `from`. */
+function removeAllFrom(line: string, re: RegExp, from: number): string {
+	let head = line.slice(0, from);
+	let rest = line.slice(from);
+	// find() looks after the first ']', so give the tail a stand-in prefix.
+	for (let hit = find(' ]' + rest, re); hit; hit = find(' ]' + rest, re)) rest = replaceAt(' ]' + rest, hit, '').slice(2);
+	return head + rest;
+}
+
 function replaceAt(line: string, hit: { index: number; text: string }, replacement: string): string {
 	return line.slice(0, hit.index) + replacement + line.slice(hit.index + hit.text.length);
 }
@@ -73,10 +82,22 @@ function styleFor(task: ParsedTask, opts: EditOptions): FieldFormat {
 function setDate(line: string, task: ParsedTask, field: DateField, value: string | null, opts: EditOptions): string {
 	if (value !== null && !ISO.test(value)) throw new Error(`invalid date: ${value}`);
 	// Edit the field where it already is, in whichever style it uses.
+	// A line can carry the same date more than once (both styles, or repeated); the edit makes
+	// the line read back as the value that was set.
 	const dv = find(line, fieldRe(field));
-	if (dv) return value === null ? replaceAt(line, dv, '') : replaceAt(line, dv, dv.text.replace(/::\s*[^\])]*/u, `:: ${value}`));
 	const emoji = find(line, DATE_EMOJI_RE[field]);
-	if (emoji) return value === null ? replaceAt(line, emoji, '') : replaceAt(line, emoji, emoji.text.replace(/\d{4}-\d{2}-\d{2}/, value));
+	const first = dv && emoji ? (dv.index < emoji.index ? dv : emoji) : (dv ?? emoji);
+	if (first) {
+		const isDv = first === dv;
+		const kept = value === null ? '' : isDv ? first.text.replace(/::\s*[^\])]*/u, `:: ${value}`) : first.text.replace(/\d{4}-\d{2}-\d{2}/, value);
+		const out = replaceAt(line, first, kept);
+		const from = first.index + kept.length;
+		// Clearing removes every copy (a later one would otherwise become the date). Setting
+		// removes copies in the other style, which compete with it; a repeated copy in the same
+		// style reads as plain text and is left alone.
+		if (value === null) return removeAllFrom(removeAllFrom(out, fieldRe(field), from), DATE_EMOJI_RE[field], from);
+		return removeAllFrom(out, isDv ? DATE_EMOJI_RE[field] : fieldRe(field), from);
+	}
 	if (value === null) return line;
 	return insertToken(line, styleFor(task, opts) === 'dataview' ? `[${field}:: ${value}]` : `${DATE_EMOJI[field]} ${value}`);
 }
@@ -114,6 +135,23 @@ function addCompletion(line: string, task: ParsedTask, opts: EditOptions): strin
 
 /** Apply one edit to a task line. Throws on invalid input; never touches text outside metadata. */
 export function applyEdit(line: string, task: ParsedTask, edit: TaskEdit, opts: EditOptions): string {
+	const out = editLine(line, task, edit, opts);
+	// Refuse rather than guess: the edit must read back as asked, and leave the description and
+	// repeat rule as they were. On unusual lines (duplicate fields, a free-text 🔁 rule that ends
+	// at the field being changed) a change could otherwise shift how the rest of the line reads.
+	const after = parseTaskLine(out);
+	if (!after) throw new Error('the edit would break the task line');
+	const same = (a?: string) => (a ?? '').replace(/\s+/g, ' ').trim();
+	if (same(after.text) !== same(task.text) || same(after.recurrence) !== same(task.recurrence)) {
+		throw new Error('the edit would change how the rest of the line reads');
+	}
+	if (edit.kind === 'date' && after[edit.field] !== (edit.value ?? undefined)) throw new Error(`the ${edit.field} date would not read back as set`);
+	if (edit.kind === 'priority' && after.priority !== edit.value) throw new Error('the priority would not read back as set');
+	if (edit.kind === 'status' && after.status !== edit.value) throw new Error('the status would not read back as set');
+	return out;
+}
+
+function editLine(line: string, task: ParsedTask, edit: TaskEdit, opts: EditOptions): string {
 	switch (edit.kind) {
 		case 'status':
 			return setStatus(line, task, edit.value, opts);

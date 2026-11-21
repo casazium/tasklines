@@ -332,5 +332,38 @@
       "format": "mixed",
       "text": "Water"
     }
+  },
+  {
+    "name": "block id right after the checkbox (found by fuzzing)",
+    "line": "- [!] ^not-id",
+    "expect": {
+      "blockId": "not-id",
+      "text": ""
+    }
+  },
+  {
+    "name": "bare 🔁 before a Dataview field has no rule (found by fuzzing)",
+    "line": "- [x] A 🔁 [completion:: 2026-11-20]",
+    "expect": {
+      "done": "2026-11-20",
+      "text": "A 🔁",
+      "format": "dataview"
+    }
+  },
+  {
+    "name": "repeat rule stops before inline code (found by fuzzing)",
+    "line": "- [ ] Water 🔁 every 2 days when done `note`",
+    "expect": {
+      "recurrence": "every 2 days when done",
+      "text": "Water `note`"
+    }
+  },
+  {
+    "name": "bare 🔁 before another emoji has no rule (found by fuzzing)",
+    "line": "- [ ] Water 🔁 ✅ 2026-11-20",
+    "expect": {
+      "done": "2026-11-20",
+      "text": "Water 🔁"
+    }
   }
 ]
