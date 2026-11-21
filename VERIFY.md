@@ -93,3 +93,12 @@ Run on 2026-11-20 with Tasklines 0.9.2 in Obsidian 1.15.1 (macOS), using `npm ru
     - A picked date saved only after tapping somewhere else (iPhone too). On phones it now saves as soon as the picker closes.
     - In New task, the keyboard covered **Add task**, and its action key moved to the next field. The key now says Done and adds the task.
   - Rechecked on the iPhone with these fixes: one tap still opens one native menu, and a picked date saves when you press ✓ (it wrote `📅 2026-11-24`).
+
+## Themes
+
+Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with `perf-vault/theme-check.js` (not committed), which measures row height, clipped cells, checkbox size and position, header alignment, toolbar overflow and the cell editor's fit. Five themes, each in light and dark, at desktop width and with `app.emulateMobile(true)`: the default theme, Minimal 9.1.4, AnuPpuccin 1.5.0, Things 2.2.6 and Blue Topaz (2026110301). I also looked at each one.
+
+- [x] Rows keep their fixed height (30 px, 40 px on touch), nothing is clipped, checkboxes stay inside their rows, header columns line up with the cells, the toolbar fits, and the cell editors fit their cells, in all 20 combinations.
+- [x] Checkbox states follow the theme (Minimal's circles, a dash for cancelled in Minimal and Things).
+- [x] Found and fixed: Blue Topaz removed the gap between the checkbox and the task text. The gap now comes from the cell (`gap`), and the checkbox's own margin is reset, so a theme's checkbox margins can't close or widen it.
+

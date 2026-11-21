@@ -53,9 +53,10 @@
 .tasklines-status-done .tasklines-open, .tasklines-status-cancelled .tasklines-open { text-decoration: line-through; color: var(--text-faint); }
 /* Property values rendered by Bases (lists, links) must stay on one line to keep row height fixed. */
 .tasklines-prop > * { display: inline; white-space: nowrap; }
-.tasklines-checkbox { margin-inline-end: 6px; vertical-align: middle; flex: none; }
+/* Themes restyle task checkboxes, margins included; the gap belongs to the cell instead. */
+.tasklines-view .tasklines-text > input.tasklines-checkbox { margin: 0; vertical-align: middle; flex: none; }
 .tasklines-checkbox:disabled { opacity: 0.5; }
-.tasklines-text { display: flex; align-items: center; }
+.tasklines-text { display: flex; align-items: center; gap: 6px; }
 .tasklines-text .tasklines-open { overflow: hidden; text-overflow: ellipsis; }
 
 /* Touch devices: larger targets; keep the toolbar compact. */
