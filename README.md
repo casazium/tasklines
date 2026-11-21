@@ -142,6 +142,7 @@ npm run lint
 npm run bench   # index and query timing on a synthetic vault
 ```
 
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to report a problem and get a change accepted.
 - [AGENTS.md](AGENTS.md): code layout and the rules every change must keep.
 - [VERIFY.md](VERIFY.md): manual checks in Obsidian; `test-vault/` has material for each.
 - [RELEASE.md](RELEASE.md): how to cut a release and the community-submission checklist.
