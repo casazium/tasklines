@@ -169,7 +169,7 @@ Run on 2026-11-21 with `test-vault/Task calendar.base`. Fable reviewed the code 
   - **Pick a date…** opened iOS's calendar picker straight away. Choosing the 27th enabled **Save**, and saving moved the task; **Undo** put it back.
   - Tomorrow rescheduled an overdue recurring task.
   - Month layout: **›** and **Today** change month, and the page scrolls as one, with No date below. Scheduling from the tray added `⏳ <date>` before the `^block-id`.
-  - Found and fixed: the date field in **Pick a date** ran past the window's right edge on iOS. It now counts its padding in its width (`box-sizing: border-box`). The fix isn't rechecked on iOS yet.
+  - Found and fixed: the date field in **Pick a date** ran past the window's right edge on iOS. `box-sizing: border-box`, and then `min-width: 0` with no native appearance, didn't help. Sizing the field to its content and centring it did (`width: auto; max-width: 100%; margin: 0 auto`). This was rechecked on the iPhone in dark mode: the field sits inside the window, level with the buttons.
 - [x] **Real mouse drag** (same day, macOS, Obsidian 1.15.1, with the real pointer through computer use):
   - Month: dragging a task shows its preview, dims the original, and outlines the day under the pointer. Dropping on the 26th moved it ("Moved to Thursday, November 26 · Undo"), and a real click on **Undo** put it back on the 22nd. A task dragged from No date onto the 24th got that date.
   - Agenda: a task dragged from Overdue onto Monday the 23rd (an empty day shown as a drop target) moved there. A recurring task dropped on the Overdue section was refused: no outline, nothing changed.
