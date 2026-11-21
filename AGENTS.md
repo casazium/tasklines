@@ -1,6 +1,6 @@
 # Tasklines: notes for contributors and coding agents
 
-Obsidian community plugin that adds a **Tasklines** view to Bases: one row per inline checkbox task, with the parent note's properties as columns.
+Obsidian community plugin that adds a **Tasklines** view to Bases: one row per inline checkbox task, with the parent note's properties as columns. A second view, **Task board**, shows the same tasks as cards in columns.
 
 ## Commands
 
@@ -34,6 +34,7 @@ npm run bench   # index/query timing on a synthetic vault
 | `src/indexer.ts` | Per-file task cache keyed by mtime, invalidation listeners |
 | `src/query.ts` | Task-level filter, sort, group, summaries |
 | `src/view.ts`, `src/virtual-list.ts`, `src/toolbar.ts` | Rendering |
+| `src/board.ts`, `src/board-view.ts` | Task board: columns and moves (pure), cards and drag and drop |
 | `src/edit.ts`, `src/writeback.ts`, `src/writer.ts` | Editing and writing back |
 | `src/dataview-migrate.ts`, `src/migrate-command.ts` | Dataview TASK → .base |
 

@@ -23,13 +23,18 @@ export interface ToggleOptions extends EditOptions {
 	 * plain checkbox, so it would complete a recurring task there without the next occurrence.
 	 */
 	tasksGlobalFilter?: string;
+	/**
+	 * Refuse unless the toggle leaves the task done. The Tasks plugin moves a task to the next
+	 * status in its own cycle, which may not be done; a board drop onto Done must not land elsewhere.
+	 */
+	expectDone?: boolean;
 }
 
 export type ToggleResult =
 	| { ok: true; content: string; newLines: string[]; via: 'tasks-plugin' | 'built-in' }
 	| {
 			ok: false;
-			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch' | 'invalid-edit';
+			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch' | 'invalid-edit' | 'not-completed';
 			detail: string;
 	  };
 
@@ -100,6 +105,23 @@ export function editInContent(content: string, ref: TaskRef, edit: TaskEdit, opt
 }
 
 /**
+ * Replace the task at `ref.line` with `text`, a line this plugin wrote or read before (undo).
+ * The current line must be exactly `ref.raw`, and the replacement must be a task at the same
+ * indent with the same list marker, so undo can never turn into a general line rewrite.
+ */
+export function replaceLineInContent(content: string, ref: TaskRef, text: string): EditResult {
+	const found = locate(content, ref);
+	if (!found.ok) return found;
+	const { lines, task } = found;
+	const after = parseTaskLine(text);
+	if (/[\r\n]/.test(text) || !after || after.indent !== task.indent || after.marker !== task.marker) {
+		return { ok: false, reason: 'invalid-edit', detail: 'the replacement is not the same task line' };
+	}
+	if (text === ref.raw) return { ok: true, content, changed: false, newLine: text };
+	return { ok: true, content: lines.map((l, i) => (i === ref.line ? text : l.text) + l.eol).join(''), changed: true, newLine: text };
+}
+
+/**
  * Toggle the task at `ref.line` in `content`. Refuses rather than guesses: the line must
  * still be exactly what was indexed. Every other byte of the file is left unchanged.
  */
@@ -158,6 +180,10 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 		}
 	}
 
+	// With a recurring task Tasks returns the next occurrence and the completed line; one must be done.
+	if (opts.expectDone && !newLines.some((l) => statusKind(parseTaskLine(l)?.status ?? '') === 'done')) {
+		return { ok: false, reason: 'not-completed', detail: 'the toggle would not mark the task done' };
+	}
 	const eol = target.eol || detectEol(lines);
 	const replaced = newLines.map((text, i) => ({ text, eol: i === newLines.length - 1 ? target.eol : eol }));
 	const next = [...lines.slice(0, ref.line), ...replaced, ...lines.slice(ref.line + 1)];

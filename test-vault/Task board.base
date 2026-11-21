@@ -1,0 +1,22 @@
+filters:
+  and:
+    - file.inFolder("Projects")
+views:
+  - type: tasklines-board
+    name: By status
+    boardField: status
+    taskQuery:
+      doneWithinDays: 30
+      sort:
+        - key: due
+          desc: false
+  - type: tasklines-board
+    name: By due date
+    boardField: due
+    taskQuery:
+      statuses:
+        - todo
+        - in-progress
+  - type: tasklines-board
+    name: By priority
+    boardField: priority

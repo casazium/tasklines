@@ -7,6 +7,7 @@ import {
 	BasesPropertyId,
 	BasesView,
 	debounce,
+	Menu,
 	Notice,
 	Platform,
 	NullValue,
@@ -16,6 +17,8 @@ import {
 	type Value,
 } from 'obsidian';
 import { AddTaskModal } from './add-task-modal.ts';
+import { BOARD_FIELD_LABELS, BOARD_FIELDS, boardColumns, moveFor, normalizeBoardField, type BoardColumn, type BoardMove } from './board.ts';
+import { TaskBoard, type MenuChoice } from './board-view.ts';
 import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
 import type { IndexedTask } from './extract.ts';
 import { ALL_PATHS, type TaskIndex } from './indexer.ts';
@@ -26,15 +29,39 @@ import { localDate, renderRows, type RowSource, type ViewRow } from './view.ts';
 import { ROW_HEIGHT, TOUCH_ROW_HEIGHT, VirtualList } from './virtual-list.ts';
 
 export const VIEW_TYPE = 'tasklines';
+export const BOARD_VIEW_TYPE = 'tasklines-board';
 const QUERY_KEY = 'taskQuery';
+const BOARD_FIELD_KEY = 'boardField';
 
+/** Registers the list and board views; false if Bases is not available. */
 export function registerTasklinesView(plugin: Plugin, index: TaskIndex, writer: TaskWriter): boolean {
-	return plugin.registerBasesView(VIEW_TYPE, {
+	const list = plugin.registerBasesView(VIEW_TYPE, {
 		name: 'Tasklines',
 		icon: 'lucide-list-checks',
 		factory: (controller, containerEl) => new TasklinesView(controller, containerEl, index, writer),
 		options: () => viewOptions(),
 	});
+	if (!list) return false;
+	plugin.registerBasesView(BOARD_VIEW_TYPE, {
+		name: 'Task board',
+		icon: 'lucide-kanban',
+		factory: (controller, containerEl) => new TaskBoardView(controller, containerEl, index, writer),
+		options: () => boardOptions(),
+	});
+	return true;
+}
+
+function boardOptions(): BasesAllOptions[] {
+	return [
+		{ type: 'toggle', key: 'showToolbar', displayName: 'Show task toolbar', default: true },
+		{
+			type: 'dropdown',
+			key: BOARD_FIELD_KEY,
+			displayName: 'Columns',
+			default: 'status',
+			options: Object.fromEntries(BOARD_FIELDS.map((f) => [f, BOARD_FIELD_LABELS[f]])),
+		},
+	];
 }
 
 function viewOptions(): BasesAllOptions[] {
@@ -60,19 +87,20 @@ interface NoteSnapshot {
 	baseGroupIndex: number;
 }
 
-class TasklinesView extends BasesView {
-	readonly type = VIEW_TYPE;
-	private index: TaskIndex;
-	private writer: TaskWriter;
-	private rootEl: HTMLElement;
-	private toolbar: TaskToolbar;
-	private statsEl: HTMLElement;
-	private list: VirtualList;
-	private query: TaskQuery = normalizeQuery(null);
-	private notes: NoteSnapshot[] = [];
-	private paths = new Set<string>();
+/** What the list and the board share: snapshots of the base, the toolbar, refreshes and writes. */
+abstract class TaskViewBase extends BasesView {
+	protected index: TaskIndex;
+	protected writer: TaskWriter;
+	protected rootEl: HTMLElement;
+	protected toolbar: TaskToolbar;
+	protected statsEl: HTMLElement;
+	protected query: TaskQuery = normalizeQuery(null);
+	protected notes: NoteSnapshot[] = [];
+	protected paths = new Set<string>();
 	private renderToken = 0;
 	private unsubscribe: (() => void) | null = null;
+	private lastToday = localDate(new Date());
+	private dayTimer: number;
 	private rerenderSoon = debounce(
 		() => {
 			// `this.data` is still the current result (no onDataUpdated since), so re-reading it is safe.
@@ -83,16 +111,16 @@ class TasklinesView extends BasesView {
 		true,
 	);
 
-	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex, writer: TaskWriter) {
+	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex, writer: TaskWriter, toolbar: { showGroup: boolean }) {
 		super(controller);
 		this.index = index;
 		this.writer = writer;
 		this.rootEl = parentEl.createDiv({ cls: 'tasklines-view' });
 		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask(), {
 			collapsible: Platform.isMobile,
+			showGroup: toolbar.showGroup,
 		});
 		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
-		this.list = new VirtualList(this.rootEl, Platform.isMobile ? TOUCH_ROW_HEIGHT : ROW_HEIGHT);
 		this.rootEl.toggleClass('tasklines-touch', Platform.isMobile);
 		// Bases may not call onDataUpdated when only a note's body changes (no property
 		// changed), so re-render ourselves when a note in the current result set changes.
@@ -103,13 +131,20 @@ class TasklinesView extends BasesView {
 			if (!this.rootEl.isConnected && this.notes.length) return this.onunload();
 			if (paths.some((p) => p === ALL_PATHS || this.paths.has(p))) this.rerenderSoon();
 		});
+		// "Today", "Overdue" and due-date columns change at midnight even if no note does.
+		this.dayTimer = window.setInterval(() => {
+			const today = localDate(new Date());
+			if (today === this.lastToday) return;
+			this.lastToday = today;
+			if (this.rootEl.isConnected) this.render();
+		}, 60_000);
 	}
 
 	onunload(): void {
 		this.unsubscribe?.();
 		this.unsubscribe = null;
+		window.clearInterval(this.dayTimer);
 		this.rerenderSoon.cancel();
-		this.list.destroy();
 		this.notes = [];
 	}
 
@@ -121,7 +156,7 @@ class TasklinesView extends BasesView {
 		this.render();
 	}
 
-	private onQueryChange(q: TaskQuery): void {
+	protected onQueryChange(q: TaskQuery): void {
 		this.query = q;
 		// Saved in the .base file so each view keeps its own preset.
 		this.config.set(QUERY_KEY, q);
@@ -130,13 +165,19 @@ class TasklinesView extends BasesView {
 		this.render();
 	}
 
+	/** The query actually applied; the board ignores the saved grouping. */
+	protected effectiveQuery(): TaskQuery {
+		return this.query;
+	}
+
 	/**
 	 * Copy what we need from `this.data` now. It and its entries are replaced on every
 	 * update, so no entry objects are kept across updates.
 	 */
 	private snapshot(): void {
+		const q = this.effectiveQuery();
 		const props = new Set<BasesPropertyId>(this.config.getOrder());
-		for (const key of [...this.query.sort.map((s) => s.key), this.query.group]) {
+		for (const key of [...q.sort.map((s) => s.key), q.group]) {
 			if (key.startsWith('prop:')) props.add(key.slice(5) as BasesPropertyId);
 		}
 		const notes: NoteSnapshot[] = [];
@@ -158,13 +199,12 @@ class TasklinesView extends BasesView {
 		this.paths = paths;
 	}
 
-	private render(): void {
+	protected render(): void {
 		void this.renderAsync();
 	}
 
 	private async renderAsync(): Promise<void> {
 		const notes = this.notes;
-		const query = this.query;
 		const token = ++this.renderToken;
 		const tasksByPath = await this.index.tasksFor(notes.map((n) => n.entry.file));
 		if (token !== this.renderToken) return; // superseded by a newer render
@@ -178,32 +218,16 @@ class TasklinesView extends BasesView {
 				rows.push({ task, entry: n.entry, noteIndex: n.noteIndex, noteName: n.entry.file.basename, baseGroup: n.baseGroup, baseGroupIndex: n.baseGroupIndex, props });
 			}
 		}
-		const columns = this.config.getOrder().filter((p) => p !== 'file.name');
-		const today = localDate(new Date());
-		const context = columnContext(tasksByPath, today);
-		renderRows(this.statsEl, this.list, {
-			groups: applyQuery(rows, query, today),
-			context,
-			total: rows.length,
-			columns,
-			columnNames: columns.map((p) => this.config.getDisplayName(p)),
-			taskColumns: TASK_COLUMNS.filter((c) => {
-				const v = this.config.get(columnOptionKey(c.key));
-				return typeof v === 'boolean' ? v : c.defaultOn;
-			}),
-			stats: this.index.lastStats,
-			// Notes known to have no tasks are skipped before indexing, so count from all paths.
-			notes: { total: this.paths.size, withTasks: [...tasksByPath.values()].filter((t) => t.length > 0).length },
-			openTask: (path, line, newTab) => this.openTask(path, line, newTab),
-			toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
-			tasksPluginAvailable: this.writer.tasksPluginAvailable(),
-			touch: Platform.isMobile,
-			editTask: (task, edit) => this.writer.edit({ path: task.path, line: task.line, raw: task.raw }, edit),
-			renderValue: (el, entry, prop) => {
-				const value = entry.values.get(prop);
-				if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);
-			},
-		});
+		this.lastToday = localDate(new Date());
+		this.draw(rows, tasksByPath, this.lastToday);
+	}
+
+	protected abstract draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void;
+
+	/** All notes the base selects, and how many have at least one task. */
+	protected noteCounts(tasksByPath: Map<string, IndexedTask[]>): { total: number; withTasks: number } {
+		// Notes known to have no tasks are skipped before indexing, so count from all paths.
+		return { total: this.paths.size, withTasks: [...tasksByPath.values()].filter((t) => t.length > 0).length };
 	}
 
 	private lastAddPath: string | null = null;
@@ -229,11 +253,129 @@ class TasklinesView extends BasesView {
 		return this.allProperties.map((id) => ({ id, label: this.config.getDisplayName(id) }));
 	}
 
-	private openTask(path: string, line: number, newTab: boolean): void {
+	protected openTask(path: string, line: number, newTab: boolean): void {
 		const file = this.app.vault.getAbstractFileByPath(path);
 		if (!(file instanceof TFile)) return;
 		void this.app.workspace.getLeaf(newTab ? 'tab' : false).openFile(file, { eState: { line } });
 	}
+}
+
+class TasklinesView extends TaskViewBase {
+	readonly type = VIEW_TYPE;
+	private list: VirtualList;
+
+	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex, writer: TaskWriter) {
+		super(controller, parentEl, index, writer, { showGroup: true });
+		this.list = new VirtualList(this.rootEl, Platform.isMobile ? TOUCH_ROW_HEIGHT : ROW_HEIGHT);
+	}
+
+	onunload(): void {
+		super.onunload();
+		this.list.destroy();
+	}
+
+	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
+		const columns = this.config.getOrder().filter((p) => p !== 'file.name');
+		renderRows(this.statsEl, this.list, {
+			groups: applyQuery(rows, this.query, today),
+			context: columnContext(tasksByPath, today),
+			total: rows.length,
+			columns,
+			columnNames: columns.map((p) => this.config.getDisplayName(p)),
+			taskColumns: TASK_COLUMNS.filter((c) => {
+				const v = this.config.get(columnOptionKey(c.key));
+				return typeof v === 'boolean' ? v : c.defaultOn;
+			}),
+			stats: this.index.lastStats,
+			notes: this.noteCounts(tasksByPath),
+			openTask: (path, line, newTab) => this.openTask(path, line, newTab),
+			toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
+			tasksPluginAvailable: this.writer.tasksPluginAvailable(),
+			touch: Platform.isMobile,
+			editTask: (task, edit) => this.writer.edit({ path: task.path, line: task.line, raw: task.raw }, edit),
+			renderValue: (el, entry, prop) => {
+				const value = entry.values.get(prop);
+				if (value && !(value instanceof NullValue)) value.renderTo(el, this.app.renderContext);
+			},
+		});
+	}
+}
+
+class TaskBoardView extends TaskViewBase {
+	readonly type = BOARD_VIEW_TYPE;
+	private board: TaskBoard;
+
+	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex, writer: TaskWriter) {
+		super(controller, parentEl, index, writer, { showGroup: false });
+		this.board = new TaskBoard(this.rootEl, this.statsEl);
+		this.rootEl.addClass('tasklines-board-view');
+	}
+
+	onunload(): void {
+		super.onunload();
+		this.board.el.remove();
+	}
+
+	protected onQueryChange(q: TaskQuery): void {
+		this.board.resetLimits();
+		super.onQueryChange(q);
+	}
+
+	protected effectiveQuery(): TaskQuery {
+		// Columns take the place of groups; a group saved from a list view must not apply.
+		return { ...this.query, group: 'none' };
+	}
+
+	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
+		const field = normalizeBoardField(this.config.get(BOARD_FIELD_KEY));
+		const sorted = applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows);
+		this.board.render({
+			columns: boardColumns(sorted, field, today),
+			total: rows.length,
+			today,
+			field,
+			stats: this.index.lastStats,
+			notes: this.noteCounts(tasksByPath),
+			openTask: (path, line, newTab) => this.openTask(path, line, newTab),
+			toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
+			// Worked out when the move happens, so "Today" is today even after midnight.
+			moveFor: (task, column) => moveFor(task, column, localDate(new Date())),
+			move: (task, move, column) => this.move(task, move, column),
+			showMenu: (anchor, ev, choices) => showMenu(anchor, ev, choices),
+			tasksPluginAvailable: this.writer.tasksPluginAvailable(),
+			touch: Platform.isMobile,
+		});
+	}
+
+	private async move(task: IndexedTask, move: BoardMove, column: BoardColumn): Promise<boolean> {
+		const target = { path: task.path, line: task.line, raw: task.raw };
+		if (move.kind === 'blocked') {
+			new Notice(`Tasklines: ${move.reason} Nothing was changed.`);
+			return false;
+		}
+		// Completing a recurring task may add its next occurrence, so it is not undoable here.
+		if (move.kind === 'toggle') return this.writer.toggle(target, true);
+		const written = await this.writer.editLine(target, move.edit);
+		if (written === null) return false;
+		const message = new DocumentFragment();
+		message.createSpan({ text: `Moved to ${column.label}. ` });
+		const undo = message.createEl('button', { text: 'Undo', cls: 'tasklines-notice-btn' });
+		const notice = new Notice(message, 6000);
+		undo.addEventListener('click', () => {
+			notice.hide();
+			void this.writer.restore({ path: task.path, line: task.line, raw: written }, task.raw);
+		});
+		return true;
+	}
+}
+
+function showMenu(anchor: HTMLElement, ev: MouseEvent, choices: MenuChoice[]): void {
+	const menu = new Menu();
+	for (const c of choices) menu.addItem((item) => item.setTitle(c.label).setDisabled(c.disabled ?? false).onClick(() => c.run()));
+	// A keyboard "click" has no pointer position: open under the button instead.
+	if (ev.detail > 0) return void menu.showAtMouseEvent(ev);
+	const rect = anchor.getBoundingClientRect();
+	menu.showAtPosition({ x: rect.left, y: rect.bottom }, anchor.ownerDocument);
 }
 
 /** Lookups for computed columns, built from all tasks in the base (before task filters). */

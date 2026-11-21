@@ -194,3 +194,17 @@ From 1.0.3 the settings tab uses `getSettingDefinitions()` (Obsidian 1.13+) and 
 - [x] Lint reports no warnings.
 - Obsidian 1.10 to 1.12 keep 1.0.2 through `versions.json`.
 
+
+## Task board
+
+Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled, using `test-vault/Task board.base`. Drags were sent as DOM drag events from the developer tools protocol. macOS shows Obsidian menus as native menus, so the card menu was opened on screen and its items were then run from the menu object.
+
+- [x] Status board: To do, In progress, Done and Cancelled columns. Dragging a card writes one line and moves the card. Dropping on its own column is refused while dragging.
+- [x] Undo in the notice restored the exact line (Dataview style, tab indent).
+- [x] Card menu: "Move to To do" was disabled for a to-do card, and "Move to Done" added `✅ <today>`. Keyboard focus followed the card, and the live region announced the move.
+- [x] A note changed during a drag (which redraws the board), and the drop still landed.
+- [x] A recurring task dragged to Done was completed by Tasks: next occurrence above, done line below.
+- [x] Cancelling a recurring Tasks-style task added `❌ <today>`.
+- [x] Due-date board: Overdue, Next 7 days and Later are dashed, show their explanations, and refuse drops. Today and Tomorrow set the date, and No due date removes it.
+- [x] Priority board: dropping on High added ⏫ to a task inside a callout.
+- [ ] Not covered: a real mouse drag (only synthetic events), phones, and a screen reader.
