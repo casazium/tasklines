@@ -232,4 +232,10 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
     - The Undo notice now stays 8 seconds instead of 6, to give time to reach it on a phone.
     - Found while checking the scrolling fix on desktop: ticking a checkbox, in the board or the list, dropped keyboard focus to the page. The checkbox was disabled while the change was saved, and Obsidian 1.15.1's Chromium moves focus away from a disabled element. It is now marked busy (`aria-disabled`) instead. Focus stays on the checkbox and follows the task after the redraw, which the accessibility check above expects.
   - Not a Tasklines problem: the emulator's Play Store updated Android WebView in the background, and Android closed Obsidian for the update (`killDueToPackageUpdate` in the device log).
-- [ ] Not covered: a real mouse drag (only synthetic events), an iPhone, and a screen reader.
+- [x] **Real mouse drag** (2026-11-21, macOS, Obsidian 1.15.1, with the real pointer through computer use). A background drag can't start a macOS drag session, so this needs Obsidian in front.
+  - While dragging, Obsidian's preview of the card follows the pointer, the original card dims, and the target column gets an accent outline. The outline stays while the pointer is over a card in that column.
+  - Dropping on another column wrote one line ("Confirm catering" to In progress), and a real click on **Undo** restored a later move.
+  - Dropping on the card's own column did nothing.
+  - Dropping a card into an open note in a split pane inserted nothing and changed nothing. The editor sees the drag, but the card carries only Tasklines' own drag type.
+  - Found and fixed: hovering anywhere on a card showed its column's name as a tooltip, and hovering a list row showed "Tasks". Obsidian shows any `aria-label` as a tooltip, and the card lists and the table were named that way. They are now named with `aria-labelledby` (the column title, and a hidden "Tasks" label), so the names are kept and the stray tooltips are gone. Controls such as checkboxes still show their own tooltips.
+- [ ] Not covered: an iPhone, and a screen reader.

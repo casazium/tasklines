@@ -5,6 +5,7 @@ export const ROW_HEIGHT = 30;
 /** Taller rows on phones and tablets so checkboxes and cells are easy to tap. */
 export const TOUCH_ROW_HEIGHT = 40;
 const OVERSCAN = 10;
+let tableCount = 0;
 
 export class VirtualList {
 	readonly scroller: HTMLElement;
@@ -22,7 +23,11 @@ export class VirtualList {
 		this.rowHeight = rowHeight;
 		// A table to assistive tech. Only the rows near the viewport exist, so the full row count
 		// and each row's position are given explicitly (header is row 1).
-		this.scroller = parent.createDiv({ cls: 'tasklines-scroller', attr: { role: 'table', 'aria-label': 'Tasks' } });
+		// Named by a hidden element, not aria-label: Obsidian shows an aria-label as a tooltip,
+		// which would pop up over every row.
+		const labelId = `tasklines-table-${++tableCount}`;
+		parent.createSpan({ cls: 'tasklines-sr-only', text: 'Tasks', attr: { id: labelId } });
+		this.scroller = parent.createDiv({ cls: 'tasklines-scroller', attr: { role: 'table', 'aria-labelledby': labelId } });
 		this.header = this.scroller.createDiv({ cls: 'tasklines-header' });
 		this.spacer = this.scroller.createDiv({ cls: 'tasklines-spacer' });
 		this.windowEl = this.spacer.createDiv({ cls: 'tasklines-window' });

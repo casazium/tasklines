@@ -12,6 +12,7 @@ import type { ViewRow } from './view.ts';
 export const CARD_PAGE = 100;
 /** Our own drag type, so a card dropped on a note or another app is not inserted as text. */
 const DRAG_TYPE = 'application/x-tasklines-task';
+let columnCount = 0;
 
 export interface MenuChoice {
 	label: string;
@@ -135,14 +136,17 @@ export class TaskBoard {
 		colEl.toggleClass('is-locked', column.target === null);
 		const head = colEl.createDiv({ cls: 'tasklines-column-head', attr: { role: 'heading', 'aria-level': '3', tabindex: '-1' } });
 		head.dataset.column = column.key;
-		head.createSpan({ cls: 'tasklines-column-title', text: column.label });
+		// The list is named by the title (aria-labelledby): Obsidian shows an aria-label as a
+		// tooltip, which would pop up over every card.
+		const titleId = `tasklines-column-${++columnCount}`;
+		head.createSpan({ cls: 'tasklines-column-title', text: column.label, attr: { id: titleId } });
 		head.createSpan({ cls: 'tasklines-column-count', text: String(n), attr: { 'aria-label': `${n} ${n === 1 ? 'task' : 'tasks'}` } });
 		if (n) head.setAttr('title', formatSummary(summarize(column.rows, input.today)));
 		if (column.note) colEl.createDiv({ cls: 'tasklines-column-note', text: column.note });
 
 		const scroll = colEl.createDiv({ cls: 'tasklines-column-cards' });
 		scroll.dataset.column = column.key;
-		const list = scroll.createDiv({ cls: 'tasklines-card-list', attr: { role: 'list', 'aria-label': column.label } });
+		const list = scroll.createDiv({ cls: 'tasklines-card-list', attr: { role: 'list', 'aria-labelledby': titleId } });
 
 		if (column.target !== null) {
 			const accepts = (ev: DragEvent) => this.dragged !== null && !!ev.dataTransfer?.types.includes(DRAG_TYPE) && input.moveFor(this.dragged, column) !== null;
