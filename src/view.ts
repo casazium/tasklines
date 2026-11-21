@@ -160,6 +160,7 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 		if (cell.querySelector('input, select')) return;
 		const shown = cell.getText();
 		cell.empty();
+		cell.addClass('is-editing');
 		let control: HTMLInputElement | HTMLSelectElement;
 		let toEdit: () => TaskEdit | null;
 		if (column.editor === 'date') {
@@ -190,6 +191,7 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 			const edit = commit ? toEdit() : null;
 			const hadFocus = cell.contains(cell.ownerDocument.activeElement);
 			cell.empty();
+			cell.removeClass('is-editing');
 			cell.setText(shown);
 			// Keyboard users stay on the cell (the control they were in is gone).
 			if (hadFocus) cell.focus({ preventScroll: true });

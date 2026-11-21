@@ -83,6 +83,10 @@
 .tasklines-view .tasklines-open:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 2px; border-radius: var(--radius-s); }
 .tasklines-editable.is-saving { opacity: 0.5; }
 .tasklines-cell-input { width: 100%; font-size: var(--font-ui-smaller); }
+/* An open editor may be wider than its column (a full date needs more room than a narrow
+   Due column has): let it overlap the next cell instead of cutting off the year. */
+.tasklines-grid > .tasklines-editable.is-editing { overflow: visible; position: relative; z-index: 2; }
+.tasklines-editable.is-editing > .tasklines-cell-input { width: auto; min-width: 100%; }
 .tasklines-group { gap: var(--size-4-2); }
 .tasklines-group-summary { color: var(--text-muted); font-weight: normal; font-size: var(--font-ui-smaller); }
 .tasklines-summary { color: var(--text-normal); }
