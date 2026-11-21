@@ -18,13 +18,18 @@ export interface ToggleOptions extends EditOptions {
 	 * be two lines for a recurring task, or the input unchanged if it did not handle it.
 	 */
 	external?: (line: string) => string;
+	/**
+	 * The Tasks plugin's global filter, if it has one. Tasks treats a line without it as a
+	 * plain checkbox, so it would complete a recurring task there without the next occurrence.
+	 */
+	tasksGlobalFilter?: string;
 }
 
 export type ToggleResult =
 	| { ok: true; content: string; newLines: string[]; via: 'tasks-plugin' | 'built-in' }
 	| {
 			ok: false;
-			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'bad-external-output' | 'tasks-format-mismatch';
+			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch';
 			detail: string;
 	  };
 
@@ -107,6 +112,13 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 	let via: 'tasks-plugin' | 'built-in' = 'built-in';
 	let formatMismatch = false;
 	const completing = !['done', 'cancelled'].includes(statusKind(task.status));
+	if (completing && task.recurrence && opts.external && opts.tasksGlobalFilter && !target.text.includes(opts.tasksGlobalFilter)) {
+		return {
+			ok: false,
+			reason: 'recurring-outside-global-filter',
+			detail: `the line does not contain the Tasks global filter (${opts.tasksGlobalFilter}), so Tasks would not create the next occurrence`,
+		};
+	}
 	if (opts.external) {
 		const result = opts.external(target.text);
 		if (result !== target.text) {

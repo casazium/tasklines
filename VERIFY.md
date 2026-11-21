@@ -102,3 +102,16 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with `perf-vault/theme-check.js` (n
 - [x] Checkbox states follow the theme (Minimal's circles, a dash for cancelled in Minimal and Things).
 - [x] Found and fixed: Blue Topaz removed the gap between the checkbox and the task text. The gap now comes from the cell (`gap`), and the checkbox's own margin is reset, so a theme's checkbox margins can't close or widen it.
 
+## Tasks plugin settings
+
+Run on 2026-11-20 with Tasks 8.6.0 in the test vault. For each setting, a fresh note with plain, tagged, recurring, scheduled-recurring and in-progress tasks was ticked through the Tasklines view, and the note was diffed after each tick.
+
+- [x] **Defaults:** one-off tasks get ✅; recurring tasks get their next occurrence above; in progress → done.
+- [x] **Set created date:** the next occurrence gets ➕ (Tasks' own behaviour). Tasklines' New task does not add ➕.
+- [x] **Done date off:** completions have no ✅, as in the editor.
+- [x] **Next occurrence on next line:** the new occurrence goes below the completed one.
+- [x] **Remove scheduled date on recurrence:** the next occurrence has no ⏳.
+- [x] **Custom status cycle (To do → In progress → Done):** ticking moves a task to `[/]`, as clicking it in the editor does.
+- [x] **Global filter `#task`** (also with "remove global filter" on): tagged tasks complete as usual. An untagged one-off is toggled the way Tasks toggles a plain checkbox (no ✅).
+- [x] Found and fixed: an untagged **recurring** task was completed without its next occurrence, because Tasks treats a line without the global filter as a plain checkbox. Tasklines now refuses it, changes nothing and explains why (add the filter to the line, or complete it in the note).
+

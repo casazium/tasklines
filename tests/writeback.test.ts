@@ -164,3 +164,28 @@ test('plain lines accept whichever style Tasks uses', () => {
 	const r = toggleInContent('- [ ] Plain', { line: 0, raw: '- [ ] Plain' }, { ...OPTS, external: (l) => `${l.replace('[ ]', '[x]')} [completion:: 2026-11-20]` });
 	assert.ok(r.ok && r.via === 'tasks-plugin');
 });
+
+test('a recurring task outside the Tasks global filter is refused, untouched', () => {
+	// Tasks treats a line without its global filter as a plain checkbox: it would tick it and
+	// drop the next occurrence. Found with Tasks 8.6.0 and global filter #task.
+	const plainToggle = (l: string) => l.replace('[ ]', '[x]');
+	const rec = '- [ ] Water plants 🔁 every week 📅 2026-11-20';
+	const r = toggleInContent(rec, { line: 0, raw: rec }, { ...OPTS, external: plainToggle, tasksGlobalFilter: '#task' });
+	assert.equal(r.ok ? '' : r.reason, 'recurring-outside-global-filter');
+
+	// With the filter on the line, Tasks handles it as usual.
+	const tagged = '- [ ] Water plants #task 🔁 every week 📅 2026-11-20';
+	const next = '- [ ] Water plants #task 🔁 every week 📅 2026-11-27\n- [x] Water plants #task 🔁 every week 📅 2026-11-20 ✅ 2026-11-20';
+	const ok = toggleInContent(tagged, { line: 0, raw: tagged }, { ...OPTS, external: () => next, tasksGlobalFilter: '#task' });
+	assert.ok(ok.ok && ok.content === next);
+
+	// One-off tasks outside the filter still toggle the way Tasks toggles them in the editor.
+	const once = '- [ ] Fix gate 📅 2026-11-25';
+	const one = toggleInContent(once, { line: 0, raw: once }, { ...OPTS, external: plainToggle, tasksGlobalFilter: '#task' });
+	assert.ok(one.ok && one.content === '- [x] Fix gate 📅 2026-11-25');
+
+	// Reopening a done recurring task is not affected.
+	const done = '- [x] Water plants 🔁 every week 📅 2026-11-20 ✅ 2026-11-20';
+	const reopen = toggleInContent(done, { line: 0, raw: done }, { ...OPTS, external: (l) => l.replace('[x]', '[ ]').replace(' ✅ 2026-11-20', ''), tasksGlobalFilter: '#task' });
+	assert.ok(reopen.ok);
+});
