@@ -63,4 +63,4 @@ writeFileSync(
 for (const f of ['main.js', 'manifest.json', 'styles.css']) cpSync(f, join(dir, '.obsidian', 'plugins', 'tasklines', f));
 writeFileSync(join(dir, '.obsidian', 'community-plugins.json'), '["tasklines"]\n');
 cpSync(join('test-vault', '.obsidian', 'core-plugins.json'), join(dir, '.obsidian', 'core-plugins.json'));
-console.log(`${dir}: ${NOTES} notes, ${tasks} tasks`);
+process.stdout.write(`${dir}: ${NOTES} notes, ${tasks} tasks\n`);
