@@ -22,8 +22,13 @@
 }
 /* Darkened so small white text on the accent meets 4.5:1 contrast; plain accent where color-mix is unsupported. */
 .tasklines-chip.is-active,
-.tasklines-btn.mod-cta { background: var(--interactive-accent); background: color-mix(in srgb, var(--interactive-accent) 72%, black); color: var(--text-on-accent); }
-.tasklines-btn.mod-cta:hover { background: var(--interactive-accent-hover); background: color-mix(in srgb, var(--interactive-accent-hover) 72%, black); }
+.tasklines-btn.mod-cta { background: var(--interactive-accent); color: var(--text-on-accent); }
+.tasklines-btn.mod-cta:hover { background: var(--interactive-accent-hover); }
+@supports (background: color-mix(in srgb, red 50%, black)) {
+	.tasklines-chip.is-active,
+	.tasklines-btn.mod-cta { background: color-mix(in srgb, var(--interactive-accent) 72%, black); }
+	.tasklines-btn.mod-cta:hover { background: color-mix(in srgb, var(--interactive-accent-hover) 72%, black); }
+}
 .tasklines-select { font-size: var(--font-ui-smaller); max-width: 14em; }
 .tasklines-input { font-size: var(--font-ui-smaller); width: 12em; }
 .tasklines-date { font-size: var(--font-ui-smaller); }
