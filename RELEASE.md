@@ -1,35 +1,63 @@
 # Releasing Tasklines
 
-## Cutting a release
+Every published release goes to the Obsidian community directory, which reviews it and offers it to users as an update. So release in **tested batches**, not after every change.
 
-Versions are plain `x.y.z` (Obsidian supports nothing else), and the git tag must equal the version exactly, with no `v` prefix. `.npmrc` sets `tag-version-prefix=""` so `npm version` does this.
+## When to release
+
+- **Merge often, release rarely.** Every change goes through a feature branch and a pull request, and is merged to `main` once CI passes. Merging doesn't release anything. Changes collect on `main` until a batch is ready.
+- **Release a batch** when its features are finished and the full test pass below has run on what's on `main`.
+- **Release at once** only for:
+  - a bug that can damage notes, or write to the wrong line;
+  - an error from the directory's review that stops the plugin being installed.
+
+  Even then, run the parts of the test pass that the fix touches.
+- **Bump the version only when releasing.** The directory reads `manifest.json` on `main`, so the version there must always be a published release.
+
+## Full test pass
+
+Run all of this on the commit you'll tag, and note the results in [VERIFY.md](VERIFY.md):
+
+1. **Automated:** `npm run build`, `npm test` and `npm run lint` pass. Lint must report no warnings: it uses the same `eslint-plugin-obsidianmd` rules as the directory's review.
+2. **Fuzz, large run:** `FUZZ_CASES=200000 FUZZ_SEED=7 node --test tests/fuzz.test.ts`. Turn any failure into a fixture.
+3. **Desktop:** the VERIFY.md sections for everything in the batch, plus a quick pass over the list view and the task board in `test-vault/`. Afterwards, put the notes back (`git checkout -- test-vault/`).
+4. **Android emulator:** for any change you can see or touch. Check the list, the board, editing and New task, then pull the notes back and diff them.
+5. **iPhone:** for changes to touch, pickers, menus or the keyboard.
+6. **Windows** (hypatia): for changes to reading or writing files, line endings, paths or the Tasks plugin.
+7. **Release notes:** list what changed for users since the last release, from the merged pull requests.
+
+## Beta builds (optional)
+
+For a larger feature, publish a test build before the release. A version with a suffix, such as `1.2.0-beta.1`, is marked pre-release by the workflow. BRAT installs it, but the directory and Obsidian's plugin browser ignore it.
+
+Make beta builds **on a branch, never on `main`.** This keeps the beta version out of the `manifest.json` the directory reads.
 
 ```bash
-git switch main && git pull
-npm version 0.9.1        # bumps package.json, manifest.json and versions.json, commits and tags 0.9.1
-git push --follow-tags
+git switch -c beta/1.2.0 main
+npm version 1.2.0-beta.1 --no-git-tag-version   # also updates manifest.json and versions.json
+git commit -am "Beta 1.2.0-beta.1"
+git push -u origin beta/1.2.0
+git tag 1.2.0-beta.1 && git push origin 1.2.0-beta.1
 ```
 
-The **Release Obsidian plugin** workflow then:
+Publish the draft pre-release, then install it with BRAT (`casazium/tasklines`, "Add beta plugin"). Delete the beta branch afterwards. Its version bump must not be merged.
 
-1. Fails if the tag doesn't match `manifest.json`, `package.json` and an entry in `versions.json`.
-2. Builds, lints and runs the tests.
-3. Attests build provenance for `main.js` and `styles.css`.
-4. Creates a **draft** GitHub release with `main.js`, `manifest.json` and `styles.css`, and generated notes. Versions `0.x` (and any `x.y.z-…`) are marked **pre-release**: BRAT installs them, Obsidian's plugin browser doesn't.
+## Cutting a release
 
-Check the draft's notes and assets, then publish it.
+Versions are plain `x.y.z` (Obsidian supports nothing else), and the git tag must equal the version exactly, with no `v` prefix. `.npmrc` sets `tag-version-prefix=""`.
+
+1. On a branch, run `npm version x.y.z --no-git-tag-version`. This bumps `package.json`, `manifest.json` and `versions.json`. Also set the version in `test-vault/.obsidian/plugins/tasklines/manifest.json`. Open a pull request and merge it once CI passes.
+2. On `main`, tag and push: `git tag x.y.z && git push origin x.y.z`.
+3. The **Release Obsidian plugin** workflow then:
+   1. fails if the tag doesn't match `manifest.json`, `package.json` and an entry in `versions.json`;
+   2. builds, lints and runs the tests;
+   3. attests build provenance for `main.js` and `styles.css`;
+   4. creates a **draft** GitHub release with `main.js`, `manifest.json` and `styles.css`, and generated notes. Versions `0.x` and `x.y.z-…` are marked **pre-release**.
+4. Check the draft's assets, put the user-facing notes above the generated list, and publish it.
+5. In the directory (community.obsidian.md), use **Check for new releases** on the plugin's page, and check its automated review.
 
 If `minAppVersion` changes, edit it in `manifest.json` **before** running `npm version`, so `versions.json` records the right minimum for the new version.
 
-## Beta (0.9.x)
-
-1. Merge the milestone branches into `main`.
-2. Run [VERIFY.md](VERIFY.md) in `test-vault/` on desktop, and at least the mobile line on a phone.
-3. Tag `0.9.0` as above and publish the draft pre-release.
-4. Install it through BRAT (`casazium/tasklines`) in your own vaults. BRAT needs read access to the repository, so either make the repository public or give BRAT a GitHub token that can read it.
-5. Fix what turns up with `0.9.x` releases, adding a parser fixture for every parsing bug.
-
-## 1.0.0 and community submission
+## Community directory (1.0.0 submission)
 
 Obsidian takes submissions through the community directory at **community.obsidian.md**, not through a pull request to `obsidianmd/obsidian-releases`. The directory reads `manifest.json` at the head of the default branch, installs from the GitHub release whose tag matches its version, and reviews each release automatically. Fix any errors it reports with a new, higher version; until then the plugin can't be installed from inside Obsidian.
 
