@@ -17,7 +17,23 @@ export interface TaskTarget {
 
 type TasksApi = { executeToggleTaskDoneCommand?: (line: string, path: string) => string };
 type Failure = { ok: false; reason: string; detail: string };
-type Computed = { ok: true; content: string; changed?: boolean; newLine?: string } | Failure;
+type Computed = { ok: true; content: string; changed?: boolean; newLine?: string; newLines?: string[] } | Failure;
+
+/** What one write did. `lines` are the lines now in place of the target (two for a recurring completion). */
+export type WriteResult =
+	| { status: 'written'; lines: string[] }
+	| { status: 'unchanged' }
+	| { status: 'refused'; reason: string; message: string }
+	| { status: 'busy' | 'missing' | 'error'; message: string };
+
+/** Settings read once per batch, so each task in it does not re-read them. */
+export interface BatchContext {
+	today: string;
+	tasksGlobalFilter: string | undefined;
+}
+
+/** One step of a batch: an edit, or the checkbox's toggle (which must end done). */
+export type BatchOp = { kind: 'edit'; edit: TaskEdit } | { kind: 'toggle' };
 
 const FAILURE_TEXT: Record<string, string> = {
 	'line-missing': 'The task is no longer in the note.',
@@ -80,10 +96,15 @@ export class TaskWriter {
 	/** Toggle one task done/open. Returns true if the note was changed. */
 	async toggle(target: TaskTarget, expectDone = false): Promise<boolean> {
 		const tasks = this.tasksToggle();
-		const opts: ToggleOptions = { ...this.options(), expectDone };
 		const tasksGlobalFilter = tasks ? await this.tasksGlobalFilter() : undefined;
+		return (await this.runDetailed(target, this.toggleCompute(target, expectDone, tasksGlobalFilter, this.options()), false)).status === 'written';
+	}
+
+	private toggleCompute(target: TaskTarget, expectDone: boolean, tasksGlobalFilter: string | undefined, base: ToggleOptions) {
+		const tasks = this.tasksToggle();
+		const opts: ToggleOptions = { ...base, expectDone };
 		const withTasks: ToggleOptions = { ...opts, tasksGlobalFilter, external: tasks ? (line) => tasks(line, target.path) : undefined };
-		return this.run(target, (data, precheck) => {
+		return (data: string, precheck: boolean): Computed => {
 			// The precheck runs without the Tasks plugin so it has no side effects; a recurring
 			// task is only refused there if Tasks is not available to handle it.
 			if (precheck) {
@@ -91,7 +112,40 @@ export class TaskWriter {
 				return !r.ok && r.reason === 'recurring-needs-tasks' && tasks ? { ok: true, content: data } : r;
 			}
 			return toggleInContent(data, target, withTasks);
-		});
+		};
+	}
+
+	/** Read once before a batch: today's date and the Tasks global filter. */
+	async batchContext(): Promise<BatchContext> {
+		return { today: localDate(new Date()), tasksGlobalFilter: this.tasksToggle() ? await this.tasksGlobalFilter() : undefined };
+	}
+
+	/**
+	 * One step of a batch, quietly: no notice and no re-index on refusal (the caller reports the
+	 * whole batch and refreshes the notes it touched). Same checks as any single write.
+	 */
+	async applyStep(target: TaskTarget, op: BatchOp, ctx: BatchContext): Promise<WriteResult> {
+		const opts: ToggleOptions = { ...this.options(), today: ctx.today };
+		if (op.kind === 'toggle') return this.runDetailed(target, this.toggleCompute(target, true, ctx.tasksGlobalFilter, opts), true);
+		return this.runDetailed(target, (data) => editInContent(data, target, op.edit, opts), true);
+	}
+
+	/** Undo of one batch step, quietly; refuses unless the line is still what the batch wrote. */
+	async restoreQuiet(target: TaskTarget, original: string): Promise<WriteResult> {
+		return this.runDetailed(target, (data) => replaceLineInContent(data, target, original), true);
+	}
+
+	/** Re-index notes after a quiet batch, so views show what is really there. */
+	refresh(paths: Iterable<string>): void {
+		for (const path of new Set(paths)) {
+			const file = this.app.vault.getAbstractFileByPath(path);
+			if (file instanceof TFile) this.index.invalidate(file);
+		}
+	}
+
+	/** Plain words for a refusal reason. */
+	describe(reason: string): string {
+		return FAILURE_TEXT[reason] ?? reason;
 	}
 
 	/** Change one field (status, date or priority) of one task. */
@@ -102,13 +156,8 @@ export class TaskWriter {
 	/** Like edit(), but resolves to the line as written (for undo), or null if nothing changed. */
 	async editLine(target: TaskTarget, edit: TaskEdit): Promise<string | null> {
 		const opts = this.options();
-		let written: string | null = null;
-		const ok = await this.run(target, (data) => {
-			const r = editInContent(data, target, edit, opts);
-			if (r.ok) written = r.newLine;
-			return r;
-		});
-		return ok ? written : null;
+		const r = await this.runDetailed(target, (data) => editInContent(data, target, edit, opts), false);
+		return r.status === 'written' ? (r.lines[0] ?? null) : null;
 	}
 
 	/**
@@ -138,19 +187,29 @@ export class TaskWriter {
 	}
 
 	private async run(target: TaskTarget, compute: (data: string, precheck: boolean) => Computed): Promise<boolean> {
+		return (await this.runDetailed(target, compute, false)).status === 'written';
+	}
+
+	/** One checked write. Quiet: no notices and no re-index; the caller reports. */
+	private async runDetailed(target: TaskTarget, compute: (data: string, precheck: boolean) => Computed, quiet: boolean): Promise<WriteResult> {
 		const key = `${target.path}:${target.line}`;
-		if (this.pending.has(key)) return false;
+		if (this.pending.has(key)) return { status: 'busy', message: 'Another change to this task was still being written.' };
 		const file = this.app.vault.getAbstractFileByPath(target.path);
 		if (!(file instanceof TFile)) {
-			new Notice('Tasklines: the note was moved or deleted. Nothing was changed.');
-			return false;
+			const message = 'The note was moved or deleted.';
+			if (!quiet) new Notice(`Tasklines: ${message} Nothing was changed.`);
+			return { status: 'missing', message };
 		}
 		this.pending.add(key);
+		const refused = (f: Failure): WriteResult => {
+			if (!quiet) this.refuse(file, f, target.line);
+			return { status: 'refused', reason: f.reason, message: FAILURE_TEXT[f.reason] ?? f.detail };
+		};
 		try {
 			// Check first without writing, so a refusal never touches the file or its mtime.
 			const pre = compute(await this.app.vault.read(file), true);
-			if (!pre.ok) return this.refuse(file, pre, target.line);
-			if (pre.changed === false) return false;
+			if (!pre.ok) return refused(pre);
+			if (pre.changed === false) return { status: 'unchanged' };
 
 			// Re-verify inside the atomic write: the file may have changed since the read.
 			let outcome: Computed | null = null;
@@ -160,13 +219,15 @@ export class TaskWriter {
 				return r.ok ? r.content : data;
 			});
 			const result = outcome as Computed | null;
-			if (!result) return false;
-			if (!result.ok) return this.refuse(file, result, target.line);
-			return true;
+			if (!result) return { status: 'unchanged' };
+			if (!result.ok) return refused(result);
+			if (result.changed === false) return { status: 'unchanged' };
+			return { status: 'written', lines: result.newLines ?? (result.newLine !== undefined ? [result.newLine] : []) };
 		} catch (err) {
 			console.error('Tasklines: write failed', err);
-			new Notice('Tasklines: could not write the change. Nothing was changed.');
-			return false;
+			const message = 'Could not write the change.';
+			if (!quiet) new Notice(`Tasklines: ${message} Nothing was changed.`);
+			return { status: 'error', message };
 		} finally {
 			this.pending.delete(key);
 		}

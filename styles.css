@@ -231,3 +231,16 @@
 .tasklines-date-error { color: var(--text-error); font-size: var(--font-ui-smaller); min-height: 1.2em; margin-top: var(--size-4-1); }
 .tasklines-cal-day.is-past:not(.is-today) .tasklines-cal-daynum { color: var(--text-muted); }
 .tasklines-cal-daynum:focus-visible, .tasklines-agenda-head:focus-visible { outline: 2px solid var(--interactive-accent); outline-offset: 1px; border-radius: var(--radius-s); }
+
+/* Bulk actions: select mode and its action bar */
+.tasklines-selection-bar { padding: var(--size-4-2); border: 1px solid var(--interactive-accent); border-radius: var(--radius-m); background: var(--background-secondary); }
+.tasklines-selection-count { font-weight: var(--font-semibold); font-size: var(--font-ui-small); margin-inline-end: var(--size-4-2); font-variant-numeric: tabular-nums; }
+.tasklines-selection-done { margin-inline-start: auto; }
+.tasklines-view input.tasklines-select-box { margin: 0; flex: none; accent-color: var(--interactive-accent); width: 16px; height: 16px; }
+.tasklines-touch input.tasklines-select-box { width: 22px; height: 22px; }
+.tasklines-select-text { overflow: hidden; text-overflow: ellipsis; cursor: pointer; flex: 1 1 auto; min-width: 0; }
+.tasklines-card .tasklines-select-text { white-space: normal; overflow-wrap: anywhere; }
+.tasklines-cal-chip .tasklines-select-text { white-space: nowrap; }
+.tasklines-row.is-selected, .tasklines-card.is-selected { background: var(--background-modifier-active-hover); }
+.tasklines-card.is-selected { border-color: var(--interactive-accent); }
+.tasklines-status-done .tasklines-select-text, .tasklines-status-cancelled .tasklines-select-text { text-decoration: line-through; color: var(--text-faint); }

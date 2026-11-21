@@ -51,19 +51,22 @@ export class TaskToolbar {
 	private expanded: boolean;
 	/** The board's columns take the place of grouping, so it has no group control. */
 	private showGroup: boolean;
+	/** Starts select mode for bulk actions, if the view has it. */
+	private onSelect: (() => void) | undefined;
 
 	constructor(
 		parent: HTMLElement,
 		query: TaskQuery,
 		private onChange: (q: TaskQuery) => void,
 		private onAdd: () => void,
-		options: { collapsible?: boolean; showGroup?: boolean } = {},
+		options: { collapsible?: boolean; showGroup?: boolean; onSelect?: () => void } = {},
 	) {
 		this.el = parent.createDiv({ cls: 'tasklines-toolbar' });
 		this.query = query;
 		this.collapsible = options.collapsible ?? false;
 		this.expanded = !this.collapsible;
 		this.showGroup = options.showGroup ?? true;
+		this.onSelect = options.onSelect;
 		this.build();
 	}
 
@@ -107,6 +110,7 @@ export class TaskToolbar {
 				this.expanded = !this.expanded;
 				this.build();
 			});
+			this.selectButton(header);
 			const add = header.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
 			add.addEventListener('click', () => this.onAdd());
 			if (!this.expanded) return;
@@ -180,11 +184,23 @@ export class TaskToolbar {
 		if (!this.collapsible) {
 			const add = order.createEl('button', { cls: 'tasklines-btn mod-cta tasklines-add', text: 'New task', attr: { 'aria-label': 'Add a new task' } });
 			add.addEventListener('click', () => this.onAdd());
+			this.selectButton(order);
 		}
 		const reset = order.createEl('button', { cls: 'tasklines-btn tasklines-reset', text: 'Reset' });
 		reset.addEventListener('click', () =>
 			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', doneWithinDays: null, sort: [], group: 'bases' }),
 		);
+	}
+
+	private selectButton(parent: HTMLElement): void {
+		if (!this.onSelect) return;
+		const b = parent.createEl('button', { cls: 'tasklines-btn tasklines-select-mode', text: 'Select', attr: { 'aria-label': 'Select tasks to change several at once', 'data-focus-key': 'select' } });
+		b.addEventListener('click', () => this.onSelect?.());
+	}
+
+	/** Put keyboard focus back on Select (after leaving select mode). */
+	focusSelect(): void {
+		this.el.querySelector<HTMLElement>('.tasklines-select-mode')?.focus();
 	}
 
 	private chipSet<T extends string>(parent: HTMLElement, label: string, all: readonly T[], selected: T[], name: (v: T) => string, apply: (v: T[]) => void): void {

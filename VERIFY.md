@@ -189,6 +189,33 @@ Run on 2026-11-21 with `test-vault/Task calendar.base`. Fable reviewed the code 
   - hypatia was cleaned up afterwards: Obsidian stopped, `C:\Users\casaz\tasklines` removed, and the vault list restored.
 - [ ] Not covered: VoiceOver on the calendar (its names and roles follow the board's, which the accessibility-tree check covered).
 
+## Bulk actions
+
+Fable reviewed the design before it was built; its must-change and should-change points are in. Checked on 2026-11-21.
+
+- [x] **Planner tests** (`tests/bulk.test.ts`):
+  - each action's rules (Complete via the board's rules, so a recurring task completes through Tasks and a cancelled recurring one is refused; shifting from today once past; a recurring task keeping its last date);
+  - write order;
+  - undo-record shifting;
+  - reports;
+  - every fixture through every action;
+  - an in-memory batch with a recurring completion between two plain tasks: written bottom-up, then undone, with every line back in place and only the completion kept.
+- [x] **Desktop** (Obsidian 1.15.1, DevTools protocol; nothing was logged as an error):
+  - Board: **Select** showed the action bar and selection boxes, and hid the ⋯ menus. Completing three tasks, one recurring, asked first and said the recurring one can't be undone; all three completed, the recurring one through Tasks. **Undo** in the bar put both plain lines back. Escape left select mode, and focus returned to **Select**.
+  - List: **Select all** (16) then priority High changed exactly 14 lines and skipped 2 ("already has that priority"). Undo restored both notes byte for byte. Editable cells were off in select mode.
+  - A selected task whose line was edited outside the view dropped out of the selection rather than being applied to the changed line.
+  - Calendar: the date menu acts on the view's field ("Scheduled date"). "Tomorrow" added `⏳` before a `^block-id`, and Undo removed it.
+- [x] **Android** (emulator): **Select** sits beside New task in the folded toolbar, and the action bar wraps. Tapping task text selects. The date menu opens as Android's list. "Tomorrow" rescheduled an emoji line and a Dataview line, each in its own style, and the bar's **Undo** left both notes byte for byte as before.
+- [x] **iPhone** (iCloud vault, through iPhone Mirroring): **Select** sits beside New task in the calendar and list toolbars, and the action bar wraps to three rows. Tapping task text selects, as does the box. The date menu opens as iOS's popup. "One week later" moved an overdue emoji task and an overdue Dataview recurring task to today + 7, each in its own style. The bar's **Undo** ("undid 2 of 2 changes") left the note byte for byte as before. **Done** left select mode.
+- [x] **Windows** (hypatia, Obsidian 1.15.1 with Tasks, headless over SSH and the DevTools protocol; the vault had a CRLF copy of `Beta.md`). Nothing was logged as an error.
+  - List: **Select all 20**, then priority High, wrote 17 lines in three notes (the CRLF one included) and skipped 3 ("already has that priority"). **Undo** reported "undid 17 of 17 changes", and every note was byte for byte as before.
+  - **Cancel**: pressed as the next batch started ("Working… 0 of 20"). The step already in progress finished, and the other 19 were skipped as "cancelled". **Undo** put the one line back, and every note was again byte for byte as before.
+  - Escape from a selection box left select mode, and focus returned to **Select**. Tasklines' editable cells were off in select mode.
+  - Board: the cards had no ⋯ menu and couldn't be dragged in select mode. Completing a plain task and a recurring task on the CRLF note asked first ("1 recurring task will be completed through the Tasks plugin…"). Tasks completed the recurring task and added the next occurrence. **Undo** reopened the plain task and left the recurring completion.
+  - The CRLF note kept CRLF throughout: 15 CRLF endings before, 16 after the recurring completion added a line, no lone LF or CR, and still ending in CRLF.
+  - hypatia was cleaned up afterwards: Obsidian stopped, `C:\Users\casaz\tasklines` removed, and the vault list restored.
+- [ ] Not covered: VoiceOver.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.

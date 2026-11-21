@@ -37,6 +37,7 @@ npm run bench   # index/query timing on a synthetic vault
 | `src/board.ts`, `src/board-view.ts` | Task board: columns and moves (pure), cards and drag and drop |
 | `src/calendar.ts`, `src/calendar-view.ts` | Task calendar: month grid, agenda and date moves (pure), rendering |
 | `src/edit.ts`, `src/writeback.ts`, `src/writer.ts` | Editing and writing back |
+| `src/bulk.ts`, `src/selection-bar.ts` | Bulk actions: planning, write order and reports (pure), select mode and the action bar |
 | `src/dataview-migrate.ts`, `src/migrate-command.ts` | Dataview TASK → .base |
 
 ## Releasing

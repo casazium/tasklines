@@ -8,6 +8,7 @@ import type { IndexStats } from './indexer.ts';
 import { statusKind } from './parser.ts';
 import { formatSummary, summarize } from './query.ts';
 import type { ViewRow } from './view.ts';
+import { drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 /** Tasks shown in a month cell before a "+N more" button. */
 export const CELL_TASKS = 3;
@@ -36,6 +37,8 @@ export interface CalendarInput {
 	pickDate: (current: string | undefined) => Promise<string | undefined>;
 	tasksPluginAvailable: boolean;
 	touch: boolean;
+	/** Select mode for bulk actions. */
+	selection?: SelectionHooks;
 }
 
 const cardKey = (task: IndexedTask) => `${task.path}\n${task.line}`;
@@ -320,52 +323,55 @@ export class TaskCalendar {
 		chip.dataset.day = dayEl;
 		chip.toggleClass('is-overdue', overdue);
 		const top = chip.createDiv({ cls: 'tasklines-card-top' });
-		const box = top.createEl('input', {
-			type: 'checkbox',
-			cls: 'task-list-item-checkbox tasklines-checkbox',
-			attr: { 'aria-label': open ? `Complete: ${task.text}` : `Reopen: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
-		});
-		if (task.recurrence && open && !input.tasksPluginAvailable) {
-			box.addClass('tasklines-needs-tasks');
-			box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
-		}
-		box.checked = kind !== 'todo';
-		box.indeterminate = kind === 'in-progress';
-		box.addEventListener('click', (ev) => {
-			ev.preventDefault();
-			if (box.getAttr('aria-disabled') === 'true') return;
-			box.setAttr('aria-disabled', 'true');
-			void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
-		});
-		const link = top.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open tasklines-card-text', attr: { draggable: 'false' } });
-		link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
-		link.dataset.focusKey = 'open';
-		link.addEventListener('click', (ev) => {
-			ev.preventDefault();
-			input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
-		});
-		const menuBtn = top.createEl('button', { cls: 'clickable-icon tasklines-card-menu', text: '⋯', attr: { 'aria-label': `Reschedule: ${task.text}`, 'aria-haspopup': 'menu', 'data-focus-key': 'menu' } });
-		menuBtn.addEventListener('click', (ev) => {
-			ev.preventDefault();
-			ev.stopPropagation();
-			const index = Array.from(parent.children).indexOf(chip);
-			const move = (d: string | null) => {
-				this.refocus = { key: cardKey(task), from: date ?? '', dayEl, index, until: Date.now() + 5000 };
-				// Make sure the task will be drawn where it lands.
-				if (d) this.expanded.add(d);
-				void this.doMove(task, d);
-			};
-			const choices: MenuChoice[] = quickDates(task, input.field, input.today).map((c) => ({ label: c.label, run: () => move(c.date) }));
-			choices.push({
-				label: 'Pick a date…',
-				run: () => {
-					void input.pickDate(valid ? date : undefined).then((picked) => {
-						if (picked !== undefined && picked !== date) move(picked);
-					});
-				},
+		if (input.selection?.active) drawSelectBox(top, chip, task, input.selection);
+		else {
+			const box = top.createEl('input', {
+				type: 'checkbox',
+				cls: 'task-list-item-checkbox tasklines-checkbox',
+				attr: { 'aria-label': open ? `Complete: ${task.text}` : `Reopen: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
 			});
-			input.showMenu(menuBtn, ev, choices);
-		});
+			if (task.recurrence && open && !input.tasksPluginAvailable) {
+				box.addClass('tasklines-needs-tasks');
+				box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
+			}
+			box.checked = kind !== 'todo';
+			box.indeterminate = kind === 'in-progress';
+			box.addEventListener('click', (ev) => {
+				ev.preventDefault();
+				if (box.getAttr('aria-disabled') === 'true') return;
+				box.setAttr('aria-disabled', 'true');
+				void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
+			});
+			const link = top.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open tasklines-card-text', attr: { draggable: 'false' } });
+			link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
+			link.dataset.focusKey = 'open';
+			link.addEventListener('click', (ev) => {
+				ev.preventDefault();
+				input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
+			});
+			const menuBtn = top.createEl('button', { cls: 'clickable-icon tasklines-card-menu', text: '⋯', attr: { 'aria-label': `Reschedule: ${task.text}`, 'aria-haspopup': 'menu', 'data-focus-key': 'menu' } });
+			menuBtn.addEventListener('click', (ev) => {
+				ev.preventDefault();
+				ev.stopPropagation();
+				const index = Array.from(parent.children).indexOf(chip);
+				const move = (d: string | null) => {
+					this.refocus = { key: cardKey(task), from: date ?? '', dayEl, index, until: Date.now() + 5000 };
+					// Make sure the task will be drawn where it lands.
+					if (d) this.expanded.add(d);
+					void this.doMove(task, d);
+				};
+				const choices: MenuChoice[] = quickDates(task, input.field, input.today).map((c) => ({ label: c.label, run: () => move(c.date) }));
+				choices.push({
+					label: 'Pick a date…',
+					run: () => {
+						void input.pickDate(valid ? date : undefined).then((picked) => {
+							if (picked !== undefined && picked !== date) move(picked);
+						});
+					},
+				});
+				input.showMenu(menuBtn, ev, choices);
+			});
+		}
 		const showMeta = (showDate && !!date) || !!(date && !valid) || !!task.recurrence || overdue;
 		if (showMeta) {
 			const meta = chip.createDiv({ cls: 'tasklines-card-meta' });
@@ -377,7 +383,7 @@ export class TaskCalendar {
 			if (task.recurrence) meta.createSpan({ text: '🔁', attr: { role: 'img', 'aria-label': `Repeats ${task.recurrence}` } });
 		}
 
-		if (input.touch) return; // phones reschedule with the menu
+		if (input.touch || input.selection?.active) return; // phones reschedule with the menu; select mode doesn't drag
 		chip.draggable = true;
 		chip.addEventListener('dragstart', (ev) => {
 			if (!ev.dataTransfer) return;
