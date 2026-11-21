@@ -184,6 +184,25 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) in the perf vault (5,000 notes) wit
 - [x] Newer calls used by Tasklines (the cross-window `instanceOf()`, run on every redraw) exist in 1.10.3. `showPicker()` is only called on phones and is guarded.
 - Not covered on 1.10.3: notices and modals (off-screen session). They use the same Obsidian APIs as on 1.15.1.
 
+## Oldest supported Obsidian for the board (1.13)
+
+From 1.0.3 `minAppVersion` is 1.13.0. The oldest public 1.13 release is 1.13.4 (1.13.0 to 1.13.3 were early-access builds).
+
+Run on 2026-11-21 on macOS with the official `Obsidian-1.13.4.dmg`, signed by Dynalist Inc. and notarized. It ran from the mounted image with its own `--user-data-dir`, on a copy of `test-vault/`, with Tasklines from `main` (1.1.1 plus the unreleased accessibility fixes) and Tasks 8.6.0. It was driven over the DevTools protocol, and the version was confirmed from the running app. Nothing was logged as an error.
+
+- [x] Both plugins load. The three board views render with the right columns, which shows the view's **Columns** dropdown is read correctly. The list view renders with its table, and the board hides the toolbar's group control.
+- [x] Moves each wrote exactly one intended line:
+  - To do to In progress.
+  - Done to Cancelled (`❌ <today>`).
+  - A recurring task to Done (completed by Tasks, next occurrence above).
+  - Overdue to Today.
+  - Later to No due date (field removed).
+  - Medium to Highest (🔺 before `^beta-block`).
+- [x] Drops onto the card's own column and onto Later were refused.
+- [x] After a move, the live region announced it ("Moved "Write announcement" to In progress.").
+- [ ] Not confirmed on 1.13.4: the **Undo** notice. No notice appeared, but Obsidian's own `new Notice('…')` didn't appear either. A separate Settings window had opened on first launch and held focus, so this looks like Obsidian not showing notices in an unfocused window, not a Tasklines problem. `Notice` and the `DocumentFragment` helpers Tasklines uses exist in 1.13.4. The test was cut short before the window could be focused.
+- The download, the mounted image and the vault copy were removed afterwards.
+
 ## Declarative settings (1.0.3)
 
 From 1.0.3 the settings tab uses `getSettingDefinitions()` (Obsidian 1.13+) and `minAppVersion` is 1.13.0. Checked on 2026-11-20 in Obsidian 1.15.1 (macOS), after quitting Obsidian so the Settings window loaded the new code:
