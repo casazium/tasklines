@@ -37,6 +37,8 @@ export interface RenderInput {
 	renderValue: (el: HTMLElement, entry: RowSource, prop: BasesPropertyId) => void;
 	/** Whether the Tasks plugin can complete recurring tasks right now. */
 	tasksPluginAvailable: boolean;
+	/** Phone or tablet: open pickers on the first tap and save a date as soon as it is picked. */
+	touch: boolean;
 }
 
 type Item = { kind: 'group'; label: string; summary: string } | { kind: 'row'; row: ViewRow };
@@ -197,7 +199,9 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 		if (column.editor === 'date') {
 			// A date input reports a change after every typed segment ("1" of "12" already
 			// makes a valid date), so save only on Enter or when focus leaves the field.
+			// Phones set the whole date at once from their picker, so save on change there.
 			control.addEventListener('blur', () => close(true));
+			if (input.touch) control.addEventListener('change', () => close(true));
 		} else {
 			// Dropdowns report a change once, when an option is picked.
 			control.addEventListener('change', () => close(true));
@@ -209,6 +213,15 @@ function makeEditable(cell: HTMLElement, column: TaskColumn, task: QueryRow['tas
 			if (key === 'Enter') close(true);
 		});
 		control.focus();
+		// Android only shows the control on focus; open its picker straight away.
+		// (iOS opens it on focus, and older engines lack showPicker.)
+		if (input.touch) {
+			try {
+				control.showPicker();
+			} catch {
+				// Not supported for this control, or already open.
+			}
+		}
 	};
 	cell.addEventListener('click', open);
 	cell.addEventListener('keydown', (ev) => {
