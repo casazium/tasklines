@@ -8,6 +8,7 @@ import type { IndexStats } from './indexer.ts';
 import { statusDefs, statusKind, statusName } from './parser.ts';
 import { formatSummary, PRIORITY_ORDER, summarize, type QueryRow, type RowGroup } from './query.ts';
 import type { VirtualList } from './virtual-list.ts';
+import { drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 export interface RowSource {
 	file: TFile;
@@ -39,6 +40,8 @@ export interface RenderInput {
 	tasksPluginAvailable: boolean;
 	/** Phone or tablet: open pickers on the first tap and save a date as soon as it is picked. */
 	touch: boolean;
+	/** Select mode for bulk actions. */
+	selection?: SelectionHooks;
 }
 
 type Item = { kind: 'group'; label: string; summary: string } | { kind: 'row'; row: ViewRow };
@@ -109,38 +112,44 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 	el.setAttr('role', 'row');
 	const textCell = el.createDiv({ cls: 'tasklines-text', attr: { role: 'cell' } });
 	textCell.setCssProps({ '--tasklines-depth': String(task.depth) });
-	const box = textCell.createEl('input', {
-		type: 'checkbox',
-		cls: 'task-list-item-checkbox tasklines-checkbox',
-		attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
-	});
-	const open = kind !== 'done' && kind !== 'cancelled';
-	if (task.recurrence && open && !input.tasksPluginAvailable) {
-		box.addClass('tasklines-needs-tasks');
-		box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
+	const selecting = input.selection?.active === true;
+	if (selecting && input.selection) {
+		drawSelectBox(textCell, el, task, input.selection);
+		if (task.recurrence) textCell.createSpan({ cls: 'tasklines-recurs', text: '🔁', attr: { role: 'img', title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
+	} else {
+		const box = textCell.createEl('input', {
+			type: 'checkbox',
+			cls: 'task-list-item-checkbox tasklines-checkbox',
+			attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
+		});
+		const open = kind !== 'done' && kind !== 'cancelled';
+		if (task.recurrence && open && !input.tasksPluginAvailable) {
+			box.addClass('tasklines-needs-tasks');
+			box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
+		}
+		box.checked = kind !== 'todo';
+		box.indeterminate = kind === 'in-progress';
+		box.addEventListener('click', (ev) => {
+			ev.preventDefault(); // the checkbox shows the note's state, which changes only after the write
+			// Marked busy rather than disabled: disabling the focused checkbox drops keyboard focus.
+			if (box.getAttr('aria-disabled') === 'true') return;
+			box.setAttr('aria-disabled', 'true');
+			void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
+		});
+		const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
+		link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
+		link.dataset.focusKey = 'open';
+		if (task.recurrence) {
+			textCell.createSpan({ cls: 'tasklines-recurs', text: '🔁', attr: { role: 'img', title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
+		}
+		link.addEventListener('click', (ev) => {
+			ev.preventDefault();
+			input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
+		});
 	}
-	box.checked = kind !== 'todo';
-	box.indeterminate = kind === 'in-progress';
-	box.addEventListener('click', (ev) => {
-		ev.preventDefault(); // the checkbox shows the note's state, which changes only after the write
-		// Marked busy rather than disabled: disabling the focused checkbox drops keyboard focus.
-		if (box.getAttr('aria-disabled') === 'true') return;
-		box.setAttr('aria-disabled', 'true');
-		void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
-	});
-	const link = textCell.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open', attr: { title: task.text } });
-	link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
-	link.dataset.focusKey = 'open';
-	if (task.recurrence) {
-		textCell.createSpan({ cls: 'tasklines-recurs', text: '🔁', attr: { role: 'img', title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
-	}
-	link.addEventListener('click', (ev) => {
-		ev.preventDefault();
-		input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
-	});
 	for (const c of input.taskColumns) {
 		const cell = el.createDiv({ cls: `tasklines-col-${c.key}`, text: c.value(task, input.context), attr: { role: 'cell' } });
-		if (c.editor) makeEditable(cell, c, task, input);
+		if (c.editor && !selecting) makeEditable(cell, c, task, input);
 	}
 	for (const prop of input.columns) input.renderValue(el.createDiv({ cls: 'tasklines-prop', attr: { role: 'cell' } }), row.entry, prop);
 }

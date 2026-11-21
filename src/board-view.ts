@@ -7,6 +7,7 @@ import type { IndexStats } from './indexer.ts';
 import { statusKind } from './parser.ts';
 import { formatSummary, summarize } from './query.ts';
 import type { ViewRow } from './view.ts';
+import { drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 /** Cards drawn per column before a "Show more" button; keeps huge columns cheap to draw. */
 export const CARD_PAGE = 100;
@@ -39,6 +40,8 @@ export interface BoardInput {
 	showMenu: (anchor: HTMLElement, ev: MouseEvent, choices: MenuChoice[]) => void;
 	tasksPluginAvailable: boolean;
 	touch: boolean;
+	/** Select mode for bulk actions. */
+	selection?: SelectionHooks;
 }
 
 const PRIORITY_MARK: Record<string, string> = { highest: '🔺', high: '⏫', medium: '🔼', low: '🔽', lowest: '⏬' };
@@ -175,7 +178,7 @@ export class TaskBoard {
 		const limit = this.limits.get(limitKey) ?? CARD_PAGE;
 		for (const row of column.rows.slice(0, limit)) {
 			const card = this.drawCard(list, row, input);
-			if (input.touch) continue; // phones move cards with the menu
+			if (input.touch || input.selection?.active) continue; // phones move cards with the menu; select mode doesn't drag
 			card.draggable = true;
 			card.addEventListener('dragstart', (ev) => {
 				if (!ev.dataTransfer) return;
@@ -209,57 +212,60 @@ export class TaskBoard {
 		card.dataset.key = cardKey(task);
 
 		const top = card.createDiv({ cls: 'tasklines-card-top' });
-		const box = top.createEl('input', {
-			type: 'checkbox',
-			cls: 'task-list-item-checkbox tasklines-checkbox',
-			attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
-		});
 		const open = kind !== 'done' && kind !== 'cancelled';
-		if (task.recurrence && open && !input.tasksPluginAvailable) {
-			box.addClass('tasklines-needs-tasks');
-			box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
+		if (input.selection?.active) drawSelectBox(top, card, task, input.selection);
+		else {
+			const box = top.createEl('input', {
+				type: 'checkbox',
+				cls: 'task-list-item-checkbox tasklines-checkbox',
+				attr: { 'aria-label': kind === 'done' || kind === 'cancelled' ? `Reopen: ${task.text}` : `Complete: ${task.text}`, 'data-task': task.status, 'data-focus-key': 'check' },
+			});
+			if (task.recurrence && open && !input.tasksPluginAvailable) {
+				box.addClass('tasklines-needs-tasks');
+				box.setAttr('title', 'Completing a recurring task needs the Tasks plugin (7.2.0 or later). Open the note to complete it there.');
+			}
+			box.checked = kind !== 'todo';
+			box.indeterminate = kind === 'in-progress';
+			box.addEventListener('click', (ev) => {
+				ev.preventDefault(); // shows the note's state, which changes only after the write
+				// Marked busy rather than disabled: disabling the focused checkbox drops keyboard focus.
+				if (box.getAttr('aria-disabled') === 'true') return;
+				box.setAttr('aria-disabled', 'true');
+				void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
+			});
+			const link = top.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open tasklines-card-text', attr: { title: task.text, draggable: 'false' } });
+			link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
+			link.dataset.focusKey = 'open';
+			link.addEventListener('click', (ev) => {
+				ev.preventDefault();
+				input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
+			});
+			const menuBtn = top.createEl('button', {
+				cls: 'clickable-icon tasklines-card-menu',
+				text: '⋯',
+				attr: { 'aria-label': `Move: ${task.text}`, 'aria-haspopup': 'menu', 'data-focus-key': 'menu' },
+			});
+			menuBtn.addEventListener('click', (ev) => {
+				ev.preventDefault();
+				// The menu closes on a click outside it; this click must not count as one.
+				ev.stopPropagation();
+				const from = input.columns.find((c) => c.rows.includes(row));
+				input.showMenu(
+					menuBtn,
+					ev,
+					input.columns
+						.filter((c) => c.target !== null)
+						.map((c) => ({
+							label: `Move to ${c.label}`,
+							disabled: input.moveFor(task, c) === null,
+							run: () => {
+								this.refocus = { key: cardKey(task), from: from?.key ?? '', index: from ? from.rows.indexOf(row) : 0, until: Date.now() + 5000 };
+								void this.doMove(task, c);
+							},
+						})),
+				);
+			});
 		}
-		box.checked = kind !== 'todo';
-		box.indeterminate = kind === 'in-progress';
-		box.addEventListener('click', (ev) => {
-			ev.preventDefault(); // shows the note's state, which changes only after the write
-			// Marked busy rather than disabled: disabling the focused checkbox drops keyboard focus.
-			if (box.getAttr('aria-disabled') === 'true') return;
-			box.setAttr('aria-disabled', 'true');
-			void input.toggleTask(task).finally(() => box.removeAttribute('aria-disabled'));
-		});
-		const link = top.createEl('a', { text: task.text || '(empty)', href: '#', cls: 'tasklines-open tasklines-card-text', attr: { title: task.text, draggable: 'false' } });
-		link.setAttr('aria-label', `${task.text} — open ${task.path} at line ${task.line + 1}`);
-		link.dataset.focusKey = 'open';
-		link.addEventListener('click', (ev) => {
-			ev.preventDefault();
-			input.openTask(task.path, task.line, ev.metaKey || ev.ctrlKey);
-		});
-		const menuBtn = top.createEl('button', {
-			cls: 'clickable-icon tasklines-card-menu',
-			text: '⋯',
-			attr: { 'aria-label': `Move: ${task.text}`, 'aria-haspopup': 'menu', 'data-focus-key': 'menu' },
-		});
-		menuBtn.addEventListener('click', (ev) => {
-			ev.preventDefault();
-			// The menu closes on a click outside it; this click must not count as one.
-			ev.stopPropagation();
-			const from = input.columns.find((c) => c.rows.includes(row));
-			input.showMenu(
-				menuBtn,
-				ev,
-				input.columns
-					.filter((c) => c.target !== null)
-					.map((c) => ({
-						label: `Move to ${c.label}`,
-						disabled: input.moveFor(task, c) === null,
-						run: () => {
-							this.refocus = { key: cardKey(task), from: from?.key ?? '', index: from ? from.rows.indexOf(row) : 0, until: Date.now() + 5000 };
-							void this.doMove(task, c);
-						},
-					})),
-			);
-		});
 
 		const meta = card.createDiv({ cls: 'tasklines-card-meta' });
 		meta.createSpan({ cls: 'tasklines-card-note', text: row.noteName });

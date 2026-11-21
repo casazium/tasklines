@@ -113,6 +113,18 @@ views:
       statuses: [todo, in-progress]
 ```
 
+## Changing several tasks at once
+
+Press **Select** in the task toolbar of any Tasklines view (list, board or calendar). Each task's checkbox becomes a selection box, and tapping a task selects it too. An action bar appears with:
+
+- **Complete** and **Reopen**.
+- **Status**, **Priority** and a **date** menu: Today, Tomorrow, One day later, One week later, Pick a date… and Remove. It changes the due date, or in a calendar the calendar's own date. "One day later" moves each task's own date (counting from today once it has passed), and skips tasks with no date.
+- **Select all** (every task the view's filters show), **Clear**, and **Done** (or Escape) to leave select mode.
+
+Each selected task is still changed on its own, one line at a time, with the same checks as everywhere else. If a line changed since you selected it, that task is refused and the rest go ahead. Tasks with nothing to change are skipped. One notice reports what was done, skipped and refused, and **Undo** (in the notice and in the action bar) puts every changed line back, each only if it's still what the batch wrote.
+
+Batches of more than 20 tasks ask first. So do batches that complete a recurring task: those go through the Tasks plugin, which adds the next occurrence, so Undo can't take them back.
+
 ## Completing, editing and adding tasks
 
 Every change follows the same safety rule. Tasklines re-reads the note and checks that the line is still exactly what the view showed. It then writes through Obsidian's atomic `Vault.process`, changing only that line. If anything differs (you edited the line, it moved, the note was renamed), nothing is written, and a notice with an **Open at line** button appears.

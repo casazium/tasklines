@@ -21,14 +21,16 @@ import {
 import { AddTaskModal } from './add-task-modal.ts';
 import { BOARD_FIELD_LABELS, BOARD_FIELDS, boardColumns, moveFor, normalizeBoardField, type BoardColumn, type BoardMove } from './board.ts';
 import { TaskBoard, type MenuChoice } from './board-view.ts';
-import { CALENDAR_FIELD_LABELS, CALENDAR_FIELDS, CALENDAR_LAYOUT_CHOICES, CALENDAR_LAYOUT_LABELS, isRealDate, moveToDate, normalizeCalendarField, normalizeCalendarLayout } from './calendar.ts';
+import { CALENDAR_FIELD_LABELS, CALENDAR_FIELDS, CALENDAR_LAYOUT_CHOICES, CALENDAR_LAYOUT_LABELS, isRealDate, moveToDate, type CalendarField, normalizeCalendarField, normalizeCalendarLayout } from './calendar.ts';
 import { TaskCalendar } from './calendar-view.ts';
+import { describePlan, describeSummary, orderForWrite, planBulk, shiftRecords, summarize as summarizeBatch, type BulkAction, type StepOutcome, type UndoRecord } from './bulk.ts';
+import { SelectionBar, type SelectionHooks } from './selection-bar.ts';
 import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
 import type { TaskEdit } from './edit.ts';
 import type { IndexedTask } from './extract.ts';
 import { ALL_PATHS, type TaskIndex } from './indexer.ts';
 import type { TaskWriter } from './writer.ts';
-import { applyQuery, normalizeQuery, summarize, type TaskQuery } from './query.ts';
+import { addDays, applyQuery, normalizeQuery, summarize, type TaskQuery } from './query.ts';
 import { TaskToolbar, type PropChoice } from './toolbar.ts';
 import { localDate, renderRows, type RowSource, type ViewRow } from './view.ts';
 import { ROW_HEIGHT, TOUCH_ROW_HEIGHT, VirtualList } from './virtual-list.ts';
@@ -123,6 +125,18 @@ abstract class TaskViewBase extends BasesView {
 	private renderToken = 0;
 	private unsubscribe: (() => void) | null = null;
 	private lastToday = localDate(new Date());
+	/** Select mode for bulk actions, and the selection: task key → the line as selected. */
+	protected selecting = false;
+	private selected = new Map<string, string>();
+	/** Every task in the base (before task filters), from the last render. */
+	private allRows: ViewRow[] = [];
+	/** The tasks the view shows (after filters), for "Select all". Set by each view's draw. */
+	protected shownRows: ViewRow[] = [];
+	private selectionBar: SelectionBar;
+	/** A batch being written. Redraws wait until it ends. */
+	private batch: { cancel: boolean; done: number; total: number } | null = null;
+	private refreshAfterBatch = false;
+	private lastUndo: { label: string; records: UndoRecord[] } | null = null;
 	private dayTimer: number;
 	private rerenderSoon = debounce(
 		() => {
@@ -142,8 +156,29 @@ abstract class TaskViewBase extends BasesView {
 		this.toolbar = new TaskToolbar(this.rootEl, this.query, (q) => this.onQueryChange(q), () => this.openAddTask(), {
 			collapsible: Platform.isMobile,
 			showGroup: toolbar.showGroup,
+			onSelect: () => this.setSelecting(true),
 		});
 		this.statsEl = this.rootEl.createDiv({ cls: 'tasklines-stats' });
+		this.selectionBar = new SelectionBar(this.rootEl, this.statsEl, {
+			run: (action, verb) => void this.runBulk(action, verb),
+			selectAll: () => this.selectAll(),
+			clear: () => {
+				this.selected.clear();
+				this.render();
+			},
+			undo: () => void this.runUndo(),
+			cancel: () => {
+				if (this.batch) this.batch.cancel = true;
+			},
+			exit: () => this.setSelecting(false),
+		});
+		this.rootEl.addEventListener('keydown', (ev) => {
+			if (ev.key !== 'Escape' || !this.selecting || this.batch) return;
+			const t = ev.target as HTMLElement | null;
+			if (t?.closest('input:not([type="checkbox"]), select, textarea')) return;
+			ev.preventDefault();
+			this.setSelecting(false);
+		});
 		this.rootEl.toggleClass('tasklines-touch', Platform.isMobile);
 		// Bases may not call onDataUpdated when only a note's body changes (no property
 		// changed), so re-render ourselves when a note in the current result set changes.
@@ -152,7 +187,10 @@ abstract class TaskViewBase extends BasesView {
 		this.unsubscribe = this.index.onInvalidate((paths) => {
 			// If the view was torn down without onunload, stop listening instead of leaking.
 			if (!this.rootEl.isConnected && this.notes.length) return this.onunload();
-			if (paths.some((p) => p === ALL_PATHS || this.paths.has(p))) this.rerenderSoon();
+			if (!paths.some((p) => p === ALL_PATHS || this.paths.has(p))) return;
+			// During a batch every write changes a note; redraw once at the end instead.
+			if (this.batch) this.refreshAfterBatch = true;
+			else this.rerenderSoon();
 		});
 		// "Today", "Overdue" and due-date columns change at midnight even if no note does.
 		this.dayTimer = window.setInterval(() => {
@@ -227,6 +265,10 @@ abstract class TaskViewBase extends BasesView {
 	}
 
 	private async renderAsync(): Promise<void> {
+		if (this.batch) {
+			this.refreshAfterBatch = true;
+			return;
+		}
 		const notes = this.notes;
 		const token = ++this.renderToken;
 		const tasksByPath = await this.index.tasksFor(notes.map((n) => n.entry.file));
@@ -242,7 +284,186 @@ abstract class TaskViewBase extends BasesView {
 			}
 		}
 		this.lastToday = localDate(new Date());
+		this.allRows = rows;
+		// Keep only selections that still point at the same line: a key is a line number, and a
+		// line inserted above would otherwise make it point at a different task.
+		if (this.selected.size) {
+			const raws = new Map(rows.map((r) => [taskKey(r.task), r.task.raw]));
+			for (const [key, raw] of this.selected) if (raws.get(key) !== raw) this.selected.delete(key);
+		}
 		this.draw(rows, tasksByPath, this.lastToday);
+		this.updateBar();
+	}
+
+	/** What the views need to draw select mode. */
+	protected selectionHooks(): SelectionHooks | undefined {
+		if (!this.selecting) return undefined;
+		return {
+			active: true,
+			has: (t) => this.selected.get(taskKey(t)) === t.raw,
+			toggle: (t, on) => {
+				if (on) this.selected.set(taskKey(t), t.raw);
+				else this.selected.delete(taskKey(t));
+				this.selectionBar.setCount(this.selected.size);
+			},
+		};
+	}
+
+	/** The date field date actions change. */
+	protected bulkDateField(): CalendarField {
+		return 'due';
+	}
+
+	private updateBar(): void {
+		this.selectionBar.render({
+			active: this.selecting,
+			selected: this.selected.size,
+			shown: this.shownRows.length,
+			dateField: this.bulkDateField(),
+			busy: this.batch ? { done: this.batch.done, total: this.batch.total } : null,
+			undoLabel: this.lastUndo?.label ?? null,
+		});
+	}
+
+	private setSelecting(on: boolean): void {
+		if (this.batch) return;
+		this.selecting = on;
+		if (!on) this.selected.clear();
+		this.rootEl.toggleClass('is-selecting', on);
+		void this.renderAsync().then(() => (on ? this.selectionBar.focus() : this.toolbar.focusSelect()));
+	}
+
+	private selectAll(): void {
+		for (const r of this.shownRows) this.selected.set(taskKey(r.task), r.task.raw);
+		this.render();
+	}
+
+	/** Run one action on every selected task: planned, confirmed, then written one line at a time. */
+	private async runBulk(choice: BulkAction | 'pick-date', verb: string): Promise<void> {
+		if (this.batch) return;
+		const field = this.bulkDateField();
+		let action: BulkAction;
+		if (choice === 'pick-date') {
+			const picked = await new Promise<string | undefined>((resolve) => new DatePickModal(this.app, undefined, resolve).open());
+			if (picked === undefined) return;
+			action = { kind: 'set-date', field, value: picked };
+			verb = `Rescheduled to ${picked}:`;
+		} else action = choice;
+		const ctx = await this.writer.batchContext();
+		// Today and Tomorrow mean the day the batch runs.
+		if (action.kind === 'set-date' && (action.value === 'today' || action.value === 'tomorrow')) {
+			action = { ...action, value: action.value === 'today' ? ctx.today : addDays(ctx.today, 1) };
+		}
+		// The tasks as selected: same key and same line text as when they were ticked.
+		const tasks: IndexedTask[] = [];
+		const seen = new Set<string>();
+		for (const r of this.allRows) {
+			const key = taskKey(r.task);
+			if (seen.has(key) || this.selected.get(key) !== r.task.raw) continue;
+			seen.add(key);
+			tasks.push(r.task);
+		}
+		if (!tasks.length) return;
+		const plan = planBulk(tasks, action, ctx.today);
+		const confirmVerb = action.kind === 'complete' ? 'Complete' : action.kind === 'reopen' ? 'Reopen' : 'Change';
+		const desc = describePlan(confirmVerb, plan);
+		const outcomes: Array<{ outcome: StepOutcome; reason?: string; toggle?: boolean }> = [];
+		for (const s of plan) {
+			if (s.op.kind === 'skip') outcomes.push({ outcome: 'skipped', reason: s.op.reason });
+			if (s.op.kind === 'refuse') outcomes.push({ outcome: 'refused', reason: s.op.reason });
+		}
+		if (desc.writes === 0) {
+			new Notice(`Tasklines: ${describeSummary(verb, tasks.length, summarizeBatch(outcomes))}`, 8000);
+			return;
+		}
+		// Large batches, and any that can't be fully undone, ask first.
+		if ((desc.writes > 20 || desc.toggles > 0) && !(await confirmModal(this.app, desc.text, confirmVerb))) return;
+
+		const steps = orderForWrite(plan.filter((s) => s.op.kind === 'edit' || s.op.kind === 'toggle'));
+		const batch = { cancel: false, done: 0, total: steps.length };
+		this.batch = batch;
+		this.lastUndo = null;
+		this.updateBar();
+		const records: UndoRecord[] = [];
+		const touched = new Set<string>();
+		try {
+			for (const step of steps) {
+				const { task, op } = step;
+				if (batch.cancel) {
+					outcomes.push({ outcome: 'skipped', reason: 'cancelled' });
+					continue;
+				}
+				if (op.kind !== 'edit' && op.kind !== 'toggle') continue;
+				const target = { path: task.path, line: task.line, raw: task.raw };
+				const res = await this.writer.applyStep(target, op.kind === 'toggle' ? { kind: 'toggle' } : { kind: 'edit', edit: op.edit }, ctx);
+				if (res.status === 'written') {
+					touched.add(task.path);
+					outcomes.push({ outcome: 'written', toggle: op.kind === 'toggle' });
+					if (op.kind === 'toggle') shiftRecords(records, task.path, task.line, res.lines.length);
+					else if (res.lines[0] !== undefined) records.push({ path: task.path, line: task.line, written: res.lines[0], original: task.raw });
+				} else if (res.status === 'unchanged') outcomes.push({ outcome: 'skipped', reason: 'nothing to change' });
+				else if (res.status === 'refused') {
+					touched.add(task.path);
+					outcomes.push({ outcome: 'refused', reason: res.message });
+				} else outcomes.push({ outcome: 'failed', reason: res.message });
+				batch.done++;
+				this.updateBar();
+			}
+		} finally {
+			this.batch = null;
+			this.writer.refresh(touched);
+			this.selected.clear();
+			this.lastUndo = records.length ? { label: verb.replace(/:$/, ''), records } : null;
+			this.refreshAfterBatch = false;
+			await this.renderAsync();
+			this.selectionBar.focus();
+		}
+		this.reportBatch(describeSummary(verb, tasks.length, summarizeBatch(outcomes)), records.length > 0);
+	}
+
+	private reportBatch(text: string, undoable: boolean): void {
+		const message = new DocumentFragment();
+		message.createDiv({ text: `Tasklines: ${text}` });
+		if (undoable) {
+			const undo = message.createEl('button', { text: 'Undo', cls: 'tasklines-notice-btn' });
+			const notice = new Notice(message, 15000);
+			undo.addEventListener('click', () => {
+				notice.hide();
+				void this.runUndo();
+			});
+		} else new Notice(message, 10000);
+	}
+
+	/** Put back every line the last batch wrote, each only if it is still what the batch wrote. */
+	private async runUndo(): Promise<void> {
+		const last = this.lastUndo;
+		if (!last || this.batch) return;
+		this.lastUndo = null;
+		const batch = { cancel: false, done: 0, total: last.records.length };
+		this.batch = batch;
+		this.updateBar();
+		let restored = 0;
+		const failed: string[] = [];
+		try {
+			for (const r of [...last.records].reverse()) {
+				const res = await this.writer.restoreQuiet({ path: r.path, line: r.line, raw: r.written }, r.original);
+				if (res.status === 'written') restored++;
+				else if (res.status === 'refused' || res.status === 'missing' || res.status === 'error' || res.status === 'busy') failed.push(res.message);
+				batch.done++;
+				this.updateBar();
+			}
+		} finally {
+			this.batch = null;
+			this.writer.refresh(last.records.map((r) => r.path));
+			this.refreshAfterBatch = false;
+			await this.renderAsync();
+		}
+		const total = last.records.length;
+		new Notice(
+			`Tasklines: undid ${restored} of ${total} ${total === 1 ? 'change' : 'changes'}.` +
+				(failed.length ? ` ${failed.length} could not be put back: ${[...new Set(failed)].join(' ')}` : ''),
+			10000,
+		);
 	}
 
 	protected abstract draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void;
@@ -299,8 +520,12 @@ class TasklinesView extends TaskViewBase {
 
 	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
 		const columns = this.config.getOrder().filter((p) => p !== 'file.name');
+		const groups = applyQuery(rows, this.query, today);
+		// A task can appear in several tag groups; select it once.
+		this.shownRows = [...new Map(groups.flatMap((g) => g.rows).map((r) => [taskKey(r.task), r])).values()];
 		renderRows(this.statsEl, this.list, {
-			groups: applyQuery(rows, this.query, today),
+			selection: this.selectionHooks(),
+			groups,
 			context: columnContext(tasksByPath, today),
 			total: rows.length,
 			columns,
@@ -352,7 +577,9 @@ class TaskBoardView extends TaskViewBase {
 	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
 		const field = normalizeBoardField(this.config.get(BOARD_FIELD_KEY));
 		const sorted = applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows);
+		this.shownRows = sorted;
 		this.board.render({
+			selection: this.selectionHooks(),
 			columns: boardColumns(sorted, field, today),
 			total: rows.length,
 			today,
@@ -418,6 +645,10 @@ class TaskCalendarView extends TaskViewBase {
 		super.onQueryChange(q);
 	}
 
+	protected bulkDateField(): CalendarField {
+		return normalizeCalendarField(this.config.get(CALENDAR_FIELD_KEY));
+	}
+
 	protected effectiveQuery(): TaskQuery {
 		// Days take the place of groups; a group saved from a list view must not apply.
 		return { ...this.query, group: 'none' };
@@ -425,8 +656,10 @@ class TaskCalendarView extends TaskViewBase {
 
 	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
 		const field = normalizeCalendarField(this.config.get(CALENDAR_FIELD_KEY));
+		this.shownRows = applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows);
 		this.calendar.render({
-			rows: applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows),
+			selection: this.selectionHooks(),
+			rows: this.shownRows,
 			total: rows.length,
 			today,
 			field,
@@ -536,4 +769,33 @@ function snapshotEntry(entry: BasesEntry, props: Iterable<BasesPropertyId>): Row
 function valueText(v: Value | null | undefined): string {
 	if (!v || v instanceof NullValue) return '';
 	return v.toString();
+}
+
+const taskKey = (t: { path: string; line: number }) => `${t.path}\n${t.line}`;
+
+/** Ask before a large batch, or one that can't be fully undone. Resolves true to go ahead. */
+function confirmModal(app: Plugin['app'], text: string, verb: string): Promise<boolean> {
+	return new Promise((resolve) => {
+		let answered = false;
+		const modal = new (class extends Modal {
+			onOpen(): void {
+				this.setTitle('Change several tasks');
+				this.contentEl.createEl('p', { text });
+				const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
+				const go = buttons.createEl('button', { text: verb, cls: 'mod-cta' });
+				const cancel = buttons.createEl('button', { text: 'Cancel' });
+				go.addEventListener('click', () => {
+					answered = true;
+					this.close();
+				});
+				cancel.addEventListener('click', () => this.close());
+				window.setTimeout(() => go.focus(), 0);
+			}
+			onClose(): void {
+				this.contentEl.empty();
+				resolve(answered);
+			}
+		})(app);
+		modal.open();
+	});
 }
