@@ -254,4 +254,20 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
   - iOS doesn't focus a tapped checkbox, so after ticking, the board stays where it is rather than following the card. That's fine on a phone.
   - Not covered: swiping between columns, because iPhone Mirroring doesn't pass mouse drags or scrolling through as touch swipes. Arrow keys from a hardware keyboard scroll the board, but WebKit doesn't snap keyboard scrolling to columns. Swipe snapping was checked on Android.
   - Obsidian for iOS rewrote `Project tasks.base` in its own format when it opened it, as desktop Obsidian does. Tasklines doesn't write that file in these tests.
-- [ ] Not covered: a screen reader.
+- [x] **Accessibility tree** (2026-11-21, Obsidian 1.15.1 on macOS, read through the developer tools protocol with `Accessibility.getFullAXTree`, the roles and names VoiceOver uses):
+  - Board: each column is a level-3 heading ("To do 13 tasks") followed by a list named by its title (`aria-labelledby`). Each card is a list item with:
+    - a checkbox ("Complete: Fix gate", "Reopen: …" when done, mixed when in progress);
+    - a link ("Fix gate — open Projects/Beta.md at line 6");
+    - a "Move: Fix gate" button with `hasPopup=menu`;
+    - named icons ("high priority", "Repeats every week").
+  - List view: a table named "Tasks" (`aria-labelledby`) with column headers. Group rows have the group as a row header, and editable cells are labelled "Edit due: 2026-11-30".
+  - After a move, the polite, atomic live region reads "Moved "Confirm catering" to In progress.".
+  - Found and fixed:
+    - An overdue date on a card was shown only in red. It now carries hidden text, "(overdue)".
+    - The column count was named with `aria-label` ("13 tasks"), which Obsidian shows as a tooltip. It now uses hidden text, and the heading still reads "To do 13 tasks".
+- [x] **VoiceOver** (same day, partial, the user listening while Claude pressed the keys):
+  - Tabbing from the To do heading read the first card's checkbox as "Complete: Fix gate, unchecked, checkbox", then its link with the note and line, then "Move: Fix gate" as a menu button.
+  - The pass stopped before moving a card from the menu. The announcement is covered by the live-region check above.
+  - The first attempts heard nothing, because VoiceOver's Quick Start window, which opens the first time VoiceOver is switched on, kept VoiceOver's attention.
+- [ ] Not covered: hearing VoiceOver read a move and the column headings, and NVDA on Windows.
+- Known limit: **Undo** lives in Obsidian's notice, which keyboard and screen-reader users can't easily reach before it closes after 8 seconds. Undo is a convenience: a move can always be made again in the other direction.
