@@ -175,7 +175,19 @@ Run on 2026-11-21 with `test-vault/Task calendar.base`. Fable reviewed the code 
   - Agenda: a task dragged from Overdue onto Monday the 23rd (an empty day shown as a drop target) moved there. A recurring task dropped on the Overdue section was refused: no outline, nothing changed.
   - The drag log (`dragstart`, `drop`, `dragend` with each day) matched what was seen on screen.
   - Not covered here: a drop on the month's No date tray, which a window of another app covered on screen; it's covered by the DevTools run above. The notes weren't diffed after this run (the same write path was diffed in the desktop, Android and iPhone runs).
-- [ ] Not covered: the calendar on Windows, and VoiceOver.
+- [x] **Windows** (same day, hypatia over Tailscale, Obsidian 1.15.1, headless over SSH and the DevTools protocol). The test vault had a CRLF copy of `Beta.md` with an extra task dated `2026-11-31`. Nothing was logged as an error.
+  - **Automatic** opened as the month, starting on Sunday.
+  - The impossible date showed under No date as "Not a real date: 2026-11-31", and dragging the task to the 24th fixed it.
+  - Moves on the CRLF note:
+    - Overdue to a day.
+    - A Dataview line to No date (`[due:: …]` removed).
+    - Agenda Overdue to Today on a Dataview recurring line.
+    - Scheduling from the tray (`⏳` before `^beta-block`).
+  - "+3 more" expanded a day of six tasks. Dropping a recurring task's only date on No date was refused, and the line was unchanged.
+  - The **⋯** menu (drawn in the page on Windows) offered Today, Tomorrow, One week later and Pick a date…, with no "Remove date" for the recurring task. **Pick a date…** kept **Save** disabled while empty, and saving 2026-12-03 wrote exactly that date.
+  - The CRLF note kept CRLF throughout: 17 CRLF endings before and after, no lone LF or CR, and still ending in CRLF.
+  - hypatia was cleaned up afterwards: Obsidian stopped, `C:\Users\casaz\tasklines` removed, and the vault list restored.
+- [ ] Not covered: VoiceOver on the calendar (its names and roles follow the board's, which the accessibility-tree check covered).
 
 ## Fuzz testing
 
