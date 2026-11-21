@@ -238,4 +238,20 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
   - Dropping on the card's own column did nothing.
   - Dropping a card into an open note in a split pane inserted nothing and changed nothing. The editor sees the drag, but the card carries only Tasklines' own drag type.
   - Found and fixed: hovering anywhere on a card showed its column's name as a tooltip, and hovering a list row showed "Tasks". Obsidian shows any `aria-label` as a tooltip, and the card lists and the table were named that way. They are now named with `aria-labelledby` (the column title, and a hidden "Tasks" label), so the names are kept and the stray tooltips are gone. Controls such as checkboxes still show their own tooltips.
-- [ ] Not covered: an iPhone, and a screen reader.
+- [x] **iPhone** (2026-11-21, Obsidian 1.15.1 for iOS, Tasks enabled, driven through iPhone Mirroring). The vault was reset over iCloud to the original notes and the build from `main` (1.1.1 plus the tooltip fix). Obsidian was reloaded once the files had synced, and the run started from the original counts (14 open, 4 overdue, 1 done). Afterwards every note was diffed on the Mac: each change was exactly one intended line, and the notes kept their final newline.
+  - Columns are most of the screen wide with the next one peeking in, and the toolbar folds into "Filter, sort (N)".
+  - The **⋯** menu opens as the iOS bottom sheet, with the card's own column disabled. On the due-date board it lists only Today, Tomorrow and No due date.
+  - Menu moves:
+    - To do to In progress.
+    - In progress to Done, and **Undo** put the line back.
+    - Done to Cancelled swapped ✅ for ❌, and Cancelled to To do removed the ❌.
+    - Overdue to Tomorrow.
+    - Tomorrow to No due date removed the `[due:: …]` field.
+    - High to Highest (⏫ to 🔺).
+  - After each move the board scrolled the card's whole column into view.
+  - A recurring task moved to Done was completed by Tasks, with the next occurrence above it and no Undo offered. Ticking a card's checkbox added `✅ <today>`.
+  - The Overdue column shows its dashed border and explanation.
+  - iOS doesn't focus a tapped checkbox, so after ticking, the board stays where it is rather than following the card. That's fine on a phone.
+  - Not covered: swiping between columns, because iPhone Mirroring doesn't pass mouse drags or scrolling through as touch swipes. Arrow keys from a hardware keyboard scroll the board, but WebKit doesn't snap keyboard scrolling to columns. Swipe snapping was checked on Android.
+  - Obsidian for iOS rewrote `Project tasks.base` in its own format when it opened it, as desktop Obsidian does. Tasklines doesn't write that file in these tests.
+- [ ] Not covered: a screen reader.
