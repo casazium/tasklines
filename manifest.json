@@ -1,7 +1,7 @@
 {
 	"id": "tasklines",
 	"name": "Tasklines",
-	"version": "0.9.4",
+	"version": "0.9.5",
 	"minAppVersion": "1.10.0",
 	"description": "Show inline checkbox tasks as rows in Bases, with each note’s properties as columns. Filter, sort, group, tick and edit tasks in place.",
 	"author": "Casazium",
