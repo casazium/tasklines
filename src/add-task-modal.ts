@@ -35,6 +35,9 @@ export class AddTaskModal extends Modal {
 
 		new Setting(contentEl).setName('Task').addText((t) => {
 			t.setPlaceholder('What needs doing?').onChange((v) => (this.task.text = v));
+			// The phone keyboard's action key then says Done and adds the task, which the
+			// keyboard would otherwise hide.
+			t.inputEl.setAttr('enterkeyhint', 'done');
 			t.inputEl.addEventListener('keydown', (ev) => {
 				if (ev.key === 'Enter') {
 					ev.preventDefault();

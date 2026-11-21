@@ -45,7 +45,7 @@ The automated tests cover parsing, extraction, querying and the byte-level write
 - [ ] The completed-task window hides tasks completed more than N days ago.
 - [ ] Add `Templates` to **Excluded folders**: the `Templates/Weekly.md` task disappears from any base that includes it.
 - [ ] In `Dataview queries.md`, run the convert command in each block. A `.base` opens with the expected filters, and the second one lists the parts it couldn't convert. The note is unchanged.
-- [ ] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, and the grid scrolls sideways. The toolbar starts folded into one **Filter, sort, group (N)** button next to **New task**; tapping it shows all controls, and "Group" stays beside its dropdown. (Checked with `app.emulateMobile(true)` at phone width on desktop, then on a real iPhone: see below. Android not tested yet.)
+- [x] **Mobile** (iOS and Android): the view opens, rows are taller, checkboxes and cells can be tapped, the date picker opens, and the grid scrolls sideways. The toolbar starts folded into one **Filter, sort, group (N)** button next to **New task**; tapping it shows all controls, and "Group" stays beside its dropdown. (Checked with `app.emulateMobile(true)` at phone width on desktop, then on a real iPhone and the Android emulator: see below.)
 
 ## Recurring tasks
 - [ ] Recurring tasks show 🔁 with a "Repeats …" tooltip.
@@ -83,4 +83,13 @@ Run on 2026-11-20 with Tasklines 0.9.2 in Obsidian 1.15.1 (macOS), using `npm ru
     - Rows were only as wide as the pane, so cells scrolled in from the right could not be tapped on iOS and row lines stopped short. Rows now span the whole grid.
     - An empty date or priority cell collapsed to zero height and could not be tapped, on any platform. Editable cells now fill the row.
     - Grouping by status showed `todo` instead of "To do".
-  - Not covered: the on-screen keyboard (iPhone Mirroring types with the Mac's keyboard), and Android.
+  - Not covered here: the on-screen keyboard (iPhone Mirroring types with the Mac's keyboard). The Android run below covers it.
+- [x] **Android.** Run on 2026-11-20 in the Android Studio emulator (Pixel-size phone, Android API 37, light theme) with Obsidian 1.15.1 from Obsidian's official GitHub release. The test vault was copied in and back out with `adb`, and every edit was diffed on the Mac.
+  - The plugin loads, the toolbar opens and fits, search filters with the on-screen keyboard up, the native Group menu works, and grouping by status shows "To do".
+  - A real touch swipe scrolls the grid sideways, and row lines span every column.
+  - Tick, recurring completion through Tasks, status (including the custom `[?]`), priority (a new `[priority:: high]` on a Dataview line), due dates in both styles, and New task each wrote exactly the intended line.
+  - Found and fixed:
+    - Status, priority and date cells needed two taps: Android shows the control on focus but doesn't open its picker. On phones the picker now opens on the first tap.
+    - A picked date saved only after tapping somewhere else (iPhone too). On phones it now saves as soon as the picker closes.
+    - In New task, the keyboard covered **Add task**, and its action key moved to the next field. The key now says Done and adds the task.
+  - Rechecked on the iPhone with these fixes: one tap still opens one native menu, and a picked date saves when you press ✓ (it wrote `📅 2026-11-24`).
