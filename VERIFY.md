@@ -238,7 +238,8 @@ The review found: the bar changed shape when Undo appeared, a tall phone bar tha
 - [x] **Select** is highlighted (without matching New task's colour) and announced as pressed in select mode; pressing it again leaves, with focus back on it.
 - [x] An empty board column says "No tasks" in select mode, and "Drop tasks here" again after.
 - [x] **Android**: the bar is two rows that keep their shape through a batch and Undo, and stays put while the agenda scrolls. **Date** and **More** open as Android lists with group headings. Overdue's checkbox selected 4, and unticking one showed the dash. Scheduled → Tomorrow on 3 tasks, then the bar's Undo, left every note byte for byte. **More → Copy → List with links** copied `- Draft spec #spec ([[Alpha]])`. The group checkboxes have 44 px tap areas.
-- [ ] Not covered: iPhone, Windows.
+- [x] **iPhone** (iCloud vault, through iPhone Mirroring; "Reload app" kept the old plugin until Obsidian was quit and reopened, which makes it fetch the vault's files from iCloud). List view: the two-row bar fits, and the group checkboxes line up with the tasks' boxes. Ticking "home" then unticking Fix gate showed the dash with 5 selected. **Date** opens as iOS's menu with "Due date" and "Scheduled date" headings. Scheduled → Tomorrow wrote `⏳ 2026-11-22` and `[scheduled:: 2026-11-22]` on the 5 lines (before `^beta-block` where there was one) and left Fix gate alone. The bar kept its shape, and its **Undo** ("undid 5 of 5 changes") closed the batch notice and left the notes byte for byte as before. **More → Copy → List with links** copied `- Dataview style ([[Beta]])`, read back on the Mac through Universal Clipboard. Pressing **Select** again left select mode.
+- [ ] Not covered: Windows.
 
 ## Fuzz testing
 
