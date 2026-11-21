@@ -1,0 +1,23 @@
+filters:
+  and:
+    - file.inFolder("Projects")
+views:
+  - type: tasklines-calendar
+    name: Calendar
+    calendarField: due
+    taskQuery:
+      statuses:
+        - todo
+        - in-progress
+  - type: tasklines-calendar
+    name: Agenda
+    calendarField: due
+    calendarLayout: agenda
+    taskQuery:
+      statuses:
+        - todo
+        - in-progress
+  - type: tasklines-calendar
+    name: Scheduled (month)
+    calendarField: scheduled
+    calendarLayout: month
