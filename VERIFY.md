@@ -147,6 +147,24 @@ Run on 2026-11-21 on the Windows 11 test PC (hypatia, reached over Tailscale) wi
 - Cleanup: Obsidian was stopped, the scheduled task and `C:\Users\casaz\tasklines` were removed, and Obsidian's vault list was restored. Obsidian 1.15.1 stays installed for later tests.
 - Note: SSH sessions end the processes they start, so a headless run has to launch Obsidian and drive it in the same `ssh` command.
 
+## Task calendar
+
+Run on 2026-11-21 with `test-vault/Task calendar.base`. Fable reviewed the code first, and its must-fix and should-fix points were addressed before these checks.
+
+- [x] **Desktop** (Obsidian 1.15.1, macOS, DevTools protocol; nothing was logged as an error):
+  - The month grid starts on the locale's first weekday and highlights today. Overdue tasks are outlined, the next month's days are greyed, and No date sits beside the grid. Day-cell menu buttons appear on hover or focus.
+  - A drag to a day set the date, and the notice's **Undo** restored it. A drag to No date removed a date. Dropping a recurring task with no other date on No date was refused.
+  - A task dated `2026-11-31` showed under No date as "Not a real date: 2026-11-31", and moving it to a real day fixed the line.
+  - Keyboard: **›** kept focus and announced "December 2026". **+2 more** kept focus (as "Show fewer") and showed all five tasks.
+  - Agenda: Overdue, the next seven days (empty ones included), dated days, and No date. The summary counts only what it shows.
+- [x] **Android** (emulator, Obsidian 1.15.1). The notes were diffed on the Mac afterwards: exactly the intended lines changed.
+  - **Automatic** opened as the agenda.
+  - The **⋯** menu left out choices that change nothing ("Tomorrow" for a task due tomorrow), and gave a recurring task's only date no "Remove date".
+  - **Pick a date…** opened Android's date picker. Saving the 27th wrote `[due:: 2026-11-27]`, and **Undo** put the 22nd back.
+  - Today rescheduled an overdue recurring task.
+  - In the month layout the whole month scrolls as one page, with No date below. Scheduling a task from the tray added `⏳` in the line's style.
+- [ ] Not covered: the calendar on iPhone and Windows, a real mouse drag, and VoiceOver.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.

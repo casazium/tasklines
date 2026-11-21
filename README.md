@@ -1,6 +1,6 @@
 # Tasklines
 
-**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects, and a task board with the same tasks as cards. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
+**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects, a task board with the same tasks as cards, and a task calendar. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
 
 ![Tasks from several notes in a Tasklines view, grouped by area, with the notes' properties as columns](docs/screenshots/overview.png)
 
@@ -81,6 +81,32 @@ views:
     boardField: status
     taskQuery:
       doneWithinDays: 7
+```
+
+## Task calendar
+
+Add a view with the **Task calendar** layout to see tasks on the days of their dates. In the view's config menu:
+- **Date** picks which date places a task: **Due**, **Scheduled** or **Start**.
+- **Layout** picks **Month**, **Agenda** or **Automatic**. Automatic, the default, shows the agenda on phones and the month elsewhere, so one base suits both.
+
+The task toolbar's filters and sort still apply.
+
+- **Month:** a grid of weeks. It starts on the first day of the week for your Obsidian language. Use **‹**, **Today** and **›** to change month. A day shows three tasks, with **+N more** for the rest. Tasks without the date are in **No date**, beside the grid (below it on phones).
+- **Agenda:** **Overdue** (open tasks only), then each of the next two weeks' days that has tasks, then **Later** and **No date**. On desktop the next seven days always show, as places to drop tasks.
+- **Reschedule a task** by dragging it to another day, or with its **⋯** menu (on phones, and from the keyboard): Today, Tomorrow, One day later, One week later, **Pick a date…** and Remove date. Each is one ordinary date edit, in the line's own style, with the same checks as everywhere else. The notice offers **Undo**. Dropping a task on **No date** removes that date.
+- A recurring task keeps its last date, so it always has one to repeat from.
+- A date that isn't a real day (such as `2026-11-31`) shows the task under **No date** with the date marked, so you can fix it.
+- Dates only: the calendar has no times of day and no reminders.
+
+A calendar view in a `.base` file:
+
+```yaml
+views:
+  - type: tasklines-calendar
+    name: Calendar
+    calendarField: due
+    taskQuery:
+      statuses: [todo, in-progress]
 ```
 
 ## Completing, editing and adding tasks

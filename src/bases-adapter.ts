@@ -8,6 +8,8 @@ import {
 	BasesView,
 	debounce,
 	Menu,
+	Modal,
+	moment,
 	Notice,
 	Platform,
 	NullValue,
@@ -19,7 +21,10 @@ import {
 import { AddTaskModal } from './add-task-modal.ts';
 import { BOARD_FIELD_LABELS, BOARD_FIELDS, boardColumns, moveFor, normalizeBoardField, type BoardColumn, type BoardMove } from './board.ts';
 import { TaskBoard, type MenuChoice } from './board-view.ts';
+import { CALENDAR_FIELD_LABELS, CALENDAR_FIELDS, CALENDAR_LAYOUT_CHOICES, CALENDAR_LAYOUT_LABELS, isRealDate, moveToDate, normalizeCalendarField, normalizeCalendarLayout } from './calendar.ts';
+import { TaskCalendar } from './calendar-view.ts';
 import { columnOptionKey, TASK_COLUMNS, type ColumnContext } from './columns.ts';
+import type { TaskEdit } from './edit.ts';
 import type { IndexedTask } from './extract.ts';
 import { ALL_PATHS, type TaskIndex } from './indexer.ts';
 import type { TaskWriter } from './writer.ts';
@@ -30,8 +35,11 @@ import { ROW_HEIGHT, TOUCH_ROW_HEIGHT, VirtualList } from './virtual-list.ts';
 
 export const VIEW_TYPE = 'tasklines';
 export const BOARD_VIEW_TYPE = 'tasklines-board';
+export const CALENDAR_VIEW_TYPE = 'tasklines-calendar';
 const QUERY_KEY = 'taskQuery';
 const BOARD_FIELD_KEY = 'boardField';
+const CALENDAR_FIELD_KEY = 'calendarField';
+const CALENDAR_LAYOUT_KEY = 'calendarLayout';
 
 /** Registers the list and board views; false if Bases is not available. */
 export function registerTasklinesView(plugin: Plugin, index: TaskIndex, writer: TaskWriter): boolean {
@@ -48,7 +56,22 @@ export function registerTasklinesView(plugin: Plugin, index: TaskIndex, writer: 
 		factory: (controller, containerEl) => new TaskBoardView(controller, containerEl, index, writer),
 		options: () => boardOptions(),
 	});
+	plugin.registerBasesView(CALENDAR_VIEW_TYPE, {
+		name: 'Task calendar',
+		icon: 'lucide-calendar-days',
+		factory: (controller, containerEl) => new TaskCalendarView(controller, containerEl, index, writer),
+		options: () => calendarOptions(),
+	});
 	return true;
+}
+
+function calendarOptions(): BasesAllOptions[] {
+	return [
+		{ type: 'toggle', key: 'showToolbar', displayName: 'Show task toolbar', default: true },
+		{ type: 'dropdown', key: CALENDAR_FIELD_KEY, displayName: 'Date', default: 'due', options: Object.fromEntries(CALENDAR_FIELDS.map((f) => [f, CALENDAR_FIELD_LABELS[f]])) },
+		// Automatic by default, so one .base file gives phones the agenda and other devices the month.
+		{ type: 'dropdown', key: CALENDAR_LAYOUT_KEY, displayName: 'Layout', default: 'auto', options: Object.fromEntries(CALENDAR_LAYOUT_CHOICES.map((l) => [l, CALENDAR_LAYOUT_LABELS[l]])) },
+	];
 }
 
 function boardOptions(): BasesAllOptions[] {
@@ -355,18 +378,126 @@ class TaskBoardView extends TaskViewBase {
 		}
 		// Completing a recurring task may add its next occurrence, so it is not undoable here.
 		if (move.kind === 'toggle') return this.writer.toggle(target, true);
-		const written = await this.writer.editLine(target, move.edit);
-		if (written === null) return false;
-		const message = new DocumentFragment();
-		message.createSpan({ text: `Moved to ${column.label}. ` });
-		const undo = message.createEl('button', { text: 'Undo', cls: 'tasklines-notice-btn' });
-		// Long enough to reach Undo on a phone.
-		const notice = new Notice(message, 8000);
-		undo.addEventListener('click', () => {
-			notice.hide();
-			void this.writer.restore({ path: task.path, line: task.line, raw: written }, task.raw);
+		return editWithUndo(this.writer, task, move.edit, column.label);
+	}
+}
+
+/** Make one edit and offer to put the line back exactly as it was. */
+async function editWithUndo(writer: TaskWriter, task: IndexedTask, edit: TaskEdit, label: string): Promise<boolean> {
+	const written = await writer.editLine({ path: task.path, line: task.line, raw: task.raw }, edit);
+	if (written === null) return false;
+	const message = new DocumentFragment();
+	message.createSpan({ text: `Moved to ${label}. ` });
+	const undo = message.createEl('button', { text: 'Undo', cls: 'tasklines-notice-btn' });
+	// Long enough to reach Undo on a phone.
+	const notice = new Notice(message, 8000);
+	undo.addEventListener('click', () => {
+		notice.hide();
+		void writer.restore({ path: task.path, line: task.line, raw: written }, task.raw);
+	});
+	return true;
+}
+
+class TaskCalendarView extends TaskViewBase {
+	readonly type = CALENDAR_VIEW_TYPE;
+	private calendar: TaskCalendar;
+
+	constructor(controller: QueryController, parentEl: HTMLElement, index: TaskIndex, writer: TaskWriter) {
+		super(controller, parentEl, index, writer, { showGroup: false });
+		this.calendar = new TaskCalendar(this.rootEl, this.statsEl);
+		this.rootEl.addClass('tasklines-calendar-view');
+	}
+
+	onunload(): void {
+		super.onunload();
+		this.calendar.el.remove();
+	}
+
+	protected onQueryChange(q: TaskQuery): void {
+		this.calendar.resetLimits();
+		super.onQueryChange(q);
+	}
+
+	protected effectiveQuery(): TaskQuery {
+		// Days take the place of groups; a group saved from a list view must not apply.
+		return { ...this.query, group: 'none' };
+	}
+
+	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
+		const field = normalizeCalendarField(this.config.get(CALENDAR_FIELD_KEY));
+		this.calendar.render({
+			rows: applyQuery(rows, this.effectiveQuery(), today).flatMap((g) => g.rows),
+			total: rows.length,
+			today,
+			field,
+			layout: normalizeCalendarLayout(this.config.get(CALENDAR_LAYOUT_KEY), Platform.isPhone ? 'agenda' : 'month'),
+			weekStart: moment.localeData().firstDayOfWeek(),
+			stats: this.index.lastStats,
+			notes: this.noteCounts(tasksByPath),
+			openTask: (path, line, newTab) => this.openTask(path, line, newTab),
+			toggleTask: (task) => this.writer.toggle({ path: task.path, line: task.line, raw: task.raw }),
+			move: (task, date, label) => {
+				const edit = moveToDate(task, field, date);
+				return edit ? editWithUndo(this.writer, task, edit, label) : Promise.resolve(false);
+			},
+			showMenu: (anchor, ev, choices) => showMenu(anchor, ev, choices),
+			pickDate: (current) => new Promise((resolve) => new DatePickModal(this.app, current, resolve).open()),
+			tasksPluginAvailable: this.writer.tasksPluginAvailable(),
+			touch: Platform.isMobile,
 		});
-		return true;
+	}
+}
+
+/** "Pick a date…": a date field with Save and Cancel. Resolves undefined when cancelled. */
+class DatePickModal extends Modal {
+	private value: string | undefined;
+	private done: (date: string | undefined) => void;
+	private result: string | undefined;
+
+	constructor(app: Plugin['app'], value: string | undefined, done: (date: string | undefined) => void) {
+		super(app);
+		this.value = value;
+		this.done = done;
+	}
+
+	onOpen(): void {
+		this.setTitle('Pick a date');
+		const input = this.contentEl.createEl('input', { type: 'date', cls: 'tasklines-date-pick', attr: { 'aria-label': 'Date', min: '1000-01-01', max: '9999-12-31' } });
+		input.value = this.value ?? '';
+		const error = this.contentEl.createDiv({ cls: 'tasklines-date-error', attr: { role: 'alert' } });
+		const buttons = this.contentEl.createDiv({ cls: 'modal-button-container' });
+		const save = buttons.createEl('button', { text: 'Save', cls: 'mod-cta' });
+		const cancel = buttons.createEl('button', { text: 'Cancel' });
+		const valid = () => isRealDate(input.value);
+		const check = () => {
+			save.disabled = !valid();
+			error.setText(input.value && !valid() ? 'Enter a complete date.' : '');
+		};
+		const commit = () => {
+			if (!valid()) {
+				error.setText('Enter a complete date.');
+				return;
+			}
+			this.result = input.value;
+			this.close();
+		};
+		input.addEventListener('input', check);
+		input.addEventListener('change', check);
+		save.addEventListener('click', commit);
+		cancel.addEventListener('click', () => this.close());
+		input.addEventListener('keydown', (ev) => {
+			if (ev.key === 'Enter') {
+				ev.preventDefault();
+				commit();
+			}
+		});
+		check();
+		window.setTimeout(() => input.focus(), 0);
+	}
+
+	onClose(): void {
+		this.contentEl.empty();
+		this.done(this.result);
 	}
 }
 
