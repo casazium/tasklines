@@ -207,4 +207,13 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
 - [x] Cancelling a recurring Tasks-style task added `❌ <today>`.
 - [x] Due-date board: Overdue, Next 7 days and Later are dashed, show their explanations, and refuse drops. Today and Tomorrow set the date, and No due date removes it.
 - [x] Priority board: dropping on High added ⏫ to a task inside a callout.
+- [x] Failure cases (2026-11-21, same setup). Each was refused with a notice, and the note was left as it was:
+  - The note changed while its card was being dragged. The drop was refused with "The task line changed since the view was drawn", and the later edit was kept.
+  - Undo after the line was edited again was refused the same way. The move and the later edit were both kept.
+  - A cancelled recurring task dropped on Done got the "Reopen it first" message.
+  - The Tasks plugin was replaced with a stand-in that returns In progress, then a recurring task was dropped on Done. It was refused with "would move this task to a status other than done". The Tasks API is a getter that returns a new object on each read, so the stand-in has to be set on the plugin instance (`Object.defineProperty`), not on `apiV1`.
+- [x] Performance (2026-11-21, `perf-vault`, 5,008 notes, 10,512 tasks, Obsidian 1.15.1 on an M-series Mac):
+  - The status board opened in 115 ms; the list view of the same vault took 148 ms. Each column draws 100 cards, about 1,900 DOM nodes in all.
+  - Each "Show more" redraws the whole board: 17 ms with 300 cards on screen, rising to 42 ms with 900. Changing a note showed on the board 126 ms later.
+  - The due-date board opened in 115 ms.
 - [ ] Not covered: a real mouse drag (only synthetic events), phones, and a screen reader.
