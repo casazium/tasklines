@@ -1,6 +1,6 @@
 {
 	"name": "tasklines",
-	"version": "1.0.0",
+	"version": "1.0.1",
 	"description": "Show inline checkbox tasks as rows in Bases, with each note’s properties as columns. Filter, sort, group, tick and edit tasks in place.",
 	"main": "main.js",
 	"type": "module",
