@@ -16,7 +16,7 @@ Please report problems on the [issue tracker](https://github.com/casazium/taskli
 
 **Manually:** download `main.js`, `manifest.json` and `styles.css` from a [release](https://github.com/casazium/tasklines/releases) into `<vault>/.obsidian/plugins/tasklines/`, then enable the plugin.
 
-Requires Obsidian 1.10 or newer with the **Bases** core plugin turned on. Works on desktop and mobile.
+Requires Obsidian 1.13 or newer with the **Bases** core plugin turned on. Works on desktop and mobile. On Obsidian 1.10 to 1.12, Obsidian offers version 1.0.2, the last release that supports them.
 
 <img src="docs/screenshots/mobile.png" alt="The Tasklines view on a phone, with taller rows and the toolbar folded" width="270">
 
@@ -129,7 +129,6 @@ Tasklines works entirely inside your vault. It makes no network requests, collec
 - Sorting and grouping by a note property use the value's displayed text, with numbers in natural order (`9` before `10`).
 - In files with old Mac line endings (CR only), a change may be refused if Obsidian numbers lines differently. Tasklines never writes to the wrong line.
 - A change to a line with repeated or competing fields (two priorities, or a date written both as an emoji and as a Dataview field) is refused if the line wouldn't read back exactly as asked. Make that change in the note.
-- Tasklines' settings don't appear in Obsidian's settings search (Obsidian 1.13 and later).
 
 ## Development
 

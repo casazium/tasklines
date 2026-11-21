@@ -1,4 +1,4 @@
-import { App, normalizePath, PluginSettingTab, Setting, type Plugin } from 'obsidian';
+import { App, normalizePath, PluginSettingTab, type Plugin, type Setting, type SettingDefinitionItem, type TextAreaComponent } from 'obsidian';
 import type { FieldFormat } from './edit.ts';
 import { configureStatuses, DEFAULT_STATUSES, formatStatusSetting, parseStatusSetting } from './parser.ts';
 import type { CompletionDate } from './writeback.ts';
@@ -37,60 +37,87 @@ export function excludedFolders(settings: TasklinesSettings): string[] {
 }
 
 export class TasklinesSettingTab extends PluginSettingTab {
-	constructor(
-		app: App,
-		plugin: Plugin,
-		private settings: TasklinesSettings,
-		private save: () => Promise<void>,
-	) {
+	private settings: TasklinesSettings;
+	private save: () => Promise<void>;
+
+	constructor(app: App, plugin: Plugin, settings: TasklinesSettings, save: () => Promise<void>) {
 		super(app, plugin);
+		this.settings = settings;
+		this.save = save;
 	}
 
-	display(): void {
-		const { containerEl } = this;
-		containerEl.empty();
+	// Declarative settings (Obsidian 1.13+): Obsidian renders them and indexes them for settings search.
+	getSettingDefinitions(): SettingDefinitionItem[] {
+		return [
+			{
+				type: 'group',
+				heading: 'Completing tasks',
+				items: [
+					{
+						name: 'Add a completion date when ticking a task',
+						desc: 'Uses the format the task already has: ✅ for Tasks-style lines, [completion:: …] for Dataview-style lines. Plain lines get ✅ only when the Tasks plugin is installed.',
+						control: { type: 'toggle', key: 'completionDate' },
+					},
+					{
+						name: 'Let the Tasks plugin complete tasks',
+						desc: 'When the Tasks plugin (7.2.0 or later) is enabled, it decides the new line, so recurrence, done dates and custom statuses follow your Tasks settings. Recurring tasks cannot be completed from this view without it.',
+						control: { type: 'toggle', key: 'useTasksPlugin' },
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: 'Editing tasks',
+				items: [
+					{
+						name: 'Style for new fields on plain tasks',
+						desc: 'When you set a date or priority on a task with no metadata yet. Tasks that already use a style keep it.',
+						control: { type: 'dropdown', key: 'newFieldFormat', options: { 'tasks-emoji': 'Tasks emoji (📅 2026-01-31)', dataview: 'Dataview field ([due:: 2026-01-31])' } },
+					},
+					{
+						name: 'Task statuses',
+						desc: 'One per line: character | name | kind. Kind is todo, in-progress, done, cancelled or other. Space, x and - always mean to do, done and cancelled.',
+						aliases: ['custom statuses', 'checkbox characters'],
+						render: (setting) => this.renderStatuses(setting),
+					},
+				],
+			},
+			{
+				type: 'group',
+				heading: 'Indexing',
+				items: [
+					{
+						name: 'Excluded folders',
+						desc: 'Tasks in these folders (one per line) never appear, even if a base selects their notes. Useful for templates and archives.',
+						control: { type: 'textarea', key: 'excludeFolders', rows: 4, placeholder: 'Templates\narchive/2024' },
+					},
+				],
+			},
+		];
+	}
 
-		new Setting(containerEl).setName('Completing tasks').setHeading();
-		new Setting(containerEl)
-			.setName('Add a completion date when ticking a task')
-			.setDesc('Uses the format the task already has: ✅ for Tasks-style lines, [completion:: …] for Dataview-style lines. Plain lines get ✅ only when the Tasks plugin is installed.')
-			.addToggle((t) =>
-				t.setValue(this.settings.completionDate === 'auto').onChange(async (v) => {
-					this.settings.completionDate = v ? 'auto' : 'off';
-					await this.save();
-				}),
-			);
-		new Setting(containerEl)
-			.setName('Let the Tasks plugin complete tasks')
-			.setDesc('When the Tasks plugin (7.2.0 or later) is enabled, it decides the new line, so recurrence, done dates and custom statuses follow your Tasks settings. Recurring tasks cannot be completed from this view without it.')
-			.addToggle((t) =>
-				t.setValue(this.settings.useTasksPlugin).onChange(async (v) => {
-					this.settings.useTasksPlugin = v;
-					await this.save();
-				}),
-			);
+	getControlValue(key: string): unknown {
+		// The completion date is stored as 'auto' | 'off' but shown as a toggle.
+		if (key === 'completionDate') return this.settings.completionDate === 'auto';
+		return this.settings[key as keyof TasklinesSettings];
+	}
 
-		new Setting(containerEl).setName('Editing tasks').setHeading();
-		new Setting(containerEl)
-			.setName('Style for new fields on plain tasks')
-			.setDesc('When you set a date or priority on a task with no metadata yet. Tasks that already use a style keep it.')
-			.addDropdown((d) =>
-				d
-					.addOptions({ 'tasks-emoji': 'Tasks emoji (📅 2026-01-31)', dataview: 'Dataview field ([due:: 2026-01-31])' })
-					.setValue(this.settings.newFieldFormat)
-					.onChange(async (v) => {
-						this.settings.newFieldFormat = v as FieldFormat;
-						await this.save();
-					}),
-			);
+	async setControlValue(key: string, value: unknown): Promise<void> {
+		if (key === 'completionDate') this.settings.completionDate = value ? 'auto' : 'off';
+		else if (key === 'useTasksPlugin') this.settings.useTasksPlugin = Boolean(value);
+		else if (key === 'newFieldFormat') this.settings.newFieldFormat = value as FieldFormat;
+		else if (key === 'excludeFolders') this.settings.excludeFolders = typeof value === 'string' ? value : '';
+		await this.save();
+	}
 
-		const statusSetting = new Setting(containerEl)
-			.setClass('tasklines-setting-stacked')
-			.setName('Task statuses')
-			.setDesc('One per line: character | name | kind. Kind is todo, in-progress, done, cancelled or other. Space, x and - always mean to do, done and cancelled.');
-		const errorsEl = containerEl.createDiv({ cls: 'setting-item-description mod-warning' });
+	/** The statuses box: a tall text area, problems shown as you type, and a reset button. */
+	private renderStatuses(setting: Setting): void {
+		setting.setClass('tasklines-setting-stacked');
+		const errorsEl = setting.descEl.createDiv({ cls: 'mod-warning' });
 		const showErrors = (errors: string[]) => errorsEl.setText(errors.join(' '));
-		statusSetting.addTextArea((t) => {
+		let area: TextAreaComponent | null = null;
+		setting.addTextArea((t) => {
+			area = t;
 			t.inputEl.rows = 10;
 			t.inputEl.addClass('tasklines-status-setting');
 			t.setValue(this.settings.statuses).onChange(async (v) => {
@@ -99,31 +126,17 @@ export class TasklinesSettingTab extends PluginSettingTab {
 				await this.save();
 			});
 		});
-		statusSetting.addExtraButton((b) =>
+		setting.addExtraButton((b) =>
 			b
 				.setIcon('reset')
 				.setTooltip('Restore defaults')
 				.onClick(async () => {
 					this.settings.statuses = DEFAULT_SETTINGS.statuses;
-					applyStatusSetting(this.settings);
+					showErrors(applyStatusSetting(this.settings));
+					area?.setValue(this.settings.statuses);
 					await this.save();
-					this.display();
 				}),
 		);
 		showErrors(parseStatusSetting(this.settings.statuses).errors);
-
-		new Setting(containerEl).setName('Indexing').setHeading();
-		new Setting(containerEl)
-			.setName('Excluded folders')
-			.setDesc('Tasks in these folders (one per line) never appear, even if a base selects their notes. Useful for templates and archives.')
-			.addTextArea((t) => {
-				t.inputEl.rows = 4;
-				t.setPlaceholder('Templates\narchive/2024')
-					.setValue(this.settings.excludeFolders)
-					.onChange(async (v) => {
-						this.settings.excludeFolders = v;
-						await this.save();
-					});
-			});
 	}
 }
