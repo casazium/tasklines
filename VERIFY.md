@@ -129,6 +129,24 @@ Run on 2026-11-20 on a Windows 11 test PC with Obsidian 1.15.1 (installed with w
   - The Tasklines settings tab renders in Obsidian's separate Settings window.
 - Note: Obsidian itself rewrites a note to LF line endings when it opens the note in its editor. Tasklines keeps CRLF in notes that are not open in the editor. Obsidian's `vault.adapter.read` also reports CRLF as LF, so line endings must be checked on disk.
 
+## Task board on Windows
+
+Run on 2026-11-21 on the Windows 11 test PC (hypatia, reached over Tailscale) with Obsidian 1.15.1, Tasklines from `main` (1.1.1 plus unreleased fixes) and Tasks. The test vault included a CRLF copy of `Beta.md` ("Windows CRLF").
+
+- [x] **Headless, over SSH and the DevTools protocol.** Every move was made on the CRLF note's cards, and nothing was logged as an error:
+  - To do to In progress.
+  - A recurring task to Done (completed by Tasks, next occurrence added).
+  - A Dataview line to Cancelled (`[cancelled:: <today>]`) and back to To do (removed).
+  - Overdue to Tomorrow, and a Dataview due date set to today.
+  - Medium to Low (🔽, before `^beta-block`).
+  - Drops onto the card's own column and onto Later were refused. The live region announced the last move.
+  - The note kept CRLF throughout: 15 CRLF line endings before and 16 after (one for the new occurrence), no lone LF or CR, and still ending in CRLF.
+- [x] **Real mouse drag in the user's RDP session** (Obsidian started there by a one-off scheduled task, the mouse driven through Windows App on the Mac):
+  - Windows started a native drag (`dragstart`, `drop`, `dragend`), and the drop wrote `[/]` with the CRLF ending kept.
+  - The "Moved to In progress · Undo" notice appeared. A click on **Undo** straight after a second drag put that line back byte for byte. A first click arrived after the 8-second notice had closed.
+- Cleanup: Obsidian was stopped, the scheduled task and `C:\Users\casaz\tasklines` were removed, and Obsidian's vault list was restored. Obsidian 1.15.1 stays installed for later tests.
+- Note: SSH sessions end the processes they start, so a headless run has to launch Obsidian and drive it in the same `ssh` command.
+
 ## Fuzz testing
 
 `tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.
