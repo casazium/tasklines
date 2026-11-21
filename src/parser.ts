@@ -61,13 +61,16 @@ const PRIORITIES: Array<[Priority, string]> = [
 ];
 // Every Tasks emoji; a free-text value (recurrence, on-completion) runs until the next one.
 const TASKS_EMOJI = '📅📆🗓⏳⌛🛫➕✅❌🔺⏫🔼🔽⏬🔁🆔⛔🏁';
-// It also stops before a Dataview inline field, e.g. `🔁 every week [completion:: …]`.
-const FREE_TEXT = `([^${TASKS_EMOJI}^]+?)(?=\\s*(?:[${TASKS_EMOJI}]|[[(][\\p{L}\\p{N}_ -]+::|\\^[\\w-]+\\s*$|$))`;
+// It also stops before a Dataview inline field, e.g. `🔁 every week [completion:: …]`, and is
+// never a Dataview field itself (a bare `🔁 [completion:: …]` has no rule). Inline code ends it
+// too (\uE000 is the placeholder for a code span), and it needs some text: a bare 🔁 followed by
+// another emoji has no rule and stays part of the description.
+const FREE_TEXT = `(?!\\s*[[(][\\p{L}\\p{N}_ -]+::)(?=\\s*[^\\s${TASKS_EMOJI}^\\uE000])([^${TASKS_EMOJI}^\\uE000]+?)(?=\\s*(?:[${TASKS_EMOJI}\\uE000]|[[(][\\p{L}\\p{N}_ -]+::|\\^[\\w-]+\\s*$|$))`;
 const RECURRENCE = new RegExp(`🔁${VS}\\s*${FREE_TEXT}`, 'u');
 const ON_COMPLETION = new RegExp(`🏁${VS}\\s*([a-z]+)`, 'u');
 const TASK_ID = new RegExp(`🆔${VS}\\s*([\\w-]+)`, 'u');
 const DEPENDS_ON = new RegExp(`⛔${VS}\\s*([\\w-]+(?:\\s*,\\s*[\\w-]+)*)`, 'u');
-const BLOCK_ID = /\s\^([\w-]+)\s*$/u;
+const BLOCK_ID = /(?:^|\s)\^([\w-]+)\s*$/u;
 
 // A field value may contain wikilinks, which themselves contain brackets.
 const FIELD_VALUE = '((?:\\[\\[[^\\]]*\\]\\]|[^\\[\\]()])*)';

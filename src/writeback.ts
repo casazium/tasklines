@@ -29,7 +29,7 @@ export type ToggleResult =
 	| { ok: true; content: string; newLines: string[]; via: 'tasks-plugin' | 'built-in' }
 	| {
 			ok: false;
-			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch';
+			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch' | 'invalid-edit';
 			detail: string;
 	  };
 
@@ -151,7 +151,11 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 				detail: 'completing a recurring task needs the Tasks plugin (7.2.0 or later) so the next occurrence is created',
 			};
 		}
-		newLines = [toggleTaskLine(target.text, task, opts)];
+		try {
+			newLines = [toggleTaskLine(target.text, task, opts)];
+		} catch (err) {
+			return { ok: false, reason: 'invalid-edit', detail: err instanceof Error ? err.message : String(err) };
+		}
 	}
 
 	const eol = target.eol || detectEol(lines);
@@ -187,7 +191,11 @@ export function buildTaskLine(task: NewTask, indent: string, opts: EditOptions, 
 	};
 	if (task.priority && task.priority !== 'none') line = applyEdit(line, reparse(), { kind: 'priority', value: task.priority }, editOpts);
 	if (task.due) line = applyEdit(line, reparse(), { kind: 'date', field: 'due', value: task.due }, editOpts);
-	reparse();
+	// Refuse rather than write a line that would read back differently (for example a 🔁 typed
+	// into the text, which would take the due date as its repeat rule).
+	const built = reparse();
+	if (task.due && built.due !== task.due) throw new Error('the due date would not read back from this task text');
+	if (task.priority && built.priority !== task.priority) throw new Error('the priority would not read back from this task text');
 	return line;
 }
 

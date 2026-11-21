@@ -124,3 +124,15 @@ Run on 2026-11-20 on a Windows 11 test PC with Obsidian 1.15.1 (installed with w
 - [x] A Dataview-format recurring task with Tasks in emoji mode was refused, and the note was unchanged.
 - [ ] Not covered: notices, the New task window and other modals. Obsidian's own command palette did not open either in that off-screen session, so these need a run on the visible desktop. Inserting a task into a CRLF note is covered by unit tests.
 
+## Fuzz testing
+
+`tests/fuzz.test.ts` generates random task lines and notes and checks the write-back rules: a tick, an edit or a new task changes only its own line, every line ending survives, the line stays a task in its own format, inline code is never touched, an edit reads back as set, and tick-then-untick restores the line. `npm test` runs 3,000 cases. On 2026-11-20 it ran 200,000 cases on each of six seeds (1.2 million lines) with no failures.
+
+Found and fixed (each one is now a fixture or an edit check):
+- A block ID right after the checkbox (`- [ ] ^id`) was read as text by the parser but treated as a block ID by edits.
+- A bare 🔁 directly before a Dataview field took the field as its repeat rule, so an unticked task kept a stale `[completion:: …]`.
+- A repeat rule ran on into inline code that followed it.
+- A bare 🔁 followed by another emoji became an empty repeat rule, so ticking such a task was refused.
+- Edits on lines with repeated or competing fields (two priorities, a date in both styles, a repeat rule that ended at the field being changed) could leave the line reading differently. Every edit now checks that the line reads back as asked, with the description and repeat rule unchanged, and refuses otherwise. Clearing a date removes every copy of it.
+- New task refuses text that would not read back with the chosen due date or priority (for example a 🔁 typed into the text).
+

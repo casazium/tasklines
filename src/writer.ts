@@ -27,7 +27,7 @@ const FAILURE_TEXT: Record<string, string> = {
 	'bad-external-output': 'The Tasks plugin returned an unexpected result.',
 	'recurring-outside-global-filter':
 		'This recurring task does not contain your Tasks global filter, so the Tasks plugin would complete it without creating the next occurrence. Add the filter to the line, or complete it in the note.',
-	'invalid-edit': 'That edit could not be applied.',
+	'invalid-edit': 'That change could not be made safely on this line (it has repeated or ambiguous fields). Make it in the note instead.',
 	'tasks-format-mismatch':
 		'The Tasks plugin is set to a different task format than this line uses (emoji or Dataview), so it cannot create the next occurrence. Change the format in the Tasks settings, or complete it in the note.',
 };
