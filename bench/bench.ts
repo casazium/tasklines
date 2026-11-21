@@ -7,6 +7,11 @@ import { TaskIndex } from '../src/indexer.ts';
 import { applyQuery, DEFAULT_QUERY, type QueryRow } from '../src/query.ts';
 import { FakeVault } from '../tests/fake-vault.ts';
 
+// The few Node globals this script uses (the project has no Node type definitions).
+declare const process: { env: Record<string, string | undefined>; stdout: { write(text: string): boolean } };
+// Results go to standard output: this is a command-line script, not plugin code.
+const print = (line: string) => process.stdout.write(`${line}\n`);
+
 const NOTES = Number(process.env.NOTES ?? 5000);
 const TODAY = '2026-11-20';
 const PRIOS = ['⏫', '🔼', '🔽', '', ''];
@@ -76,10 +81,10 @@ const queries = {
 };
 
 const ms = (n: number) => `${n.toFixed(1)} ms`;
-console.log(`Vault: ${NOTES} notes, ${rows.length} tasks, ${coldStats.filesSkippedNoTasks} notes without tasks (never read)`);
-console.log(`Index cold:            ${ms(cold)}  (${coldReads} files read)`);
-console.log(`Index warm (cached):   ${ms(warm)}`);
-console.log(`Index after 1 edit:    ${ms(oneEdit)}`);
+print(`Vault: ${NOTES} notes, ${rows.length} tasks, ${coldStats.filesSkippedNoTasks} notes without tasks (never read)`);
+print(`Index cold:            ${ms(cold)}  (${coldReads} files read)`);
+print(`Index warm (cached):   ${ms(warm)}`);
+print(`Index after 1 edit:    ${ms(oneEdit)}`);
 for (const [name, q] of Object.entries(queries)) {
 	applyQuery(rows, q, TODAY); // warm-up
 	const runs = 5;
@@ -90,5 +95,5 @@ for (const [name, q] of Object.entries(queries)) {
 		total += t;
 		shown = groups.reduce((n, g) => n + g.rows.length, 0);
 	}
-	console.log(`Query: ${name.padEnd(62)} ${ms(total / runs).padStart(9)}  (${shown} rows)`);
+	print(`Query: ${name.padEnd(62)} ${ms(total / runs).padStart(9)}  (${shown} rows)`);
 }
