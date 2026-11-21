@@ -25,6 +25,8 @@ const FAILURE_TEXT: Record<string, string> = {
 	'not-a-task': 'That line is no longer a task.',
 	'recurring-needs-tasks': 'Completing a recurring task needs the Tasks plugin (7.2.0 or later), so the next occurrence is created. Open the note to complete it there.',
 	'bad-external-output': 'The Tasks plugin returned an unexpected result.',
+	'recurring-outside-global-filter':
+		'This recurring task does not contain your Tasks global filter, so the Tasks plugin would complete it without creating the next occurrence. Add the filter to the line, or complete it in the note.',
 	'invalid-edit': 'That edit could not be applied.',
 	'tasks-format-mismatch':
 		'The Tasks plugin is set to a different task format than this line uses (emoji or Dataview), so it cannot create the next occurrence. Change the format in the Tasks settings, or complete it in the note.',
@@ -48,6 +50,18 @@ export class TaskWriter {
 		return typeof fn === 'function' ? fn : undefined;
 	}
 
+	/** The Tasks plugin's global filter (from its saved settings), or undefined if none. */
+	private async tasksGlobalFilter(): Promise<string | undefined> {
+		const plugins = (this.app as unknown as { plugins?: { plugins?: Record<string, { loadData?: () => Promise<unknown> } | undefined> } }).plugins;
+		try {
+			const data = (await plugins?.plugins?.['obsidian-tasks-plugin']?.loadData?.()) as { globalFilter?: unknown } | null | undefined;
+			const filter = typeof data?.globalFilter === 'string' ? data.globalFilter.trim() : '';
+			return filter || undefined;
+		} catch {
+			return undefined;
+		}
+	}
+
 	tasksPluginAvailable(): boolean {
 		return this.tasksToggle() !== undefined;
 	}
@@ -66,7 +80,8 @@ export class TaskWriter {
 	async toggle(target: TaskTarget): Promise<boolean> {
 		const tasks = this.tasksToggle();
 		const opts = this.options();
-		const withTasks: ToggleOptions = { ...opts, external: tasks ? (line) => tasks(line, target.path) : undefined };
+		const tasksGlobalFilter = tasks ? await this.tasksGlobalFilter() : undefined;
+		const withTasks: ToggleOptions = { ...opts, tasksGlobalFilter, external: tasks ? (line) => tasks(line, target.path) : undefined };
 		return this.run(target, (data, precheck) => {
 			// The precheck runs without the Tasks plugin so it has no side effects; a recurring
 			// task is only refused there if Tasks is not available to handle it.
