@@ -553,4 +553,10 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS), using `test-vault/`. Clicks we
   - Fix gate → Schedule removed its date (the overdue count went from 4 to 3), and **Undo** put it back.
   - Draft spec → Delegate was refused: "Move it to Do first or Later, then here."
   - Afterwards the notes matched the backup byte for byte, the test base was deleted, and the iCloud vault matches `test-vault/`.
-- [ ] Not covered: drag and drop on this board with a mouse (the same code as the other boards), and themes.
+- [x] **Themes** (2026-11-22, Mac): default, Minimal, AnuPpuccin, Things and Blue Topaz, each light and dark, on `Task board.base` → Urgent and important.
+  - Every column is 272 px wide, and the titles, notes, cards, dates and priority marks follow each theme.
+  - Title contrast is 6.6:1 to 18.8:1. The notes under the titles use the theme's muted text, 3.3:1 (AnuPpuccin light) to 9.9:1, like the existing column notes and other muted text in Obsidian.
+- [x] **Drag and drop** (same day, drag events sent to the page):
+  - A card dropped on its own box isn't accepted (no highlight, no change).
+  - Draft spec dropped on Do first got `[due:: <today>]` and moved there. **Undo** restored the line.
+  - Write announcement dropped from Later on Do first: the box highlights (as for the other refused moves on the boards), then the drop is refused with the two-step notice, and the line is unchanged.
