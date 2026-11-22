@@ -603,3 +603,12 @@ Checked on 2026-11-22 on hypatia (Windows 11, Obsidian 1.15.1, over SSH and the 
   - Windows' `Expand-Archive` misreads UTF-8 names in a zip made on the Mac (`Café` arrived as `CafÃ©`), so unusual names have to be created on Windows.
   - Names from the Mac use the decomposed form of accents, so look files up by normalized path.
 - [x] Afterwards Obsidian was stopped, `obsidian.json` restored, and the test folder removed.
+
+## Release 1.5.0
+
+Batch: the urgent-and-important board (#63), its 2×2 grid (#64, #65) and **New task base** (#63). The full pass ran on `main` at f991bff plus this release commit (version, docs and images only):
+
+- [x] Build, lint (no warnings), 787 tests, and fuzz at 200,000 cases (seed 7).
+- [x] Desktop: the board, the grid, New task base, embeds, a popout window, five themes, and a regression pass over every view (see the sections above).
+- [x] Android, iPhone and Windows: see the sections above.
+- [x] Images: `docs/screenshots/urgent.png` is new. In the directory set, `desktop-4-urgent` replaces `desktop-5-bulk` (Calendar moves to 5), and `mobile-3-card-menu` was retaken on the new board. Afterwards the Mac window, theme and sidebar were put back, the Color setting used for the images was reverted, and the emulator's vault matches `test-vault/`.
