@@ -184,7 +184,7 @@
 /* Phones: a sideways swipe settles on a whole column. */
 .tasklines-touch .tasklines-board { scroll-snap-type: x mandatory; scroll-padding-inline: var(--size-4-4); }
 .tasklines-touch .tasklines-card-menu { padding: 4px 10px; }
-/* Read by screen readers, not shown. Hidden with clip (not clip-path), which every engine Obsidian ships supports in full. */
+/* Read by screen readers, not shown. Hidden with the rect() clip, which every engine Obsidian ships supports in full. */
 .tasklines-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* Task calendar */
@@ -270,7 +270,7 @@
    they vanish into it. There the bar takes the page's colour instead: its buttons then sit on it as the
    toolbar's do on the page, and the accent border still marks it out. */
 .tasklines-touch .tasklines-selection-bar { background: var(--background-primary); }
-/* The gap shorthand (row, then column), not column-gap: the directory's review reads column-gap as multi-column layout. */
+/* The gap shorthand (row, then column): the directory's review reads the column-only gap property as multi-column layout. */
 .tasklines-selection-bar .tasklines-toolbar-row { gap: var(--size-4-1) var(--size-4-4); }
 .tasklines-selection-group, .tasklines-selection-actions, .tasklines-selection-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-4-2); }
 .tasklines-selection-end { margin-inline-start: auto; }
