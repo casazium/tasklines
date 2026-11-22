@@ -96,7 +96,11 @@ export class TaskBoard {
 			const r = this.el.getBoundingClientRect();
 			this.size = { width: r.width, height: r.height };
 		}
-		const layout = boardLayout(this.input.field, this.size.width, this.size.height, this.layout);
+		// Embedded in a note, the board is as tall as its cards and the note scrolls: its height says
+		// nothing about room, and judging by it could flip the layout back and forth.
+		const embedded = !!this.el.closest('.bases-embed');
+		this.el.toggleClass('is-embedded', embedded);
+		const layout = boardLayout(this.input.field, this.size.width, embedded ? Infinity : this.size.height, this.layout);
 		// Only on a change: toggling the class from inside the observer on every report can loop.
 		if (layout === this.layout && this.el.hasClass('is-matrix') === (layout === 'matrix')) return;
 		this.layout = layout;
