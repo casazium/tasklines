@@ -218,6 +218,10 @@
 .tasklines-board.is-matrix .tasklines-column[data-box="delegate"] { grid-area: delegate; }
 .tasklines-board.is-matrix .tasklines-column[data-box="later"] { grid-area: later; }
 .tasklines-board.is-matrix .tasklines-column[data-box="finished"] { grid-area: finished; max-height: 14rem; }
+/* Embedded in a note the board has no height of its own, so each row is as tall as its cards. */
+.tasklines-view .tasklines-board.is-matrix.is-embedded { grid-template-rows: auto auto auto auto; overflow-y: visible; }
+.tasklines-board.is-matrix.is-embedded .tasklines-column { display: block; min-height: 6rem; }
+.tasklines-board.is-matrix.is-embedded .tasklines-column-cards { overflow: visible; }
 /* Read by screen readers, not shown. Hidden with the rect() clip, which every engine Obsidian ships supports in full. */
 .tasklines-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 

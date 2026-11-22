@@ -414,3 +414,9 @@ test('eisenhower layout: the boxes come in grid order — urgent left, important
 		['finished', null],
 	]);
 });
+
+test('eisenhower layout: embedded in a note, only width decides (its height follows its cards)', () => {
+	assert.equal(boardLayout('eisenhower', 700, Infinity), 'matrix');
+	assert.equal(boardLayout('eisenhower', 700, Infinity, 'matrix'), 'matrix');
+	assert.equal(boardLayout('eisenhower', 500, Infinity, 'matrix'), 'columns');
+});

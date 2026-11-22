@@ -581,4 +581,9 @@ Checked on 2026-11-22 in Obsidian 1.15.1, with `test-vault/Task board.base` → 
   - Shrinking the width a few pixels at a time (with a tall view, so only width changed): the grid held down to a 589 px board and switched to columns at 586. Widening, it stayed columns until 612 and then switched back. That's exactly one flip each way, and none in 3 seconds held still near the threshold.
   - The box counts are grey (`rgb(92, 92, 92)`). They look coloured in screenshots only because of ClearType.
   - Afterwards the test folder was removed, Obsidian stopped, and `obsidian.json` restored.
-- [ ] Not covered: an iPad (no device), a popout window, and an embedded base in a note.
+- [x] **Embedded in a note** (`![[Task board.base#Urgent and important]]`, live preview and reading view, a 700 px wide note): grid with the axes. Found and fixed: an embed's height follows its content, so rows that share the height grew to the fullest box. Do first, with one card, was 623 px tall, and the embed was 1,520 px. Embedded boards now size each row to its own cards (top 131 px, bottom 623 px, board 1,308 → 816 px). Only width decides the layout there, since judging by a content-driven height could flip it back and forth. Nothing spills. In a 520 px pane the embed shows columns that scroll sideways.
+- [x] **Popout window** (1,000 × 900): grid. Narrowed to 560 px it showed columns, and widened again it showed the grid. A drag inside the popout wrote `[due:: <today>]`, and **Undo** restored it. The popout was closed afterwards.
+- [x] **Themes on the grid** (default, Minimal, AnuPpuccin, Things, Blue Topaz, light and dark): every one shows the grid with its axes. Axis labels use muted text, from 3.5:1 (AnuPpuccin light) to 9.4:1, like the box notes.
+- [x] **Regression pass** over every view in `test-vault/`: the three list views, the status, due and priority boards (272 px flex columns, no grid, no axes) and the calendar and agenda all render as before, with no errors in the console.
+- [x] Build, lint (no warnings), 787 tests, and fuzz at 200,000 cases (seed 7) pass.
+- [ ] Not covered: an iPad (no device).
