@@ -541,4 +541,10 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS), using `test-vault/`. Clicks we
 - [x] Refused with a notice, the note unchanged:
   - Write announcement (Later) → Do first: "Move it to Schedule or Delegate, then here."
   - Recurring: water plants (Delegate) → Later: "A recurring task needs its due date."
-- [ ] Not covered: drag and drop on this board (the same code as the other boards), phones, and themes.
+- [x] **Android** (2026-11-22, emulator, API 37, Obsidian 1.15.1):
+  - Long-pressing `Projects` in the file list shows **New task base** with its icon, right after **New base**. It created `Projects tasks.base`, byte for byte what `folderBaseContent` writes, and opened it with the notice.
+  - The Urgent and important view shows one box per screen, with the next peeking in. A swipe snapped to the next box.
+  - Card menus grey out the card's own box. Fix gate → Delegate removed `⏫` (the board followed the card), and **Undo** put it back. Dataview style → Delegate wrote `[due:: <today>]`, and **Undo** put the old date back.
+  - Refused with notices, nothing changed: Confirm catering → Schedule ("Move it to Later or Do first, then here.") and Recurring: water plants → Later ("A recurring task needs its due date.").
+  - Afterwards the device's notes were byte for byte as before. Found on the way: the device's three `.base` files were empty, from the 1.4.1 restore. They were put back from `test-vault/`, and the whole device vault now matches it.
+- [ ] Not covered: drag and drop on this board with a mouse (the same code as the other boards), iPhone, and themes.
