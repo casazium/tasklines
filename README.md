@@ -83,6 +83,7 @@ Add a view with the **Task board** layout to see the same tasks as cards in colu
     - Into an urgent box, the due date becomes today, even if it was later. Out of one, the due date is removed. A recurring task keeps its date: moving it out is refused, so give it a later date in the list or the calendar instead.
     - Into an important box, the priority becomes high. Out of one, the priority is removed.
     - A move that would change both (from Later straight to Do first, say) is refused with a notice naming the boxes to go through, so every move stays one edit you can undo. To move a finished task, reopen it first.
+    - **Layout:** with room for it (a board at least about 600 px wide and 400 px tall, as in most desktop panes and on tablets), the boxes form a 2×2 grid: urgent on the left, important on top, with the axes labelled. All four stay in view, and a full box scrolls on its own. Finished, when shown, runs along the bottom. In less room (phones, a phone held sideways, a narrow or short pane) they're swipeable columns like the other boards.
 - **Undo:** after a move, the notice has an **Undo** button that puts the line back exactly as it was (unless it has changed since). Completing a recurring task can't be undone this way, because it adds the next occurrence.
 - Custom statuses keep their place: a `[!]` task stays in To do. They aren't a drop target of their own, so moving it to another status replaces the custom status.
 - Long columns show 100 cards at a time, with a **Show more** button.

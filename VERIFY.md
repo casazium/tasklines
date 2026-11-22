@@ -560,3 +560,19 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS), using `test-vault/`. Clicks we
   - A card dropped on its own box isn't accepted (no highlight, no change).
   - Draft spec dropped on Do first got `[due:: <today>]` and moved there. **Undo** restored the line.
   - Write announcement dropped from Later on Do first: the box highlights (as for the other refused moves on the boards), then the drop is refused with the two-step notice, and the line is unchanged.
+
+## Urgent-and-important board as a 2×2 grid
+
+Checked on 2026-11-22 in Obsidian 1.15.1, with `test-vault/Task board.base` → Urgent and important. Pane sizes were set on the view's container through the developer tools protocol.
+
+- [x] **Layout by size** (board size in brackets):
+  - Grid at 1,100 px (1,053 × 660) and 800 px (753 × 638). It stayed a grid at 593 px wide, inside the slack, and became columns at 533 px.
+  - Columns when the board was short: 309 px and 229 px tall in wide panes.
+  - Axis labels show only in the grid.
+- [x] **Rows share the height:** all four boxes are in view. Delegate and Later scroll inside, and no card spills past its box. An earlier version that let rows grow with their cards cut off Later's last card; the UI review caught it.
+- [x] **Moving cards in the grid:**
+  - Drag to Do first, then **Undo**. Dropping on its own box isn't accepted, and the diagonal drop is refused.
+  - ⋯ menu move of Fix gate to Schedule: focus followed the card into Schedule and stayed visible. **Undo** restored the line.
+- [x] **Hidden tab:** switching to another tab and back kept the grid and a box's scroll position. The axis labels are `aria-hidden`.
+- [x] **Android** (emulator): portrait keeps swipeable columns, and so does landscape, where the board is about 200 px tall. The device vault was unchanged afterwards.
+- [ ] Not covered: an iPad (no device), a popout window, an embedded base in a note, and Windows classic scrollbars at the threshold.

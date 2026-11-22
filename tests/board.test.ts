@@ -1,7 +1,7 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { BOARD_FIELDS, boardColumns, columnKey, isImportant, isUrgent, moveFor, normalizeBoardField, type BoardColumn } from '../src/board.ts';
+import { BOARD_FIELDS, boardColumns, boardLayout, columnKey, isImportant, isUrgent, MATRIX_MIN_HEIGHT, MATRIX_MIN_WIDTH, MATRIX_SLACK, moveFor, normalizeBoardField, type BoardColumn } from '../src/board.ts';
 import type { EditOptions } from '../src/edit.ts';
 import type { IndexedTask } from '../src/extract.ts';
 import { configureStatuses, DEFAULT_STATUSES, parseStatusSetting, parseTaskLine } from '../src/parser.ts';
@@ -360,4 +360,57 @@ test('eisenhower: a custom finished status goes to Finished and cannot be moved'
 	useStatuses(' | To do | todo\nd | Delegated | done\nx | Done | done\n- | Cancelled | cancelled');
 	assert.equal(quadrant('- [d] handed over ⏫ 📅 2026-11-20'), 'finished');
 	assert.equal(moveFor(task('- [d] handed over ⏫ 📅 2026-11-20'), col(boardColumns([], 'eisenhower', TODAY), 'later'), TODAY)?.kind, 'blocked');
+});
+
+test('eisenhower layout: a 2×2 grid only when the board is wide and tall enough', () => {
+	assert.equal(boardLayout('eisenhower', 1200, 800), 'matrix', 'a desktop pane');
+	assert.equal(boardLayout('eisenhower', 1024, 1300), 'matrix', 'an iPad');
+	assert.equal(boardLayout('eisenhower', 390, 700), 'columns', 'a phone');
+	assert.equal(boardLayout('eisenhower', 800, 220), 'columns', 'a phone held sideways');
+	assert.equal(boardLayout('eisenhower', 560, 900), 'columns', 'a narrow split pane');
+	assert.ok(MATRIX_MIN_WIDTH >= 2 * 272 + 12, 'two boxes at the column width fit side by side');
+});
+
+test('eisenhower layout: slack at the thresholds keeps the layout from flipping back and forth', () => {
+	const W = MATRIX_MIN_WIDTH, H = MATRIX_MIN_HEIGHT, d = MATRIX_SLACK;
+	// From columns: the grid needs the threshold plus the slack.
+	assert.equal(boardLayout('eisenhower', W, 900, 'columns'), 'columns');
+	assert.equal(boardLayout('eisenhower', W + d, 900, 'columns'), 'matrix');
+	assert.equal(boardLayout('eisenhower', 900, H + d - 1, 'columns'), 'columns');
+	// From the grid: it stays until the threshold minus the slack.
+	assert.equal(boardLayout('eisenhower', W - d, 900, 'matrix'), 'matrix');
+	assert.equal(boardLayout('eisenhower', W - d - 1, 900, 'matrix'), 'columns');
+	assert.equal(boardLayout('eisenhower', 900, H - d, 'matrix'), 'matrix');
+	assert.equal(boardLayout('eisenhower', 900, H - d - 1, 'matrix'), 'columns');
+	// A scrollbar appearing (about 17 px on Windows) at the threshold doesn't flip it.
+	assert.equal(boardLayout('eisenhower', W + d - 17 + 5, 900, 'matrix'), 'matrix');
+});
+
+test('eisenhower layout: a hidden tab (size 0) keeps whatever was shown', () => {
+	assert.equal(boardLayout('eisenhower', 0, 0, 'matrix'), 'matrix');
+	assert.equal(boardLayout('eisenhower', 0, 0, 'columns'), 'columns');
+	assert.equal(boardLayout('eisenhower', 900, 0, 'matrix'), 'matrix');
+	assert.equal(boardLayout('eisenhower', 0, 0), 'columns', 'never measured: columns');
+});
+
+test('eisenhower layout: other boards are always columns, however much room', () => {
+	for (const field of ['status', 'priority', 'due'] as const) {
+		assert.equal(boardLayout(field, 5000, 5000), 'columns', field);
+		assert.equal(boardLayout(field, 5000, 5000, 'matrix'), 'columns', `${field}, even after an Eisenhower grid`);
+	}
+});
+
+test('eisenhower layout: without finished tasks there are exactly the four boxes', () => {
+	assert.deepEqual(boardColumns([row('- [ ] a', 0)], 'eisenhower', TODAY).map((c) => c.key), ['do', 'schedule', 'delegate', 'later']);
+});
+
+test('eisenhower layout: the boxes come in grid order — urgent left, important top — then Finished', () => {
+	const keys = boardColumns([row('- [x] done', 0)], 'eisenhower', TODAY).map((c) => [c.key, c.target?.field === 'eisenhower' ? [c.target.urgent, c.target.important] : null]);
+	assert.deepEqual(keys, [
+		['do', [true, true]],
+		['schedule', [false, true]],
+		['delegate', [true, false]],
+		['later', [false, false]],
+		['finished', null],
+	]);
 });
