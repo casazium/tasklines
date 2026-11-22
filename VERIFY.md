@@ -291,6 +291,14 @@ Checked on 2026-11-21 by measuring the bar and checkboxes on the Mac (DevTools p
   - The first look was misleading: iCloud brought the new `main.js` to the phone before the new `styles.css`, so the bar briefly drew with the 1.3.0 styles. Check the probe or the vault's file dates before judging a layout on iOS.
   - **Android after the fix** (same day, emulator, 412 dp wide): the bar stays two rows, including with "14 selected". The group boxes line up in the agenda and on the board. Complete on 2 board cards and Undo from the bar left the notes identical.
 
+## Select bar contrast on phones
+
+Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) with `app.emulateMobile(true)` in a 390 px window, over the DevTools protocol.
+
+- [x] **Found:** on phones and tablets Obsidian colours buttons with the secondary background, which is also the bar's colour. In light themes the bar's buttons (Select all, Undo, Done, Date, More) were the same rgb(246, 246, 246) as the bar and looked like plain text; in dark themes they were already lighter than the bar.
+- [x] **Fixed:** on touch devices the bar takes the page's background. Measured: light, bar 255 and buttons 246; dark, bar 0 and buttons 52. The buttons now sit on the bar as the toolbar's controls sit on the page. Desktop is unchanged.
+- [x] **Themes:** the phone pass of the theme check (five themes, light and dark, four views) still gives two rows of 44 px controls, nothing overflowing and every group checkbox lined up; the buttons stand out from the bar in each.
+
 ## Release 1.3.0
 
 Full test pass on 2026-11-21 for the batch #46–#49 (bulk actions and their follow-ups), on `main` at `fa12642` plus the version bump and screenshots.
