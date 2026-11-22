@@ -266,6 +266,10 @@
 .tasklines-view.is-selecting .tasklines-column-head .tasklines-column-count, .tasklines-view.is-selecting .tasklines-agenda-head .tasklines-column-count { margin-inline-start: auto; }
 /* The bar: what's selected | actions | Undo and Done. It stays in view while the tasks scroll. */
 .tasklines-selection-bar { position: sticky; top: 0; z-index: 3; }
+/* Phones and tablets colour buttons with the secondary background, the bar's own colour, so in light themes
+   they vanish into it. There the bar takes the page's colour instead: its buttons then sit on it as the
+   toolbar's do on the page, and the accent border still marks it out. */
+.tasklines-touch .tasklines-selection-bar { background: var(--background-primary); }
 .tasklines-selection-bar .tasklines-toolbar-row { column-gap: var(--size-4-4); }
 .tasklines-selection-group, .tasklines-selection-actions, .tasklines-selection-end { display: flex; flex-wrap: wrap; align-items: center; gap: var(--size-4-2); }
 .tasklines-selection-end { margin-inline-start: auto; }
