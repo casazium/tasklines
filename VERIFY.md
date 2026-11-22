@@ -588,3 +588,18 @@ Checked on 2026-11-22 in Obsidian 1.15.1, with `test-vault/Task board.base` → 
 - [x] Build, lint (no warnings), 787 tests, and fuzz at 200,000 cases (seed 7) pass.
 - [x] **iPhone** (same day, iPhone Mirroring, iCloud vault): the Urgent and important board stays swipeable columns, with no axes. As before, iCloud delivered the new `main.js` only after a second restart. The first launch still said "Drop tasks here" in an empty box, and the second said "No tasks", which proves the new build loaded. Mirroring doesn't pass sideways swipes or scrolls through, so the other boxes were checked on Android. The search typed for the test was saved into `Task board.base`; it was put back, and the iCloud vault matches `test-vault/`.
 - [ ] Not covered: an iPad (no device).
+
+## New task base on Windows
+
+Checked on 2026-11-22 on hypatia (Windows 11, Obsidian 1.15.1, over SSH and the developer tools protocol), running the command from notes in different folders of a copy of `test-vault/`.
+
+- [x] **A name that differs only in case:** `Projects` already held `projects TASKS.base`. The command made `Projects tasks 2.base`, then `3`, and left that file byte for byte as it was. Without the case-blind check, Windows would have refused to create the file.
+- [x] **Folder names:**
+  - A deep folder `Deep/a/b/c` got `c tasks.base`, listing only its own task.
+  - The vault root got `Tasks.base`, with every task.
+  - A folder made in Obsidian on Windows, `Café & Co's ü 日本/Sub folder`, got `Sub folder tasks.base`, listing only its two tasks. Each new base opened with the notice, and its Urgent and important view sorted the folder's tasks.
+- [x] **On disk:** the new files have plain LF line endings and no byte-order mark, like the ones Obsidian writes.
+- Test setup notes:
+  - Windows' `Expand-Archive` misreads UTF-8 names in a zip made on the Mac (`Café` arrived as `CafÃ©`), so unusual names have to be created on Windows.
+  - Names from the Mac use the decomposed form of accents, so look files up by normalized path.
+- [x] Afterwards Obsidian was stopped, `obsidian.json` restored, and the test folder removed.
