@@ -1,6 +1,6 @@
 # Contributing to Tasklines
 
-Thanks for helping. Tasklines edits people's notes, so the bar for changes is that they never damage a note. These notes explain how to report problems, set up the project and get a change accepted.
+Thanks for helping. Tasklines edits people's notes, so the bar for changes is that they never damage a note. These notes explain how to report problems, suggest features, set up the project and get a change accepted.
 
 ## Reporting a problem
 
@@ -12,6 +12,15 @@ Open an [issue](https://github.com/casazium/tasklines/issues) with:
 - Whether the Tasks or Dataview plugins are installed, and any Tasks settings you've changed (task format, global filter, custom statuses).
 
 Please don't paste private notes. A made-up line that shows the same problem is ideal.
+
+## Ideas and questions
+
+Feature requests, ideas and questions go in [Discussions](https://github.com/casazium/tasklines/discussions), not the issue tracker:
+
+- **Ideas:** what you'd like Tasklines to do, and the job it would help with in your vault. Upvote ideas you'd use too; that's how the next features are chosen.
+- **Q&A:** how to set something up, or whether Tasklines can do something.
+
+Some requests are out of scope by design: network access, telemetry, reminders, time tracking and new task syntax (see the rules below).
 
 ## Setting up
 
