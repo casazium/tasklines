@@ -30,6 +30,7 @@ import type { TaskEdit } from './edit.ts';
 import type { IndexedTask } from './extract.ts';
 import { ALL_PATHS, type TaskIndex } from './indexer.ts';
 import type { TaskWriter } from './writer.ts';
+import { COLOR_BY, COLOR_BY_LABELS, normalizeColorBy, tintFor, type Tint } from './tint.ts';
 import { addDays, applyQuery, normalizeQuery, summarize, type TaskQuery } from './query.ts';
 import { TaskToolbar, type PropChoice } from './toolbar.ts';
 import { localDate, renderRows, type RowSource, type ViewRow } from './view.ts';
@@ -42,6 +43,16 @@ const QUERY_KEY = 'taskQuery';
 const BOARD_FIELD_KEY = 'boardField';
 const CALENDAR_FIELD_KEY = 'calendarField';
 const CALENDAR_LAYOUT_KEY = 'calendarLayout';
+const COLOR_BY_KEY = 'colorBy';
+const COLOR_PROPERTY_KEY = 'colorProperty';
+
+/** The Color options, the same in every view. */
+function colorOptions(): BasesAllOptions[] {
+	return [
+		{ type: 'dropdown', key: COLOR_BY_KEY, displayName: 'Color', default: 'none', options: Object.fromEntries(COLOR_BY.map((c) => [c, COLOR_BY_LABELS[c]])) },
+		{ type: 'property', key: COLOR_PROPERTY_KEY, displayName: 'Color property', placeholder: 'Used when Color is Note property' },
+	];
+}
 
 /** Registers the list and board views; false if Bases is not available. */
 export function registerTasklinesView(plugin: Plugin, index: TaskIndex, writer: TaskWriter): boolean {
@@ -73,6 +84,7 @@ function calendarOptions(): BasesAllOptions[] {
 		{ type: 'dropdown', key: CALENDAR_FIELD_KEY, displayName: 'Date', default: 'due', options: Object.fromEntries(CALENDAR_FIELDS.map((f) => [f, CALENDAR_FIELD_LABELS[f]])) },
 		// Automatic by default, so one .base file gives phones the agenda and other devices the month.
 		{ type: 'dropdown', key: CALENDAR_LAYOUT_KEY, displayName: 'Layout', default: 'auto', options: Object.fromEntries(CALENDAR_LAYOUT_CHOICES.map((l) => [l, CALENDAR_LAYOUT_LABELS[l]])) },
+		...colorOptions(),
 	];
 }
 
@@ -86,6 +98,7 @@ function boardOptions(): BasesAllOptions[] {
 			default: 'status',
 			options: Object.fromEntries(BOARD_FIELDS.map((f) => [f, BOARD_FIELD_LABELS[f]])),
 		},
+		...colorOptions(),
 	];
 }
 
@@ -102,6 +115,7 @@ function viewOptions(): BasesAllOptions[] {
 				default: c.defaultOn,
 			})),
 		},
+		...colorOptions(),
 	];
 }
 
@@ -237,6 +251,21 @@ abstract class TaskViewBase extends BasesView {
 		this.render();
 	}
 
+	/** The property chosen for "Color: Note property", if Color is set to it. */
+	private colorProperty(): BasesPropertyId | null {
+		if (normalizeColorBy(this.config.get(COLOR_BY_KEY)) !== 'property') return null;
+		return this.config.getAsPropertyId(COLOR_PROPERTY_KEY);
+	}
+
+	/** The view's Color option as a function of a row, or undefined when it is off. */
+	protected tint(today: string): ((row: ViewRow) => Tint | null) | undefined {
+		const by = normalizeColorBy(this.config.get(COLOR_BY_KEY));
+		if (by === 'none') return undefined;
+		const id = this.colorProperty();
+		const property = id ? { id, name: this.config.getDisplayName(id) } : null;
+		return (row) => tintFor(row, by, today, property);
+	}
+
 	/** The query actually applied; the board ignores the saved grouping. */
 	protected effectiveQuery(): TaskQuery {
 		return this.query;
@@ -249,9 +278,11 @@ abstract class TaskViewBase extends BasesView {
 	private snapshot(): void {
 		const q = this.effectiveQuery();
 		const props = new Set<BasesPropertyId>(this.config.getOrder());
-		for (const key of [...q.sort.map((s) => s.key), q.group]) {
+		for (const key of [...q.sort.map((s) => s.key), q.group, q.subgroup]) {
 			if (key.startsWith('prop:')) props.add(key.slice(5) as BasesPropertyId);
 		}
+		const colorProp = this.colorProperty();
+		if (colorProp) props.add(colorProp);
 		const notes: NoteSnapshot[] = [];
 		// Every note in the base, including task-free ones, so a note that gains its
 		// first task in a body edit still triggers a refresh.
@@ -588,9 +619,12 @@ class TasklinesView extends TaskViewBase {
 		const groups = applyQuery(rows, this.query, today);
 		// A task can appear in several tag groups; select it once.
 		this.shownRows = [...new Map(groups.flatMap((g) => g.rows).map((r) => [taskKey(r.task), r])).values()];
-		this.screenRows = this.shownRows;
+		// Subgroups reorder rows inside their group; ranges follow what is on screen.
+		const onScreen = groups.flatMap((g) => (g.subgroups ? g.subgroups.flatMap((s) => s.rows) : g.rows));
+		this.screenRows = [...new Map(onScreen.map((r) => [taskKey(r.task), r])).values()];
 		renderRows(this.statsEl, this.list, {
 			selection: this.selectionHooks(),
+			tint: this.tint(today),
 			groups,
 			context: columnContext(tasksByPath, today),
 			total: rows.length,
@@ -637,7 +671,7 @@ class TaskBoardView extends TaskViewBase {
 
 	protected effectiveQuery(): TaskQuery {
 		// Columns take the place of groups; a group saved from a list view must not apply.
-		return { ...this.query, group: 'none' };
+		return { ...this.query, group: 'none', subgroup: 'none' };
 	}
 
 	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
@@ -648,6 +682,7 @@ class TaskBoardView extends TaskViewBase {
 		this.screenRows = [...new Map(columns.flatMap((c) => c.rows).map((r) => [taskKey(r.task), r])).values()];
 		this.board.render({
 			selection: this.selectionHooks(),
+			tint: this.tint(today),
 			columns,
 			total: rows.length,
 			today,
@@ -719,7 +754,7 @@ class TaskCalendarView extends TaskViewBase {
 
 	protected effectiveQuery(): TaskQuery {
 		// Days take the place of groups; a group saved from a list view must not apply.
-		return { ...this.query, group: 'none' };
+		return { ...this.query, group: 'none', subgroup: 'none' };
 	}
 
 	protected draw(rows: ViewRow[], tasksByPath: Map<string, IndexedTask[]>, today: string): void {
@@ -733,6 +768,7 @@ class TaskCalendarView extends TaskViewBase {
 		this.screenRows = this.shownRows.map((r, i) => ({ r, i })).sort((a, b) => (day(a.r) < day(b.r) ? -1 : day(a.r) > day(b.r) ? 1 : a.i - b.i)).map((x) => x.r);
 		this.calendar.render({
 			selection: this.selectionHooks(),
+			tint: this.tint(today),
 			rows: this.shownRows,
 			total: rows.length,
 			today,

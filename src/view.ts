@@ -7,6 +7,7 @@ import type { TaskEdit } from './edit.ts';
 import type { IndexStats } from './indexer.ts';
 import { statusDefs, statusKind, statusName } from './parser.ts';
 import { formatSummary, PRIORITY_ORDER, summarize, type QueryRow, type RowGroup } from './query.ts';
+import { tintAlreadySaid, type Tint } from './tint.ts';
 import type { VirtualList } from './virtual-list.ts';
 import { drawGroupSelect, drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
@@ -42,9 +43,22 @@ export interface RenderInput {
 	touch: boolean;
 	/** Select mode for bulk actions. */
 	selection?: SelectionHooks;
+	/** The view's Color option: a tint for each task, or null. */
+	tint?: (row: ViewRow) => Tint | null;
 }
 
-type Item = { kind: 'group'; label: string; summary: string; rows: ViewRow[] } | { kind: 'row'; row: ViewRow };
+/**
+ * Tint a row, card or chip: a bar on its leading edge and a faint wash, in a theme colour.
+ * The words go to screen readers unless the element already says them (`said`).
+ */
+export function drawTint(el: HTMLElement, srParent: HTMLElement, tint: Tint | null | undefined, said = false): void {
+	if (!tint) return;
+	el.addClasses(['tasklines-tinted', `tasklines-tint-${tint.tone}`]);
+	if (!said) srParent.createSpan({ cls: 'tasklines-sr-only', text: ` (${tint.label})` });
+}
+
+/** A group heading; a subgroup is a second-level heading inside `parent`. */
+type Item = { kind: 'group'; label: string; summary: string; rows: ViewRow[]; parent?: string } | { kind: 'row'; row: ViewRow };
 
 export function renderRows(statsEl: HTMLElement, list: VirtualList, input: RenderInput): void {
 	const today = input.context.today;
@@ -63,7 +77,14 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 	const items: Item[] = [];
 	for (const g of input.groups) {
 		if (g.label !== null) items.push({ kind: 'group', label: g.label, summary: formatSummary(summarize(g.rows, today)), rows: g.rows });
-		for (const row of g.rows) items.push({ kind: 'row', row });
+		if (!g.subgroups) {
+			for (const row of g.rows) items.push({ kind: 'row', row });
+			continue;
+		}
+		for (const sub of g.subgroups) {
+			items.push({ kind: 'group', label: sub.label ?? '', summary: formatSummary(summarize(sub.rows, today)), rows: sub.rows, parent: g.label ?? '' });
+			for (const row of sub.rows) items.push({ kind: 'row', row });
+		}
 	}
 
 	// Columns: task text, chosen task columns, then the base's note-property columns.
@@ -93,11 +114,19 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 		const item = items[i];
 		if (!item) return;
 		if (item.kind === 'group') {
+			const sub = item.parent !== undefined;
 			el.addClass('tasklines-group');
+			el.toggleClass('tasklines-subgroup', sub);
 			el.setAttr('role', 'row');
-			el.createSpan({ cls: 'tasklines-group-label', text: item.label || '(none)', attr: { role: 'rowheader' } });
+			const label = item.label || '(none)';
+			const head = el.createSpan({ cls: 'tasklines-group-label', text: label, attr: { role: 'rowheader' } });
+			// Screen readers hear which group a subgroup belongs to; sighted users see the indent.
+			if (sub) head.createSpan({ cls: 'tasklines-sr-only', text: `, in ${item.parent || '(none)'}` });
 			el.createSpan({ cls: 'tasklines-group-summary', text: item.summary, attr: { role: 'cell' } });
-			if (input.selection?.active) drawGroupSelect(el, item.rows.map((r) => r.task), input.selection, item.label);
+			if (input.selection?.active) {
+				if (sub) drawGroupSelect(el, item.rows.map((r) => r.task), input.selection, `${label} in ${item.parent || '(none)'}`, `${item.parent}\n${item.label}`);
+				else drawGroupSelect(el, item.rows.map((r) => r.task), input.selection, item.label);
+			}
 			return;
 		}
 		renderRow(el, item.row, input);
@@ -153,6 +182,8 @@ function renderRow(el: HTMLElement, row: ViewRow, input: RenderInput): void {
 		if (c.editor && !selecting) makeEditable(cell, c, task, input);
 	}
 	for (const prop of input.columns) input.renderValue(el.createDiv({ cls: 'tasklines-prop', attr: { role: 'cell' } }), row.entry, prop);
+	const tint = input.tint?.(row);
+	drawTint(el, textCell, tint, !!tint && tintAlreadySaid(tint, { view: 'list', priorityColumn: input.taskColumns.some((c) => c.key === 'priority') }));
 }
 
 /** Click (or Enter) on the cell swaps in an input. Dropdowns save on change; dates save on Enter or blur. Escape cancels. */

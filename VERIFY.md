@@ -265,6 +265,23 @@ Run on 2026-11-21 on the Mac (Obsidian 1.15.1) with real key events and Chromium
 - [x] **Ticking without a redraw, on Android** (emulator, agenda): with Overdue selected, unticking Fix gate showed the dash at once, ticking it again showed the full tick, and the group checkbox then unselected all four.
 - [x] **Ticking without a redraw, on iPhone** (iCloud vault, Obsidian quit and reopened to load the build): ticking "home" then unticking Fix gate showed the dash with 5 selected, ticking it again showed the full tick with 6, and the group checkbox then unselected all.
 
+## Two-level grouping and Color
+
+Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) over the DevTools protocol, in the dark and light themes and with `app.emulateMobile(true)` in a 390 px window, using the test vault's views set to: Open tasks (base grouping then note, Color: Priority), All tasks by section (note then section, Color: Note property `owner`), the status board (Color: Due date), the agenda (Color: Note property `area`) and the month (Color: Priority). The `.base` files were put back afterwards.
+
+- [x] **Grouping:** second-level headings sit under their group, indented and lighter, each with its own counts. In select mode every group and subgroup checkbox is at the same x as the task boxes (368 px on desktop, 24 px on the phone). Their names say where they are ("Select all in Edge cases in Alpha"), their focus keys include the parent group (so "Today" under two groups can't collide), and screen readers hear ", in Alpha" after a subgroup's name.
+- [x] **Toolbar:** **then by** appears next to **Group** only while there is a grouping, and offers every key except the current group. On the phone it wraps next to **Reset** in the folded toolbar.
+- [x] **Color:** tinted rows, cards and chips have the expected tone, a 3 px bar and a faint wash, in both themes; checkboxes don't move. Hover and selection still show. Words for screen readers are added once: "(due today)" on a status board card, but no second "(overdue)" where the card already says it.
+- Found and fixed while checking:
+  - Coloring by note property hashed "work" to red, which reads as overdue (the calendar outlines overdue tasks in red). Property values now use every theme colour but red.
+  - Choosing **No grouping** hid **then by** but kept a saved second level, which would still have grouped the list with nothing on screen to explain it. No grouping now means none, and choosing it clears the second level.
+- **Independent code review** (a separate reviewer given the diff, not these notes) found no serious bugs and confirmed rows are never lost or doubled, old `.base` files load, and the board and calendar stay one level. Fixed from it:
+  - Changing **Group** to the key already chosen in **then by** left that hidden level saved and counted on the phone's toolbar button, so it could come back later. It's now cleared, and never counted.
+  - Whether a card already said its tint was decided by matching words, so a property value such as "high priority" was wrongly silenced. Each tint now carries its kind, and one pure rule (`tintAlreadySaid`) decides for the list, board and calendar.
+  - The list read the priority twice when the Priority column was shown. Re-checked in the app: the words are now left off when that column shows them.
+  - A due date that doesn't exist (`2026-02-30`) was tinted as overdue; it isn't tinted now.
+- Tests: `tests/grouping.test.ts` (both levels with every key, tags in several subgroups, base order, sections, filters before grouping, the same key twice, no grouping, a base without groups at either level, rows never lost or doubled across levels, saved and hand-edited queries, tags as the first level, the toolbar count) and `tests/tint.test.ts` (each mode, both task formats, finished tasks, dates that don't exist, missing or blank values, stable property colours that never use red, invalid modes, and when each place already says a tint). 758 tests pass.
+
 ## Bulk actions on a large vault
 
 Run on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol) in `perf-vault` (`npm run bench`'s synthetic vault: 5,003 notes, 10,511 tasks), with a temporary board and calendar base. Times run from the action until the view had been still for 150 ms; "blocked" is the longest stretch the main thread was busy (long tasks over 50 ms). The vault was backed up first and was byte for byte as before at the end (checksum of every note).
