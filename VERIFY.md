@@ -547,4 +547,10 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS), using `test-vault/`. Clicks we
   - Card menus grey out the card's own box. Fix gate → Delegate removed `⏫` (the board followed the card), and **Undo** put it back. Dataview style → Delegate wrote `[due:: <today>]`, and **Undo** put the old date back.
   - Refused with notices, nothing changed: Confirm catering → Schedule ("Move it to Later or Do first, then here.") and Recurring: water plants → Later ("A recurring task needs its due date.").
   - Afterwards the device's notes were byte for byte as before. Found on the way: the device's three `.base` files were empty, from the 1.4.1 restore. They were put back from `test-vault/`, and the whole device vault now matches it.
-- [ ] Not covered: drag and drop on this board with a mouse (the same code as the other boards), iPhone, and themes.
+- [x] **iPhone** (2026-11-22, iPhone Mirroring, Obsidian for iOS, iCloud vault):
+  - The first launch still had the old `main.js` (no menu item): iCloud delivered it about a minute later, and the next launch had it.
+  - Long-pressing `Projects` shows **New task base** right after **New base**. It created `Projects tasks.base`, the same bytes `folderBaseContent` writes, and opened it with the notice.
+  - Fix gate → Schedule removed its date (the overdue count went from 4 to 3), and **Undo** put it back.
+  - Draft spec → Delegate was refused: "Move it to Do first or Later, then here."
+  - Afterwards the notes matched the backup byte for byte, the test base was deleted, and the iCloud vault matches `test-vault/`.
+- [ ] Not covered: drag and drop on this board with a mouse (the same code as the other boards), and themes.
