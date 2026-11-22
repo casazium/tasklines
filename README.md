@@ -2,9 +2,9 @@
 
 **Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects, a task board with the same tasks as cards, and a task calendar. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
 
-![Tasks from several notes in a Tasklines view, grouped by area, with the notes' properties as columns](docs/screenshots/overview.png)
+![Tasks from several notes in a Tasklines view, grouped by area and then by section, with overdue tasks tinted red and the notes' properties as columns](docs/screenshots/overview.png)
 
-![A ticked task and a due date being edited in place](docs/screenshots/editing.png)
+![A due date being edited in place, in a view grouped by owner](docs/screenshots/editing.png)
 
 Please report problems on the [issue tracker](https://github.com/casazium/tasklines/issues).
 
@@ -18,7 +18,7 @@ Please report problems on the [issue tracker](https://github.com/casazium/taskli
 
 Requires Obsidian 1.13 or newer with the **Bases** core plugin turned on. Works on desktop and mobile. On Obsidian 1.10 to 1.12, Obsidian offers version 1.0.2, the last release that supports them.
 
-<img src="docs/screenshots/mobile.png" alt="The Tasklines view on a phone, with taller rows and the toolbar folded" width="270">
+<img src="docs/screenshots/mobile.png" alt="The Tasklines view on a phone, grouped by due bucket and then by note, coloured by owner, with the toolbar folded" width="270">
 
 ## Quick start
 
@@ -69,7 +69,7 @@ views:
 
 Add a view with the **Task board** layout to see the same tasks as cards in columns.
 
-![The task board with To do, In progress, Done and Cancelled columns; overdue dates in red](docs/screenshots/board.png) In the view's config menu, **Columns** picks the field: **Status**, **Priority** or **Due date**. The task toolbar filters and sorts the cards, and sorting applies within each column.
+![The task board with To do, In progress, Done and Cancelled columns; overdue cards tinted red and today's orange](docs/screenshots/board.png) In the view's config menu, **Columns** picks the field: **Status**, **Priority** or **Due date**. The task toolbar filters and sorts the cards, and sorting applies within each column.
 
 - **Move a card** by dragging it to another column, or with its **⋯** menu (on phones, and from the keyboard). A move is one ordinary change to that one line, with the same checks as everywhere else:
   - **Status:** To do, In progress, Done and Cancelled. Moving to Done adds the completion date. A recurring task moved to Done is completed through the Tasks plugin, so it gets its next occurrence.
@@ -120,7 +120,7 @@ views:
 
 ## Changing several tasks at once
 
-![Select mode in the list: the action bar above the tasks, the "work" group fully selected, two of "home" selected with a dash on its checkbox, and the notice of the change just made with Undo](docs/screenshots/bulk.png)
+![Select mode in the list: the action bar above the tasks, the "work" group and its sections fully selected, two of "home" selected with a dash on its checkboxes, and the notice of the change just made with Undo](docs/screenshots/bulk.png)
 
 Press **Select** in the task toolbar of any Tasklines view (list, board or calendar); it stays highlighted while select mode is on, and pressing it again (or **Done**, or Escape) leaves. Each task's checkbox becomes a selection box, and tapping a task selects it too. To select several at once:
 

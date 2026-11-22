@@ -327,6 +327,18 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) with `app.emulateMobile(true)` 
 - [x] **Fixed:** on touch devices the bar takes the page's background. Measured: light, bar 255 and buttons 246; dark, bar 0 and buttons 52. The buttons now sit on the bar as the toolbar's controls sit on the page. Desktop is unchanged.
 - [x] **Themes:** the phone pass of the theme check (five themes, light and dark, four views) still gives two rows of 44 px controls, nothing overflowing and every group checkbox lined up; the buttons stand out from the bar in each.
 
+## Release 1.4.0
+
+Full test pass on 2026-11-22 for the batch #51–#55 (select-mode polish, the phone bar, two-level grouping and Color), on `main` at `55d9125` plus the version bump and screenshots.
+
+- [x] **Automated:** build, 758 tests and lint (no warnings) pass.
+- [x] **Fuzz, large run:** `FUZZ_CASES=200000 FUZZ_SEED=7`: no failures (10 s).
+- [x] **Themes:** grouping and Color in the default theme, Minimal, AnuPpuccin, Things and Blue Topaz, light and dark, in the list (note then section, Color by owner), the status board (Color by due date), the agenda and the month (Color by priority), at desktop width and in phone emulation at 390 px: 160 combinations. Every group and subgroup checkbox lined up with the task boxes and every tint drew its bar; the screenshots were looked at.
+- [x] **Desktop:** ticking a task wrote `✅ <today>` on its line only; a board drag wrote `[/]` on its Dataview line; a bulk "one week later" on 4 agenda tasks and its Undo; and, with subgroups, ticking the "Edge cases" subgroup selected its 4 tasks (dash on "Alpha"), setting priority Low wrote 🔽 on each (outside the inline code) and Undo restored them. Only the intended lines changed, and the notes were put back.
+- [x] **Android** (emulator): the list, the board (card ⋯ menu move to In progress, scrolled into view, and Undo from the notice), a status edit from the cell's picker (`[/]` on a Dataview line) and New task (one line after the note's last task). The diff showed exactly those changes; the notes were put back.
+- [x] **iPhone, Windows:** not repeated. The iPhone was checked for #52, #54 and #55; nothing in this batch reads or writes files differently, which is when RELEASE.md asks for Windows.
+- [x] **Screenshots:** all README images retaken, and the listing images replaced with a set of exactly 5 desktop and 5 phone images (see RELEASE.md, Screenshots).
+
 ## Release 1.3.0
 
 Full test pass on 2026-11-21 for the batch #46–#49 (bulk actions and their follow-ups), on `main` at `fa12642` plus the version bump and screenshots.

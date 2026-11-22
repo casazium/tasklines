@@ -104,14 +104,24 @@ Status as of 0.9.9 (checked against the docs on 2026-11-20): ✅ done · ⬜ nee
 
 | File | Shows |
 | --- | --- |
-| `overview.png` | `Project tasks.base` → **Open tasks** in `test-vault/`: tasks grouped by `area` with note columns, the toolbar and the counts line |
-| `editing.png` | A ticked task and a **Due** cell being edited |
+| `overview.png` | `Project tasks.base` → **Open tasks** in `test-vault/`, set to **then by** Section, **Color** Due date and the Section column off: tasks grouped by `area` then section, overdue ones red, with note columns, the toolbar and the counts line |
+| `editing.png` | **Due soon by owner**: a **Due** cell being edited |
 | `new-task.png` | The **New task** window over the view |
 | `mobile.png` | The view on a phone (Android emulator), with taller rows and the folded toolbar |
-| `board.png` | `Task board.base` → **By status**: the four status columns |
-| `calendar.png` | `Task calendar.base` → **Calendar** (month on desktop), with the No date tray |
-| `bulk.png` | `Project tasks.base` → **Open tasks** in select mode: priority High set on Retro and Task inside a callout (the notice with Undo shows), then the "work" group and Fix gate and Dataview style selected. Undo the change afterwards |
+| `board.png` | `Task board.base` → **By status**, **Color** Due date: the four status columns, overdue cards red and today's orange |
+| `calendar.png` | `Task calendar.base` → **Calendar** (month on desktop), **Color** Priority, with the No date tray |
+| `bulk.png` | The `overview.png` view in select mode: priority High set on Retro and Task inside a callout (the notice with Undo shows), then the "work" group and Fix gate and Dataview style selected. Undo the change afterwards |
 
-`docs/listing/` holds the community directory's listing images: desktop at 1200×800 (dark theme, sidebar collapsed, window resized to 1200×800; the board at 92% zoom so its four columns fit), and phone at 900×1600 (the top 1080×1920 of an Android emulator screenshot, scaled). `desktop-6-bulk.png` is the `bulk.png` scene; `mobile-3-select.png` is `Task calendar.base` on the phone in select mode with Overdue and Sunday's day checkboxes ticked. Upload them on the plugin's page at community.obsidian.md.
+`docs/listing/` holds the community directory's listing images. **The plugin's page takes at most 5 desktop and 5 phone images**, so the folder holds exactly those ten, numbered in upload order; when a release needs a new one, choose which to drop rather than adding a sixth.
+
+- **Desktop**, 1200×800: dark theme, sidebar collapsed, window resized to 1200×800 (the board at 92% zoom so its four columns fit). `desktop-1-overview` and `desktop-5-bulk` are the `overview.png` and `bulk.png` scenes; `desktop-2-editing`, `desktop-3-board` and `desktop-4-calendar` are the `editing.png`, `board.png` and `calendar.png` scenes.
+- **Phone**, 900×1600: the top 1080×1920 of an Android emulator screenshot (light theme), scaled; `mobile-3-card-menu` uses the bottom 1920 instead, to show the menu sheet.
+  - `mobile-1-list`: **All tasks by section** set to To do and In progress, grouped by due bucket then note, **Color** Note property `owner`.
+  - `mobile-2-board`: **By status**, **Color** Due date.
+  - `mobile-3-card-menu`: the same board with a card's **⋯** menu open.
+  - `mobile-4-agenda`: **Agenda**, **Color** Priority.
+  - `mobile-5-select`: **Calendar** (the agenda on phones), **Color** Priority, in select mode with Overdue selected but one task and Today selected.
+
+Upload them on the plugin's page at community.obsidian.md, replacing the old set.
 
 To retake them: open `test-vault/` in light mode with the default theme, capture the window with `screencapture -x -o -l <window id>`, and resize with `sips -Z 1600`. Put back any notes you changed (`git checkout -- test-vault/`).
