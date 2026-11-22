@@ -22,6 +22,10 @@ Requires Obsidian 1.13 or newer with the **Bases** core plugin turned on. Works 
 
 ## Quick start
 
+**Fastest:** right-click a folder and choose **New task base**, or run **New task base for the current note's folder** from the command palette. Tasklines creates `<folder> tasks.base` inside the folder and opens it, with four views of the tasks in that folder and its subfolders: open tasks grouped by note, a status board, an urgent-and-important board and a calendar. It never replaces an existing file; a second one is numbered.
+
+**By hand:**
+
 1. Create a base (**New base**), or open an existing one.
 2. Use the base's **Filters** to pick the notes whose tasks you want, for example notes in your `Projects` folder.
 3. Add a view and choose **Tasklines** as its layout.
@@ -69,12 +73,16 @@ views:
 
 Add a view with the **Task board** layout to see the same tasks as cards in columns.
 
-![The task board with To do, In progress, Done and Cancelled columns; overdue cards tinted red and today's orange](docs/screenshots/board.png) In the view's config menu, **Columns** picks the field: **Status**, **Priority** or **Due date**. The task toolbar filters and sorts the cards, and sorting applies within each column.
+![The task board with To do, In progress, Done and Cancelled columns; overdue cards tinted red and today's orange](docs/screenshots/board.png) In the view's config menu, **Columns** picks the field: **Status**, **Priority**, **Due date** or **Urgent and important (Eisenhower)**. The task toolbar filters and sorts the cards, and sorting applies within each column.
 
 - **Move a card** by dragging it to another column, or with its **⋯** menu (on phones, and from the keyboard). A move is one ordinary change to that one line, with the same checks as everywhere else:
   - **Status:** To do, In progress, Done and Cancelled. Moving to Done adds the completion date. A recurring task moved to Done is completed through the Tasks plugin, so it gets its next occurrence.
   - **Priority:** one column per priority, including No priority.
   - **Due date:** dropping on **Today** or **Tomorrow** sets the due date, and **No due date** clears it. **Overdue**, **Next 7 days** and **Later** cover ranges of dates, so they show tasks but don't accept drops. Finished tasks with a past due date sit in their own column instead of Overdue.
+  - **Urgent and important:** four boxes, **Do first**, **Schedule**, **Delegate** and **Later**. *Urgent* means overdue or due by tomorrow, going by the due date only (not scheduled or start dates). *Important* means high or highest priority (⏫ or 🔺). Finished tasks sit in their own **Finished** column. A move changes one thing:
+    - Into an urgent box, the due date becomes today, even if it was later. Out of one, the due date is removed. A recurring task keeps its date: moving it out is refused, so give it a later date in the list or the calendar instead.
+    - Into an important box, the priority becomes high. Out of one, the priority is removed.
+    - A move that would change both (from Later straight to Do first, say) is refused with a notice naming the boxes to go through, so every move stays one edit you can undo. To move a finished task, reopen it first.
 - **Undo:** after a move, the notice has an **Undo** button that puts the line back exactly as it was (unless it has changed since). Completing a recurring task can't be undone this way, because it adds the next occurrence.
 - Custom statuses keep their place: a `[!]` task stays in To do. They aren't a drop target of their own, so moving it to another status replaces the custom status.
 - Long columns show 100 cards at a time, with a **Show more** button.

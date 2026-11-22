@@ -74,7 +74,7 @@ export function toneFor(value: string): Tone {
 /** Where a tint is drawn, and what that place already shows. */
 export type TintPlace =
 	| { view: 'list'; priorityColumn: boolean }
-	| { view: 'board'; field: 'status' | 'priority' | 'due' }
+	| { view: 'board'; field: 'status' | 'priority' | 'due' | 'eisenhower' }
 	| { view: 'calendar'; field: 'due' | 'scheduled' | 'start' };
 
 /**

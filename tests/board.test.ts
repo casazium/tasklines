@@ -1,7 +1,7 @@
 import { afterEach, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { BOARD_FIELDS, boardColumns, columnKey, moveFor, normalizeBoardField, type BoardColumn } from '../src/board.ts';
+import { BOARD_FIELDS, boardColumns, columnKey, isImportant, isUrgent, moveFor, normalizeBoardField, type BoardColumn } from '../src/board.ts';
 import type { EditOptions } from '../src/edit.ts';
 import type { IndexedTask } from '../src/extract.ts';
 import { configureStatuses, DEFAULT_STATUSES, parseStatusSetting, parseTaskLine } from '../src/parser.ts';
@@ -106,6 +106,15 @@ for (const f of [...fixtures, ...BOARD_LINES]) {
 					continue;
 				}
 				if (move.kind === 'blocked') {
+					if (field === 'eisenhower' && column.target?.field === 'eisenhower') {
+						// Blocked exactly when the task is finished, the move would need two edits, or it would
+						// remove a recurring task's due date.
+						const finished = columnKey(t, field, TODAY) === 'finished';
+						const diagonal = isUrgent(t, TODAY) !== column.target.urgent && isImportant(t) !== column.target.important;
+						const repeatLosesDate = !!t.recurrence && isUrgent(t, TODAY) && !column.target.urgent;
+						assert.ok(finished || diagonal || repeatLosesDate, `${where}: blocked without a reason`);
+						continue;
+					}
 					blocked.push(where);
 					continue;
 				}
@@ -171,6 +180,7 @@ const EXPECTED_REFUSED: string[] = [
 	'board: two priorities: priority → none',
 	'board: two priorities: priority → low',
 	'board: two priorities: priority → lowest',
+	'board: two priorities: eisenhower → later',
 ];
 // A cancelled recurring task cannot be completed without reopening it first.
 const EXPECTED_BLOCKED: string[] = ['board: cancelled recurring: status → done'];
@@ -224,4 +234,130 @@ test('due board: range columns appear only when they have tasks', () => {
 test('moves resolve dates on the day they happen, across a month end', () => {
 	const tomorrow = col(boardColumns([], 'due', TODAY), 'tomorrow');
 	assert.deepEqual(moveFor(task('- [ ] a'), tomorrow, '2026-12-31'), { kind: 'edit', edit: { kind: 'date', field: 'due', value: '2027-01-01' } });
+});
+
+// The Eisenhower board: urgent is overdue or due by tomorrow, important is high or highest priority.
+const quadrant = (line: string, today = TODAY) => columnKey(task(line), 'eisenhower', today);
+
+test('eisenhower: each task lands in the box its due date and priority say', () => {
+	assert.equal(quadrant('- [ ] a ⏫ 📅 2026-11-20'), 'do');
+	assert.equal(quadrant('- [ ] a 🔺 📅 2026-11-01'), 'do', 'overdue counts as urgent');
+	assert.equal(quadrant('- [/] a ⏫ 📅 2026-11-21'), 'do', 'tomorrow is urgent; in progress is open');
+	assert.equal(quadrant('- [ ] a ⏫ 📅 2026-11-22'), 'schedule', 'the day after tomorrow is not urgent');
+	assert.equal(quadrant('- [ ] a 🔺'), 'schedule', 'no due date is not urgent');
+	assert.equal(quadrant('- [ ] a 🔼 📅 2026-11-20'), 'delegate', 'medium is not important');
+	assert.equal(quadrant('- [ ] a [due:: 2026-11-19]'), 'delegate', 'Dataview fields count');
+	assert.equal(quadrant('- [ ] a [priority:: high] [due:: 2026-11-19]'), 'do');
+	assert.equal(quadrant('- [ ] a 🔽 📅 2026-12-01'), 'later');
+	assert.equal(quadrant('- [ ] a'), 'later');
+	assert.equal(quadrant('- [x] a ⏫ 📅 2026-11-19'), 'finished');
+	assert.equal(quadrant('- [-] a ⏫ 📅 2026-11-19'), 'finished');
+	assert.equal(quadrant('- [!] a ⏫ 📅 2026-11-19'), 'do', 'a custom open status is open');
+});
+
+test('eisenhower: four boxes always shown, Finished only when it has tasks', () => {
+	assert.deepEqual(boardColumns([], 'eisenhower', TODAY).map((c) => c.key), ['do', 'schedule', 'delegate', 'later']);
+	const cols = boardColumns([row('- [x] a', 0), row('- [ ] b ⏫', 1)], 'eisenhower', TODAY);
+	assert.deepEqual(cols.map((c) => [c.key, c.rows.length]), [['do', 0], ['schedule', 1], ['delegate', 0], ['later', 0], ['finished', 1]]);
+	assert.equal(col(cols, 'finished').target, null);
+	assert.ok(cols.every((c) => c.note), 'each box says what it means');
+});
+
+test('eisenhower: a move changes one field — due today or none, priority high or none', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	assert.deepEqual(moveFor(task('- [ ] a ⏫'), col(cols, 'do'), TODAY), { kind: 'edit', edit: { kind: 'date', field: 'due', value: TODAY } });
+	assert.deepEqual(moveFor(task('- [ ] a ⏫ 📅 2026-11-01'), col(cols, 'schedule'), TODAY), { kind: 'edit', edit: { kind: 'date', field: 'due', value: null } });
+	assert.deepEqual(moveFor(task('- [ ] a 📅 2026-11-20'), col(cols, 'do'), TODAY), { kind: 'edit', edit: { kind: 'priority', value: 'high' } });
+	assert.deepEqual(moveFor(task('- [ ] a 🔺 📅 2026-11-20'), col(cols, 'delegate'), TODAY), { kind: 'edit', edit: { kind: 'priority', value: 'none' } });
+	assert.deepEqual(moveFor(task('- [ ] a 🔽'), col(cols, 'schedule'), TODAY), { kind: 'edit', edit: { kind: 'priority', value: 'high' } });
+});
+
+test('eisenhower: no move when already there, even if the exact fields differ', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	assert.equal(moveFor(task('- [ ] a 🔺 📅 2026-11-21'), col(cols, 'do'), TODAY), null, 'highest and tomorrow are already urgent and important');
+	assert.equal(moveFor(task('- [ ] a 🔽 📅 2026-12-25'), col(cols, 'later'), TODAY), null, 'a later date and low priority stay');
+});
+
+test('eisenhower: refuses diagonal moves and finished tasks, and says why', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	const diag = moveFor(task('- [ ] a'), col(cols, 'do'), TODAY);
+	assert.equal(diag?.kind, 'blocked');
+	assert.match(diag?.kind === 'blocked' ? diag.reason : '', /Move it to Delegate or Schedule, then here\./);
+	const back = moveFor(task('- [ ] a ⏫ 📅 2026-11-20'), col(cols, 'later'), TODAY);
+	assert.match(back?.kind === 'blocked' ? back.reason : '', /Move it to Schedule or Delegate, then here\./);
+	const done = moveFor(task('- [x] a ⏫'), col(cols, 'later'), TODAY);
+	assert.equal(done?.kind, 'blocked');
+	assert.match(done?.kind === 'blocked' ? done.reason : '', /Reopen/);
+});
+
+test('eisenhower: urgency follows the day of the move', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	assert.equal(quadrant('- [ ] a ⏫ 📅 2026-11-22', '2026-11-21'), 'do');
+	assert.deepEqual(moveFor(task('- [ ] a ⏫'), col(cols, 'do'), '2026-12-01'), { kind: 'edit', edit: { kind: 'date', field: 'due', value: '2026-12-01' } });
+});
+
+test('eisenhower: the refusal names both ways round, for every diagonal pair', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	const cases: Array<[string, string, string]> = [
+		['- [ ] a', 'do', 'Delegate or Schedule'],
+		['- [ ] a ⏫ 📅 2026-11-20', 'later', 'Schedule or Delegate'],
+		['- [ ] a ⏫', 'delegate', 'Do first or Later'],
+		['- [ ] a 📅 2026-11-20', 'schedule', 'Later or Do first'],
+	];
+	for (const [line, to, via] of cases) {
+		const m = moveFor(task(line), col(cols, to), TODAY);
+		assert.equal(m?.kind, 'blocked', `${line} → ${to}`);
+		const reason = m?.kind === 'blocked' ? m.reason : '';
+		assert.ok(reason.includes(`Move it to ${via}, then here.`), reason);
+		assert.ok(!/first first/.test(reason), reason);
+	}
+});
+
+test('eisenhower: a recurring task keeps its due date', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	for (const line of ['- [ ] Pay rent ⏫ 🔁 every month 📅 2026-11-19', '- [ ] Pay rent [priority:: high] [repeat:: every month] [due:: 2026-11-19]']) {
+		const m = moveFor(task(line), col(cols, 'schedule'), TODAY);
+		assert.equal(m?.kind, 'blocked', line);
+		assert.match(m?.kind === 'blocked' ? m.reason : '', /recurring task needs its due date/);
+	}
+	// Other moves of a recurring task are fine: they keep a date.
+	assert.deepEqual(moveFor(task('- [ ] r 🔁 every week 📅 2026-12-01'), col(cols, 'delegate'), TODAY), { kind: 'edit', edit: { kind: 'date', field: 'due', value: TODAY } });
+	assert.deepEqual(moveFor(task('- [ ] r ⏫ 🔁 every week 📅 2026-11-20'), col(cols, 'delegate'), TODAY), { kind: 'edit', edit: { kind: 'priority', value: 'none' } });
+});
+
+test('eisenhower: the exact lines written, in each line\'s own format', () => {
+	const cols = boardColumns([], 'eisenhower', TODAY);
+	const write = (line: string, to: string) => {
+		const m = moveFor(task(line), col(cols, to), TODAY);
+		assert.equal(m?.kind, 'edit', `${line} → ${to}`);
+		const r = editInContent(line, { line: 0, raw: line }, m?.kind === 'edit' ? m.edit : { kind: 'priority', value: 'none' }, OPTS);
+		assert.ok(r.ok, `${line} → ${to}`);
+		return r.ok ? r.content : '';
+	};
+	assert.equal(write('- [ ] a ⏫ 📅 2026-12-30', 'do'), '- [ ] a ⏫ 📅 2026-11-20', 'a later deadline becomes today');
+	assert.equal(write('- [ ] a [priority:: high] [due:: 2026-12-30]', 'do'), '- [ ] a [priority:: high] [due:: 2026-11-20]');
+	assert.equal(write('- [ ] a [priority:: high] [due:: 2026-11-20] tail', 'delegate'), '- [ ] a [due:: 2026-11-20] tail', 'the Dataview field goes, the text stays');
+	assert.equal(write('- [ ] a 🔼 📅 2026-11-19', 'later'), '- [ ] a 🔼', 'not urgent removes the date; medium stays');
+	assert.equal(write('- [ ] a 🔽', 'schedule'), '- [ ] a ⏫', 'low becomes high');
+	assert.equal(write('- [ ] a `📅 2026-01-01` ⏫', 'do'), '- [ ] a `📅 2026-01-01` ⏫ 📅 2026-11-20', 'inline code untouched');
+});
+
+test('eisenhower: urgency across a month and year end, and only the due date counts', () => {
+	assert.equal(quadrant('- [ ] a 📅 2027-01-01', '2026-12-31'), 'delegate');
+	assert.equal(quadrant('- [ ] a 📅 2027-01-02', '2026-12-31'), 'later');
+	assert.equal(quadrant('- [ ] a ⏫ ⏳ 2026-11-19'), 'schedule', 'a scheduled date is not a deadline');
+	assert.equal(quadrant('- [ ] a ⏫ 🛫 2026-11-19'), 'schedule', 'nor is a start date');
+	assert.equal(quadrant('- [ ] a [due:: 2026-11-21T10:00]'), 'delegate', 'a date with a time');
+});
+
+test('eisenhower: the field name round-trips and odd values fall back', () => {
+	assert.equal(normalizeBoardField('eisenhower'), 'eisenhower');
+	assert.equal(normalizeBoardField('Eisenhower'), 'status');
+	assert.equal(normalizeBoardField('matrix'), 'status');
+});
+
+test('eisenhower: a custom finished status goes to Finished and cannot be moved', () => {
+	useStatuses(' | To do | todo\nd | Delegated | done\nx | Done | done\n- | Cancelled | cancelled');
+	assert.equal(quadrant('- [d] handed over ⏫ 📅 2026-11-20'), 'finished');
+	assert.equal(moveFor(task('- [d] handed over ⏫ 📅 2026-11-20'), col(boardColumns([], 'eisenhower', TODAY), 'later'), TODAY)?.kind, 'blocked');
 });

@@ -528,3 +528,17 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
   - The first attempts heard nothing, because VoiceOver's Quick Start window, which opens the first time VoiceOver is switched on, kept VoiceOver's attention.
 - [ ] Not covered: hearing VoiceOver read a move and the column headings, and NVDA on Windows.
 - Known limit: **Undo** lives in Obsidian's notice, which keyboard and screen-reader users can't easily reach before it closes after 8 seconds. Undo is a convenience: a move can always be made again in the other direction.
+
+## Urgent-and-important board and New task base
+
+Checked on 2026-11-22 in Obsidian 1.15.1 (macOS), using `test-vault/`. Clicks were sent as real input events through the developer tools protocol, with native menus turned off for the test (then back to the default).
+
+- [x] **New task base** (command, with `Projects/Alpha.md` open) created `Projects/Projects tasks.base`, opened it, and showed a notice. Its four views render: Open tasks (grouped by note), Board, Urgent and important, Calendar.
+- [x] The folder's right-click menu has **New task base** right after **New base**. Choosing it again created `Projects tasks 2.base`, not a replacement. The vault root's menu has it too.
+- [x] A folder named `Café & Co's ü/Sub folder`: the base listed only that folder's two tasks. Obsidian won't create folders with `"`, `:` or `#`, so the unit tests parse the YAML for those names instead.
+- [x] Urgent and important board on the test vault: Do first (Fix gate: ⏫, overdue), Schedule (Draft spec: high, no date), Delegate (Confirm catering due today, three overdue recurring tasks), Later (eight). Each box shows its meaning under the title.
+- [x] Card menu on Draft spec: "Move to Schedule" disabled, the others enabled. **Move to Do first** added `[due:: <today>]` in the line's Dataview style. **Undo** put the line back.
+- [x] Refused with a notice, the note unchanged:
+  - Write announcement (Later) → Do first: "Move it to Schedule or Delegate, then here."
+  - Recurring: water plants (Delegate) → Later: "A recurring task needs its due date."
+- [ ] Not covered: drag and drop on this board (the same code as the other boards), phones, and themes.
