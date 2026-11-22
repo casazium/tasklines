@@ -575,4 +575,10 @@ Checked on 2026-11-22 in Obsidian 1.15.1, with `test-vault/Task board.base` → 
   - ⋯ menu move of Fix gate to Schedule: focus followed the card into Schedule and stayed visible. **Undo** restored the line.
 - [x] **Hidden tab:** switching to another tab and back kept the grid and a box's scroll position. The axis labels are `aria-hidden`.
 - [x] **Android** (emulator): portrait keeps swipeable columns, and so does landscape, where the board is about 200 px tall. The device vault was unchanged afterwards.
-- [ ] Not covered: an iPad (no device), a popout window, an embedded base in a note, and Windows classic scrollbars at the threshold.
+- [x] **Windows** (same day, hypatia over SSH and the developer tools protocol, Obsidian 1.15.1, a 1,024 × 767 window):
+  - Grid at board widths 756 and 1,056 px. Columns when the board was under 400 px tall, which happens sooner here because the toolbar wraps.
+  - Scrollbars are 12 px wide and appear only on the boxes that are full.
+  - Shrinking the width a few pixels at a time (with a tall view, so only width changed): the grid held down to a 589 px board and switched to columns at 586. Widening, it stayed columns until 612 and then switched back. That's exactly one flip each way, and none in 3 seconds held still near the threshold.
+  - The box counts are grey (`rgb(92, 92, 92)`). They look coloured in screenshots only because of ClearType.
+  - Afterwards the test folder was removed, Obsidian stopped, and `obsidian.json` restored.
+- [ ] Not covered: an iPad (no device), a popout window, and an embedded base in a note.
