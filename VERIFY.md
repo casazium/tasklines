@@ -327,6 +327,16 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) with `app.emulateMobile(true)` 
 - [x] **Fixed:** on touch devices the bar takes the page's background. Measured: light, bar 255 and buttons 246; dark, bar 0 and buttons 52. The buttons now sit on the bar as the toolbar's controls sit on the page. Desktop is unchanged.
 - [x] **Themes:** the phone pass of the theme check (five themes, light and dark, four views) still gives two rows of 44 px controls, nothing overflowing and every group checkbox lined up; the buttons stand out from the bar in each.
 
+## Release 1.4.1
+
+Test pass on 2026-11-22 for the batch #57–#60 (the directory review's two CSS warnings, the manifest description and the Discussions links), on `main` at `79ab43c` plus the version bump. Only CSS, the manifest's description and docs changed since 1.4.0.
+
+- [x] **Automated:** build, 758 tests and lint (no warnings) pass. **Fuzz, large run** (`FUZZ_CASES=200000 FUZZ_SEED=7`): no failures (9 s).
+- [x] **Desktop:** screen-reader text is 1×1 px, clipped, and still read ("To do 13 tasks"); the select bar keeps 16 px between groups and 4 px between rows; the quick pass (tick, board drag, a bulk change on 4 tasks and its Undo) changed only the intended lines, which were put back.
+- [x] **Android** (emulator): the phone bar is still two rows with its own spacing, nothing overflows. The device's board and calendar bases still had the Color settings from the 1.4.0 screenshots (an earlier restore compared notes but not `.base` files); they now match `test-vault/` exactly. Compare `.base` files too when restoring.
+- [x] **iPhone, Windows:** not needed. No code changed; the two CSS rules use properties every engine supports.
+- [x] **Screenshots:** unchanged; nothing visible changed.
+
 ## Community directory review of 1.4.0
 
 The directory's automated review reported two browser-feature warnings and one disclosure (2026-11-22). None blocks installing.
