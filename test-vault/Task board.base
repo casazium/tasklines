@@ -20,3 +20,10 @@ views:
   - type: tasklines-board
     name: By priority
     boardField: priority
+  - type: tasklines-board
+    name: Urgent and important
+    boardField: eisenhower
+    taskQuery:
+      statuses:
+        - todo
+        - in-progress

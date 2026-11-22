@@ -528,3 +528,35 @@ Checked on 2026-11-21 in Obsidian 1.15.1 (macOS), with the Tasks plugin enabled,
   - The first attempts heard nothing, because VoiceOver's Quick Start window, which opens the first time VoiceOver is switched on, kept VoiceOver's attention.
 - [ ] Not covered: hearing VoiceOver read a move and the column headings, and NVDA on Windows.
 - Known limit: **Undo** lives in Obsidian's notice, which keyboard and screen-reader users can't easily reach before it closes after 8 seconds. Undo is a convenience: a move can always be made again in the other direction.
+
+## Urgent-and-important board and New task base
+
+Checked on 2026-11-22 in Obsidian 1.15.1 (macOS), using `test-vault/`. Clicks were sent as real input events through the developer tools protocol, with native menus turned off for the test (then back to the default).
+
+- [x] **New task base** (command, with `Projects/Alpha.md` open) created `Projects/Projects tasks.base`, opened it, and showed a notice. Its four views render: Open tasks (grouped by note), Board, Urgent and important, Calendar.
+- [x] The folder's right-click menu has **New task base** right after **New base**. Choosing it again created `Projects tasks 2.base`, not a replacement. The vault root's menu has it too.
+- [x] A folder named `Café & Co's ü/Sub folder`: the base listed only that folder's two tasks. Obsidian won't create folders with `"`, `:` or `#`, so the unit tests parse the YAML for those names instead.
+- [x] Urgent and important board on the test vault: Do first (Fix gate: ⏫, overdue), Schedule (Draft spec: high, no date), Delegate (Confirm catering due today, three overdue recurring tasks), Later (eight). Each box shows its meaning under the title.
+- [x] Card menu on Draft spec: "Move to Schedule" disabled, the others enabled. **Move to Do first** added `[due:: <today>]` in the line's Dataview style. **Undo** put the line back.
+- [x] Refused with a notice, the note unchanged:
+  - Write announcement (Later) → Do first: "Move it to Schedule or Delegate, then here."
+  - Recurring: water plants (Delegate) → Later: "A recurring task needs its due date."
+- [x] **Android** (2026-11-22, emulator, API 37, Obsidian 1.15.1):
+  - Long-pressing `Projects` in the file list shows **New task base** with its icon, right after **New base**. It created `Projects tasks.base`, byte for byte what `folderBaseContent` writes, and opened it with the notice.
+  - The Urgent and important view shows one box per screen, with the next peeking in. A swipe snapped to the next box.
+  - Card menus grey out the card's own box. Fix gate → Delegate removed `⏫` (the board followed the card), and **Undo** put it back. Dataview style → Delegate wrote `[due:: <today>]`, and **Undo** put the old date back.
+  - Refused with notices, nothing changed: Confirm catering → Schedule ("Move it to Later or Do first, then here.") and Recurring: water plants → Later ("A recurring task needs its due date.").
+  - Afterwards the device's notes were byte for byte as before. Found on the way: the device's three `.base` files were empty, from the 1.4.1 restore. They were put back from `test-vault/`, and the whole device vault now matches it.
+- [x] **iPhone** (2026-11-22, iPhone Mirroring, Obsidian for iOS, iCloud vault):
+  - The first launch still had the old `main.js` (no menu item): iCloud delivered it about a minute later, and the next launch had it.
+  - Long-pressing `Projects` shows **New task base** right after **New base**. It created `Projects tasks.base`, the same bytes `folderBaseContent` writes, and opened it with the notice.
+  - Fix gate → Schedule removed its date (the overdue count went from 4 to 3), and **Undo** put it back.
+  - Draft spec → Delegate was refused: "Move it to Do first or Later, then here."
+  - Afterwards the notes matched the backup byte for byte, the test base was deleted, and the iCloud vault matches `test-vault/`.
+- [x] **Themes** (2026-11-22, Mac): default, Minimal, AnuPpuccin, Things and Blue Topaz, each light and dark, on `Task board.base` → Urgent and important.
+  - Every column is 272 px wide, and the titles, notes, cards, dates and priority marks follow each theme.
+  - Title contrast is 6.6:1 to 18.8:1. The notes under the titles use the theme's muted text, 3.3:1 (AnuPpuccin light) to 9.9:1, like the existing column notes and other muted text in Obsidian.
+- [x] **Drag and drop** (same day, drag events sent to the page):
+  - A card dropped on its own box isn't accepted (no highlight, no change).
+  - Draft spec dropped on Do first got `[due:: <today>]` and moved there. **Undo** restored the line.
+  - Write announcement dropped from Later on Do first: the box highlights (as for the other refused moves on the boards), then the drop is refused with the two-step notice, and the line is unchanged.
