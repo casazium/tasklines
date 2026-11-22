@@ -91,6 +91,30 @@ function buckets(field: BoardField): Bucket[] {
 	}
 }
 
+/**
+ * The room (CSS px, measured on the board itself) the Eisenhower board needs to be a 2×2 grid:
+ * two 272 px boxes side by side, and two rows of boxes tall enough to show a few cards each.
+ * Below it (phones, a phone held sideways, narrow or short panes) it stays swipeable columns.
+ */
+export const MATRIX_MIN_WIDTH = 600;
+export const MATRIX_MIN_HEIGHT = 400;
+/** Room on each side of the thresholds, so dragging a pane divider doesn't flip the layout back and forth. */
+export const MATRIX_SLACK = 12;
+
+export type BoardLayout = 'matrix' | 'columns';
+
+/**
+ * The Eisenhower board becomes a 2×2 grid when it has room; every other board is columns.
+ * `previous` is the layout shown now: a size of 0 (a hidden tab) keeps it, and so does a size
+ * within MATRIX_SLACK of a threshold.
+ */
+export function boardLayout(field: BoardField, width: number, height: number, previous: BoardLayout = 'columns'): BoardLayout {
+	if (field !== 'eisenhower') return 'columns';
+	if (width <= 0 || height <= 0) return previous;
+	const slack = previous === 'matrix' ? -MATRIX_SLACK : MATRIX_SLACK;
+	return width >= MATRIX_MIN_WIDTH + slack && height >= MATRIX_MIN_HEIGHT + slack ? 'matrix' : 'columns';
+}
+
 /** Urgent on the Eisenhower board: an open task that is overdue or due by tomorrow. */
 export function isUrgent(task: IndexedTask, today: string): boolean {
 	return isOpen(task) && !!task.due && task.due <= addDays(today, 1);

@@ -661,7 +661,7 @@ class TaskBoardView extends TaskViewBase {
 
 	onunload(): void {
 		super.onunload();
-		this.board.el.remove();
+		this.board.destroy();
 	}
 
 	protected onQueryChange(q: TaskQuery): void {

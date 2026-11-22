@@ -1,7 +1,7 @@
 // DOM rendering for the task board. Uses only types from Obsidian; the adapter passes in
 // callbacks for writing, opening notes and showing menus.
 
-import type { BoardColumn, BoardField, BoardMove } from './board.ts';
+import { boardLayout, type BoardColumn, type BoardField, type BoardLayout, type BoardMove } from './board.ts';
 import type { IndexedTask } from './extract.ts';
 import type { IndexStats } from './indexer.ts';
 import { statusKind } from './parser.ts';
@@ -63,11 +63,52 @@ export class TaskBoard {
 	private deferred = false;
 	/** After a move from the menu: keep keyboard focus on the card, or near where it was. */
 	private refocus: { key: string; from: string; index: number; until: number } | null = null;
+	/** The board's own size, so the Eisenhower board can be a grid when there is room. */
+	private size = { width: 0, height: 0 };
+	private layout: BoardLayout = 'columns';
+	private resize: ResizeObserver;
 
 	constructor(parent: HTMLElement, statsEl: HTMLElement) {
 		this.statsEl = statsEl;
 		this.el = parent.createDiv({ cls: 'tasklines-board' });
 		this.live = parent.createDiv({ cls: 'tasklines-sr-only', attr: { 'aria-live': 'polite', role: 'status' } });
+		// The border box includes any scrollbar, so a scrollbar can't flip the layout back. The
+		// observer comes from the board's own window, which is a popout window's when it is in one.
+		const Observer = (parent.win as Window & { ResizeObserver?: typeof ResizeObserver }).ResizeObserver ?? ResizeObserver;
+		this.resize = new Observer((entries: ResizeObserverEntry[]) => {
+			const box = entries[0]?.borderBoxSize?.[0];
+			const rect = box ? null : this.el.getBoundingClientRect();
+			this.size = { width: box?.inlineSize ?? rect?.width ?? 0, height: box?.blockSize ?? rect?.height ?? 0 };
+			this.applyLayout();
+		});
+		this.resize.observe(this.el);
+	}
+
+	destroy(): void {
+		this.resize.disconnect();
+		this.el.remove();
+	}
+
+	/** Grid or columns: a class only, so changing it needs no redraw and keeps focus and drags. */
+	private applyLayout(): void {
+		if (!this.input) return;
+		if (!this.size.width) {
+			const r = this.el.getBoundingClientRect();
+			this.size = { width: r.width, height: r.height };
+		}
+		const layout = boardLayout(this.input.field, this.size.width, this.size.height, this.layout);
+		// Only on a change: toggling the class from inside the observer on every report can loop.
+		if (layout === this.layout && this.el.hasClass('is-matrix') === (layout === 'matrix')) return;
+		this.layout = layout;
+		this.el.toggleClass('is-matrix', layout === 'matrix');
+	}
+
+	/** "Urgent / Not urgent" across the top and "Important / Not important" down the side; shown only in the grid. */
+	private drawAxes(): void {
+		for (const [axis, text] of [['urgent', 'Urgent'], ['not-urgent', 'Not urgent'], ['important', 'Important'], ['not-important', 'Not important']]) {
+			// Hidden from screen readers: each box's note already says what it means.
+			this.el.createDiv({ cls: `tasklines-axis tasklines-axis-${axis}`, text, attr: { 'aria-hidden': 'true' } });
+		}
 	}
 
 	resetLimits(): void {
@@ -116,19 +157,23 @@ export class TaskBoard {
 		const focusCard = inBoard ? focused.closest<HTMLElement>('.tasklines-card')?.dataset.key : undefined;
 		const focusKey = inBoard ? focused.closest<HTMLElement>('[data-focus-key]')?.dataset.focusKey : undefined;
 		const scrollLeft = boardEl.scrollLeft;
+		const scrollTop = boardEl.scrollTop;
 		const columnScroll = new Map<string, number>();
 		boardEl.querySelectorAll<HTMLElement>('.tasklines-column-cards').forEach((el) => {
 			if (el.dataset.column) columnScroll.set(el.dataset.column, el.scrollTop);
 		});
 
 		boardEl.empty();
+		this.applyLayout();
 		if (input.total === 0) {
 			boardEl.createDiv({ cls: 'tasklines-empty', text: 'No checkbox tasks in the notes this base selects.' });
 			return;
 		}
+		if (input.field === 'eisenhower') this.drawAxes();
 		for (const column of input.columns) this.drawColumn(column, input);
 
 		boardEl.scrollLeft = scrollLeft;
+		boardEl.scrollTop = scrollTop;
 		boardEl.querySelectorAll<HTMLElement>('.tasklines-column-cards').forEach((el) => {
 			const top = el.dataset.column ? columnScroll.get(el.dataset.column) : undefined;
 			if (top) el.scrollTop = top;
@@ -140,6 +185,7 @@ export class TaskBoard {
 		const n = column.rows.length;
 		const colEl = this.el.createDiv({ cls: 'tasklines-column' });
 		colEl.toggleClass('is-locked', column.target === null);
+		colEl.dataset.box = column.key;
 		const head = colEl.createDiv({ cls: 'tasklines-column-head', attr: { role: 'heading', 'aria-level': '3', tabindex: '-1' } });
 		head.dataset.column = column.key;
 		// The list is named by the title (aria-labelledby): Obsidian shows an aria-label as a
@@ -206,7 +252,8 @@ export class TaskBoard {
 				if (this.input) this.render(this.input);
 			});
 		}
-		if (n === 0) scroll.createDiv({ cls: 'tasklines-column-empty', text: column.target && !input.selection?.active ? 'Drop tasks here' : 'No tasks' });
+		// Phones move cards with the menu, so there is nothing to drop there.
+		if (n === 0) scroll.createDiv({ cls: 'tasklines-column-empty', text: column.target && !input.selection?.active && !input.touch ? 'Drop tasks here' : 'No tasks' });
 	}
 
 	private drawCard(parent: HTMLElement, row: ViewRow, input: BoardInput): HTMLElement {

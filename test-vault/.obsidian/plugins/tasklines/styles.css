@@ -184,6 +184,40 @@
 /* Phones: a sideways swipe settles on a whole column. */
 .tasklines-touch .tasklines-board { scroll-snap-type: x mandatory; scroll-padding-inline: var(--size-4-4); }
 .tasklines-touch .tasklines-card-menu { padding: 4px 10px; }
+/* The Eisenhower board with room for it: a 2×2 grid, urgent on the left and important on top,
+   with the axes labelled. The two rows share the board's height, so all four boxes stay in view
+   and a full box scrolls inside, like a column. Finished, when shown, spans the width below. */
+.tasklines-axis { display: none; }
+.tasklines-view .tasklines-board.is-matrix {
+	display: grid;
+	grid-template-columns: auto minmax(0, 1fr) minmax(0, 1fr);
+	grid-template-rows: auto minmax(14rem, 1fr) minmax(14rem, 1fr) auto;
+	grid-template-areas:
+		". urgent not-urgent"
+		"important do schedule"
+		"not-important delegate later"
+		". finished finished";
+	overflow-x: hidden;
+	overflow-y: auto;
+	scroll-snap-type: none;
+}
+.tasklines-board.is-matrix .tasklines-axis {
+	display: block;
+	color: var(--text-muted);
+	font-size: var(--font-ui-smaller);
+	text-align: center;
+}
+.tasklines-board.is-matrix .tasklines-axis-important,
+.tasklines-board.is-matrix .tasklines-axis-not-important { writing-mode: vertical-rl; transform: rotate(180deg); align-self: center; }
+.tasklines-board.is-matrix .tasklines-axis-urgent { grid-area: urgent; }
+.tasklines-board.is-matrix .tasklines-axis-not-urgent { grid-area: not-urgent; }
+.tasklines-board.is-matrix .tasklines-axis-important { grid-area: important; }
+.tasklines-board.is-matrix .tasklines-axis-not-important { grid-area: not-important; }
+.tasklines-board.is-matrix .tasklines-column[data-box="do"] { grid-area: do; }
+.tasklines-board.is-matrix .tasklines-column[data-box="schedule"] { grid-area: schedule; }
+.tasklines-board.is-matrix .tasklines-column[data-box="delegate"] { grid-area: delegate; }
+.tasklines-board.is-matrix .tasklines-column[data-box="later"] { grid-area: later; }
+.tasklines-board.is-matrix .tasklines-column[data-box="finished"] { grid-area: finished; max-height: 14rem; }
 /* Read by screen readers, not shown. Hidden with the rect() clip, which every engine Obsidian ships supports in full. */
 .tasklines-sr-only { position: absolute; width: 1px; height: 1px; margin: -1px; padding: 0; border: 0; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
