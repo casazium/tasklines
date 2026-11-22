@@ -6,7 +6,8 @@ import type { IndexedTask } from './extract.ts';
 import type { IndexStats } from './indexer.ts';
 import { statusKind } from './parser.ts';
 import { formatSummary, summarize } from './query.ts';
-import type { ViewRow } from './view.ts';
+import { tintAlreadySaid, type Tint } from './tint.ts';
+import { drawTint, type ViewRow } from './view.ts';
 import { drawGroupSelect, drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 /** Cards drawn per column before a "Show more" button; keeps huge columns cheap to draw. */
@@ -23,6 +24,8 @@ export interface MenuChoice {
 
 export interface BoardInput {
 	columns: BoardColumn<ViewRow>[];
+	/** The view's Color option: a tint for each task, or null. */
+	tint?: (row: ViewRow) => Tint | null;
 	/** Tasks before task-level filters, for the "N filtered out" count. */
 	total: number;
 	today: string;
@@ -279,6 +282,8 @@ export class TaskBoard {
 		const mark = PRIORITY_MARK[task.priority];
 		if (mark && input.field !== 'priority') meta.createSpan({ text: mark, attr: { role: 'img', 'aria-label': `${task.priority} priority`, title: `${task.priority} priority` } });
 		if (task.recurrence) meta.createSpan({ text: '🔁', attr: { role: 'img', title: `Repeats ${task.recurrence}`, 'aria-label': `Repeats ${task.recurrence}` } });
+		const tint = input.tint?.(row);
+		drawTint(card, top, tint, !!tint && tintAlreadySaid(tint, { view: 'board', field: input.field }));
 		return card;
 	}
 

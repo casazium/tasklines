@@ -36,6 +36,8 @@ export interface TaskQuery {
 	/** Applied in order; ties fall back to the base's note order, then position in the note. */
 	sort: SortKey[];
 	group: string;
+	/** A second level of grouping inside each group; 'none' for one level. */
+	subgroup: string;
 }
 
 export const DEFAULT_QUERY: TaskQuery = {
@@ -49,6 +51,7 @@ export const DEFAULT_QUERY: TaskQuery = {
 	doneWithinDays: null,
 	sort: [],
 	group: 'bases',
+	subgroup: 'none',
 };
 
 export interface QueryRow {
@@ -68,6 +71,8 @@ export interface RowGroup<R extends QueryRow = QueryRow> {
 	/** null: a single ungrouped list with no heading. */
 	label: string | null;
 	rows: R[];
+	/** Present when the query has a second level: the group's rows split again (a tag can put a row in several). */
+	subgroups?: RowGroup<R>[];
 }
 
 const SORT_KEY_SET = new Set<string>(TASK_SORT_KEYS);
@@ -96,6 +101,7 @@ export function normalizeQuery(raw: unknown): TaskQuery {
 			.slice(0, 3);
 	}
 	if (typeof r.group === 'string' && isValidKey(r.group, GROUP_KEY_SET)) q.group = r.group;
+	if (typeof r.subgroup === 'string' && isValidKey(r.subgroup, GROUP_KEY_SET)) q.subgroup = r.subgroup;
 	return q;
 }
 
@@ -275,21 +281,34 @@ export function applyQuery<R extends QueryRow>(rows: R[], q: TaskQuery, today: s
 		rows.filter((r) => matches(r, q, today)),
 		q.sort,
 	);
-	if (q.group === 'none') return [{ label: null, rows: sorted }];
+	const top = groupRows(sorted, q.group, today);
+	// "No grouping" means none at all: its toolbar has no second-level control to explain one.
+	if (q.group === 'none' || q.subgroup === 'none' || q.subgroup === q.group) return top;
+	// A base without groups as the first level: the second level takes its place.
+	if (top.length === 1 && top[0]?.label === null) return groupRows(top[0].rows, q.subgroup, today);
+	return top.map((g) => {
+		const subgroups = groupRows(g.rows, q.subgroup, today);
+		// The second level found nothing to split by (a base without groups): leave the group whole.
+		return subgroups.length === 1 && subgroups[0]?.label === null ? g : { ...g, subgroups };
+	});
+}
 
+/** One level of grouping. A single group with a null label means "not grouped". */
+function groupRows<R extends QueryRow>(sorted: R[], key: string, today: string): RowGroup<R>[] {
+	if (key === 'none') return [{ label: null, rows: sorted }];
 	const groups = new Map<string, { first: R; rows: R[] }>();
 	for (const r of sorted) {
-		for (const label of groupLabels(r, q.group, today)) {
+		for (const label of groupLabels(r, key, today)) {
 			const g = groups.get(label);
 			if (g) g.rows.push(r);
 			else groups.set(label, { first: r, rows: [r] });
 		}
 	}
 	// No base grouping configured: one unlabeled list.
-	if (q.group === 'bases' && groups.size <= 1 && (groups.has('') || groups.size === 0)) {
+	if (key === 'bases' && groups.size <= 1 && (groups.has('') || groups.size === 0)) {
 		return [{ label: null, rows: sorted }];
 	}
-	return groupOrder(q.group, groups).map((label) => ({ label, rows: groups.get(label)?.rows ?? [] }));
+	return groupOrder(key, groups).map((label) => ({ label, rows: groups.get(label)?.rows ?? [] }));
 }
 
 export interface Summary {
@@ -336,5 +355,6 @@ export function activeQueryCount(q: TaskQuery): number {
 		q.text.trim() !== '',
 		q.sort.length > 0,
 		q.group !== DEFAULT_QUERY.group,
+		q.group !== 'none' && q.subgroup !== DEFAULT_QUERY.subgroup && q.subgroup !== q.group,
 	].filter(Boolean).length;
 }

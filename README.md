@@ -52,11 +52,16 @@ views:
 - **Notes vs tasks:** the base's own filters, sort and **Group by** work on notes. The task toolbar works on tasks:
   - **Filter** by status, priority, due date (overdue, today, next 7 or 30 days, has or has no due date, or a date range), completion window (completed today, in the last 7 or 30 days), tags (`#area` also matches `#area/home`) and task text.
   - **Sort** by up to three keys, each ascending or descending: any task date, priority, status, text, note name, base order, or any note property. Tasks with no value always sort last.
-  - **Group** by the base's grouping, note, section (nearest heading), status, due bucket, priority, tag, or any note property.
+  - **Group** by the base's grouping, note, section (nearest heading), status, due bucket, priority, tag, or any note property. **then by** adds a second level inside each group, for example note then section, or due bucket then owner. Each second-level heading has its own counts, and in select mode its own checkbox. The board and the calendar use one level: their columns and days are the grouping.
 - **On phones** the toolbar folds into one **Filter, sort, group** button, which shows how many settings are active, next to **New task**, so the tasks keep the screen. Tap it to open the controls.
 - **Each view is a saved preset:** the toolbar's settings are stored in the `.base` file, so each view keeps its own. **Reset** clears them.
 - **Columns:** note properties come from the base's **Properties** menu. Task columns (status, dates, priority, recurrence, tags, section, line, note) and computed columns (Overdue, Days until due, Age, Subtasks done, Note progress) are switched on in the view's config menu, which also has **Show task toolbar** (turn it off for embedded bases).
 - **Counts:** group headers and the line above the table show open, overdue and done counts.
+- **Color** (in the view's config menu, in the list, the board and the calendar) tints tasks with a bar on their leading edge and a faint wash, in your theme's colours:
+  - **Due date:** overdue tasks red, tasks due today orange.
+  - **Priority:** highest red, high orange, medium yellow, low blue, lowest cyan.
+  - **Note property:** pick the property in **Color property**. Each value always gets the same colour (never red, which stays for overdue), so every task in a note shares its note's colour.
+  - Finished tasks aren't tinted by due date or priority. Colour is an extra cue, not the only one: screen readers hear it in words (for example "overdue" or "area: home"), and the same facts can be shown as columns.
 - **Open a task:** click its text to open the note at that line; Cmd/Ctrl-click opens a new tab.
 - **Large vaults:** only the rows on screen are drawn, and each note is read once and cached until it changes.
 

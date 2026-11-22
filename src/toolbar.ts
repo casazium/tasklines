@@ -102,7 +102,7 @@ export class TaskToolbar {
 		if (this.collapsible) {
 			// Compact header: one button for all controls, plus New task.
 			const header = this.el.createDiv({ cls: 'tasklines-toolbar-row tasklines-toolbar-header' });
-			const active = activeQueryCount(this.showGroup ? q : { ...q, group: DEFAULT_QUERY.group });
+			const active = activeQueryCount(this.showGroup ? q : { ...q, group: DEFAULT_QUERY.group, subgroup: DEFAULT_QUERY.subgroup });
 			const toggle = header.createEl('button', {
 				cls: `tasklines-btn tasklines-filter-toggle${active ? ' is-active' : ''}`,
 				text: `${this.expanded ? '▾' : '▸'} ${this.showGroup ? 'Filter, sort, group' : 'Filter, sort'}${active ? ` (${active})` : ''}`,
@@ -180,7 +180,16 @@ export class TaskToolbar {
 				...this.props.map((p): [string, string] => [`prop:${p.id}`, p.label]),
 			];
 			const group = this.select(groupWrap, 'Group tasks by', groupChoices, q.group);
-			group.addEventListener('change', () => this.set({ group: group.value }));
+			// A second level that the new group makes meaningless ("No grouping", or the same key) is cleared, so it can't come back unseen.
+			group.addEventListener('change', () => this.set(group.value === 'none' || group.value === q.subgroup ? { group: group.value, subgroup: 'none' } : { group: group.value }));
+			// A second level, inside each group. Hidden while there are no groups to split.
+			if (q.group !== 'none') {
+				const thenWrap = order.createSpan({ cls: 'tasklines-control' });
+				thenWrap.createSpan({ cls: 'tasklines-label', text: 'then by' });
+				const thenChoices: Array<[string, string]> = [['none', 'Nothing'], ...groupChoices.filter(([k]) => k !== 'none' && k !== q.group)];
+				const then = this.select(thenWrap, 'Then group by', thenChoices, q.subgroup === q.group ? 'none' : q.subgroup);
+				then.addEventListener('change', () => this.set({ subgroup: then.value }));
+			}
 		}
 
 		if (!this.collapsible) {
@@ -190,7 +199,7 @@ export class TaskToolbar {
 		}
 		const reset = order.createEl('button', { cls: 'tasklines-btn tasklines-reset', text: 'Reset' });
 		reset.addEventListener('click', () =>
-			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', doneWithinDays: null, sort: [], group: 'bases' }),
+			this.set({ statuses: [], priorities: [], due: 'any', dueFrom: '', dueTo: '', tags: [], text: '', doneWithinDays: null, sort: [], group: 'bases', subgroup: 'none' }),
 		);
 	}
 
