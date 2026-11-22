@@ -16,7 +16,7 @@ Please report problems on the [issue tracker](https://github.com/casazium/taskli
 
 **Manually:** download `main.js`, `manifest.json` and `styles.css` from a [release](https://github.com/casazium/tasklines/releases) into `<vault>/.obsidian/plugins/tasklines/`, then enable the plugin.
 
-Requires Obsidian 1.13 or newer with the **Bases** core plugin turned on. Works on desktop and mobile. On Obsidian 1.10 to 1.12, Obsidian offers version 1.0.2, the last release that supports them.
+Requires Obsidian 1.13 or newer with the **Bases** core plugin turned on. Works on desktop and mobile. On Obsidian 1.10 to 1.12 you'll get Tasklines 1.0.2, the last version that runs there: the list view only, without the task board, the calendar, bulk changes, Color or a second grouping level. Update Obsidian to get the current version.
 
 <img src="docs/screenshots/mobile.png" alt="The Tasklines view on a phone, grouped by due bucket and then by note, coloured by owner, with the toolbar folded" width="270">
 
