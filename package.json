@@ -1,7 +1,7 @@
 {
 	"name": "tasklines",
 	"version": "1.5.0",
-	"description": "Show inline checkbox tasks in Bases as a table, a board or a calendar, with each note’s properties as columns. Filter, sort, group, color, bulk-change, tick and edit tasks in place.",
+	"description": "Show inline checkbox tasks in Bases as a table, a board, an urgent-and-important matrix or a calendar, with each note’s properties as columns. Filter, sort, group, color, tick and edit tasks in place.",
 	"main": "main.js",
 	"type": "module",
 	"scripts": {
