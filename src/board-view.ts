@@ -103,7 +103,7 @@ export class TaskBoard {
 		this.statsEl.empty();
 		this.statsEl.createSpan({ cls: 'tasklines-summary', text: formatSummary(summarize(shown, input.today)) });
 		this.statsEl.createSpan({
-			text: `${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${input.notes.total} notes (${input.notes.total - input.notes.withTasks} without tasks) · ${s.ms.toFixed(0)} ms`,
+			text: `${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${input.notes.total} notes (${input.notes.total - input.notes.withTasks} without tasks) · ${s.ms.toFixed(0)}\u00a0ms`,
 		});
 
 		// Redrawing replaces every card: keep scroll positions and keyboard focus.

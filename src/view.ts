@@ -57,7 +57,7 @@ export function renderRows(statsEl: HTMLElement, list: VirtualList, input: Rende
 	statsEl.createSpan({
 		text:
 			`${hidden > 0 ? ` · ${hidden} filtered out` : ''} · ${input.notes.total} notes ` +
-			`(${input.notes.total - input.notes.withTasks} without tasks; ${s.filesRead} read, ${s.cacheHits} cached) · ${s.ms.toFixed(0)} ms`,
+			`(${input.notes.total - input.notes.withTasks} without tasks; ${s.filesRead} read, ${s.cacheHits} cached) · ${s.ms.toFixed(0)}\u00a0ms`,
 	});
 
 	const items: Item[] = [];

@@ -269,6 +269,16 @@ Run on 2026-11-21 on the Mac (Obsidian 1.15.1, DevTools protocol) in `perf-vault
 - [x] **Writing.** 312 tasks in 88 notes → Scheduled tomorrow: asked first ("Change 312 tasks in 88 notes?"), then 2.1 s; Undo 1.9 s. 2,001 tasks in 2,001 notes: 13.5 s, Undo 12.9 s, so about 6.7 ms a task at either size. The count updated every ~110 ms throughout, the main thread was never blocked for more than 56 ms (at the final redraw), and every line came back on Undo.
 - [x] **Cancel.** Pressed at "Working… 65 of 256": 66 written (the one in progress finished), 190 skipped as cancelled, 56 skipped as already Low. Undo put back all 66.
 
+## Select mode layout polish
+
+Checked on 2026-11-21 by measuring the bar and checkboxes on the Mac (DevTools protocol) and looking at the Android emulator.
+
+- [x] **One row of controls.** Before, the bar's buttons were 18 px tall and its menus 30 px; now every control is 30 px on the same line. On the phone, Date and More use the same text size and height as Complete.
+- [x] **Menus fit their labels.** They were 98–168 px wide (Copy 162 px, sized to its longest option); now 73–119 px. iOS sizes menus its own way, so there they're as before.
+- [x] **Group checkboxes line up.** They were 5 px left of the task boxes on the board and 9 px in the agenda; now they're at the same x in the list, board, agenda and the month view's No date tray, on desktop and on the phone.
+- [x] **"0 ms" stays together.** The stats line used to leave "ms" alone on a line on the phone; the number and unit now wrap as one.
+- [x] The README and listing images were retaken to match.
+
 ## Release 1.3.0
 
 Full test pass on 2026-11-21 for the batch #46–#49 (bulk actions and their follow-ups), on `main` at `fa12642` plus the version bump and screenshots.
