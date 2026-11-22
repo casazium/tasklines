@@ -278,6 +278,13 @@ Checked on 2026-11-21 by measuring the bar and checkboxes on the Mac (DevTools p
 - [x] **Group checkboxes line up.** They were 5 px left of the task boxes on the board and 9 px in the agenda; now they're at the same x in the list, board, agenda and the month view's No date tray, on desktop and on the phone.
 - [x] **"0 ms" stays together.** The stats line used to leave "ms" alone on a line on the phone; the number and unit now wrap as one.
 - [x] The README and listing images were retaken to match.
+- [x] **iPhone** (2026-11-22, Obsidian 1.15.1 on iOS 18.7, a 390 pt wide iPhone, through iPhone Mirroring). Sizes were read on the phone by a temporary probe plugin that wrote them to a file in the vault; it was removed afterwards.
+  - Every bar control is 44 px tall (Obsidian's touch height on iOS), Complete, Date and More alike.
+  - Group checkboxes sit at the same x as the task boxes in the list, the board (each column) and the agenda.
+  - Ticking a group selected its tasks, unticking one task showed the dash, and Complete on 2 tasks followed by Undo from the bar put both lines back. The notes were identical to the backup afterwards.
+  - Found and fixed: at iOS's taller button size the bar's top row (count, Select all, Undo, Done) needed 351 px and had 340, so Undo and Done wrapped and the bar became three rows. On phones the top row is now a grid that never wraps, the buttons in it have narrower padding, and the count shortens with an ellipsis if it must. Measured after the fix: two rows, with 33 px to spare at "14 selected", so a 375 pt iPhone fits too.
+  - The first look was misleading: iCloud brought the new `main.js` to the phone before the new `styles.css`, so the bar briefly drew with the 1.3.0 styles. Check the probe or the vault's file dates before judging a layout on iOS.
+  - Not rechecked on Android after the fix (wider screen, where the row already fit; same rules).
 
 ## Release 1.3.0
 
