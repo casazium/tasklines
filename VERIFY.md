@@ -275,6 +275,11 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) over the DevTools protocol, in 
 - Found and fixed while checking:
   - Coloring by note property hashed "work" to red, which reads as overdue (the calendar outlines overdue tasks in red). Property values now use every theme colour but red.
   - Choosing **No grouping** hid **then by** but kept a saved second level, which would still have grouped the list with nothing on screen to explain it. No grouping now means none, and choosing it clears the second level.
+- [x] **Android** (same day, emulator, Obsidian 1.15.1, with the same view settings pushed to the device):
+  - Note-then-section subgroups and the owner colour drew as on the Mac, and the folded toolbar shows **then by** next to **Reset**.
+  - Ticking the "Launch" subgroup's checkbox selected its 4 tasks and showed the dash on "Alpha" at once.
+  - Complete changed 3 (the fourth was already done) and **Undo** from the bar put all 3 back. The notes were identical afterwards, and the device's `.base` files were put back.
+  - The status board coloured overdue cards red and today's orange; the agenda coloured high orange and medium yellow.
 - **Independent code review** (a separate reviewer given the diff, not these notes) found no serious bugs and confirmed rows are never lost or doubled, old `.base` files load, and the board and calendar stay one level. Fixed from it:
   - Changing **Group** to the key already chosen in **then by** left that hidden level saved and counted on the phone's toolbar button, so it could come back later. It's now cleared, and never counted.
   - Whether a card already said its tint was decided by matching words, so a property value such as "high priority" was wrongly silenced. Each tint now carries its kind, and one pure rule (`tintAlreadySaid`) decides for the list, board and calendar.
