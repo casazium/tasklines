@@ -280,6 +280,12 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) over the DevTools protocol, in 
   - Ticking the "Launch" subgroup's checkbox selected its 4 tasks and showed the dash on "Alpha" at once.
   - Complete changed 3 (the fourth was already done) and **Undo** from the bar put all 3 back. The notes were identical afterwards, and the device's `.base` files were put back.
   - The status board coloured overdue cards red and today's orange; the agenda coloured high orange and medium yellow.
+- [x] **iPhone** (same day, Obsidian 1.15.1 on iOS 18.7 through iPhone Mirroring, the same view settings copied into the iCloud vault):
+  - Note-then-section subgroups are indented under their note, and the owner colour shows as a bar and wash, as on the Mac.
+  - Ticking the "Edge cases" subgroup selected its 4 tasks and showed the dash on "Alpha"; selected rows keep their bar.
+  - Complete on the 4 and **Undo** from the bar both worked; the notes were identical afterwards, and the vault's `.base` files were put back.
+  - The status board coloured overdue cards red and today's orange.
+  - As before, iCloud delivered the new `.base` file before the new `main.js`, so the first launch showed the old build. A second restart a minute later loaded it.
 - **Independent code review** (a separate reviewer given the diff, not these notes) found no serious bugs and confirmed rows are never lost or doubled, old `.base` files load, and the board and calendar stay one level. Fixed from it:
   - Changing **Group** to the key already chosen in **then by** left that hidden level saved and counted on the phone's toolbar button, so it could come back later. It's now cleared, and never counted.
   - Whether a card already said its tint was decided by matching words, so a property value such as "high priority" was wrongly silenced. Each tint now carries its kind, and one pure rule (`tintAlreadySaid`) decides for the list, board and calendar.
