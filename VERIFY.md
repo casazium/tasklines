@@ -327,6 +327,14 @@ Checked on 2026-11-22 in Obsidian 1.15.1 (macOS) with `app.emulateMobile(true)` 
 - [x] **Fixed:** on touch devices the bar takes the page's background. Measured: light, bar 255 and buttons 246; dark, bar 0 and buttons 52. The buttons now sit on the bar as the toolbar's controls sit on the page. Desktop is unchanged.
 - [x] **Themes:** the phone pass of the theme check (five themes, light and dark, four views) still gives two rows of 44 px controls, nothing overflowing and every group checkbox lined up; the buttons stand out from the bar in each.
 
+## Community directory review of 1.4.0
+
+The directory's automated review reported two browser-feature warnings and one disclosure (2026-11-22). None blocks installing.
+
+- [x] **"css-clip-path is only partially supported by Obsidian 1.11.4":** from the screen-reader-only text class. It now hides with `clip: rect(0 0 0 0)` (with a 1 px box, negative margin and no padding or border). Checked over the DevTools protocol: the text is 1×1 px and clipped, and the accessibility tree still reads it (board headings "To do 13 tasks", where "tasks" is the hidden part).
+- [x] **"multicolumn is only partially supported":** from `column-gap` in the select bar's flex row, which the check reads as multi-column layout. It's now the `gap` shorthand; measured the same 16 px between groups and 4 px between rows. The stylesheet has no other `column-` property.
+- [x] **Clipboard access:** **Copy** in select mode writes the selected tasks to the clipboard; Tasklines never reads it. The README's Privacy section now says so.
+
 ## Release 1.4.0
 
 Full test pass on 2026-11-22 for the batch #51–#55 (select-mode polish, the phone bar, two-level grouping and Color), on `main` at `55d9125` plus the version bump and screenshots.

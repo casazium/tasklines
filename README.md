@@ -201,7 +201,7 @@ Anything else (`OR` inside `WHERE`, `LIMIT`, `FLATTEN`, link sources, custom fun
 
 ## Privacy
 
-Tasklines works entirely inside your vault. It makes no network requests, collects no data, and changes notes only when you tick, edit or add a task. Turning the plugin off leaves every note and `.base` file as plain, valid Markdown and YAML.
+Tasklines works entirely inside your vault. It makes no network requests, collects no data, and changes notes only when you tick, edit or add a task. It touches the clipboard only when you press **Copy** in select mode, which writes the selected tasks to it; it never reads the clipboard. Turning the plugin off leaves every note and `.base` file as plain, valid Markdown and YAML.
 
 ## Known limits
 
