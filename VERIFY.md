@@ -101,6 +101,11 @@ Run on 2026-11-20 in Obsidian 1.15.1 (macOS) with `perf-vault/theme-check.js` (n
 - [x] Rows keep their fixed height (30 px, 40 px on touch), nothing is clipped, checkboxes stay inside their rows, header columns line up with the cells, the toolbar fits, and the cell editors fit their cells, in all 20 combinations.
 - [x] Checkbox states follow the theme (Minimal's circles, a dash for cancelled in Minimal and Things).
 - [x] Found and fixed: Blue Topaz removed the gap between the checkbox and the task text. The gap now comes from the cell (`gap`), and the checkbox's own margin is reset, so a theme's checkbox margins can't close or widen it.
+- [x] **Select mode** (2026-11-22, Obsidian 1.15.1 on macOS, `main` with #51 and #52, same five themes in light and dark). Measured over the DevTools protocol in the list, board, agenda and month views with a group half selected, at desktop width (1632 px) and with `app.emulateMobile(true)` in a 390 px window (phone layout, the iPhone's width); 80 combinations, each also looked at.
+  - The bar is one row on desktop and two rows on the phone, with every control the same height (30 px; 32 px in Minimal; 44 px on the phone) and nothing overflowing.
+  - Every group checkbox is at the same x as the first task box under it, in all four views. The only offset is in the list's "work" group, whose first task is a subtask and is indented on purpose.
+  - The partial-selection dash shows in every theme, including Minimal's round checkboxes.
+  - Nothing to fix.
 
 ## Tasks plugin settings
 
