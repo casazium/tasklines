@@ -284,7 +284,7 @@ Checked on 2026-11-21 by measuring the bar and checkboxes on the Mac (DevTools p
   - Ticking a group selected its tasks, unticking one task showed the dash, and Complete on 2 tasks followed by Undo from the bar put both lines back. The notes were identical to the backup afterwards.
   - Found and fixed: at iOS's taller button size the bar's top row (count, Select all, Undo, Done) needed 351 px and had 340, so Undo and Done wrapped and the bar became three rows. On phones the top row is now a grid that never wraps, the buttons in it have narrower padding, and the count shortens with an ellipsis if it must. Measured after the fix: two rows, with 33 px to spare at "14 selected", so a 375 pt iPhone fits too.
   - The first look was misleading: iCloud brought the new `main.js` to the phone before the new `styles.css`, so the bar briefly drew with the 1.3.0 styles. Check the probe or the vault's file dates before judging a layout on iOS.
-  - Not rechecked on Android after the fix (wider screen, where the row already fit; same rules).
+  - **Android after the fix** (same day, emulator, 412 dp wide): the bar stays two rows, including with "14 selected". The group boxes line up in the agenda and on the board. Complete on 2 board cards and Undo from the bar left the notes identical.
 
 ## Release 1.3.0
 
