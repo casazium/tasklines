@@ -6,7 +6,7 @@
 
 ![A due date being edited in place, in a view grouped by owner](docs/screenshots/editing.png)
 
-Please report problems on the [issue tracker](https://github.com/casazium/tasklines/issues).
+Please report problems on the [issue tracker](https://github.com/casazium/tasklines/issues). For ideas, feature requests and questions, use [Discussions](https://github.com/casazium/tasklines/discussions).
 
 ## Install
 
@@ -224,7 +224,7 @@ npm run lint
 npm run bench   # index and query timing on a synthetic vault
 ```
 
-- [CONTRIBUTING.md](CONTRIBUTING.md): how to report a problem and get a change accepted.
+- [CONTRIBUTING.md](CONTRIBUTING.md): how to report a problem, suggest a feature and get a change accepted.
 - [AGENTS.md](AGENTS.md): code layout and the rules every change must keep.
 - [VERIFY.md](VERIFY.md): manual checks in Obsidian; `test-vault/` has material for each.
 - [RELEASE.md](RELEASE.md): how to cut a release and the community-submission checklist.
