@@ -1,6 +1,10 @@
 # Tasklines
 
-**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects, a task board with the same tasks as cards (by status, priority, due date, or as an urgent-and-important matrix), and a task calendar. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view. Your notes stay in the formats you already use: Tasks plugin emoji or Dataview fields.
+**Your inline tasks as rows in Obsidian Bases.** Tasklines adds a view to Bases with one row per checkbox task in the notes a base selects, a task board with the same tasks as cards (by status, priority, due date, or as an urgent-and-important matrix), and a task calendar. Each row carries its note's properties as columns. Filter, sort and group by task or note fields, then tick, edit and add tasks without leaving the view.
+
+- **Works on the tasks you already write.** Each `- [ ]` line in your daily notes, meeting notes and project notes is a task. You don't need one note per task, and you don't need a new syntax.
+- **Leaves your notes as they are.** Tasklines reads and writes Tasks plugin emoji and Dataview fields, and keeps each line in the format it already uses. An edit changes only that one line, and if the line has changed since Tasklines read it, the edit is refused rather than guessed.
+- **Free, with no limits and no account.** Every feature is in the plugin, with no cap on tasks. It never goes online, and it works on desktop and mobile.
 
 ![Tasks from several notes in a Tasklines view, grouped by area and then by section, with overdue tasks tinted red and the notes' properties as columns](docs/screenshots/overview.png)
 
