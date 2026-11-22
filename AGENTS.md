@@ -32,7 +32,8 @@ npm run bench   # index/query timing on a synthetic vault
 | `src/parser.ts` | Task line parser, status set |
 | `src/extract.ts` | Tasks from file text + metadata-cache list items (depth, section, subtasks) |
 | `src/indexer.ts` | Per-file task cache keyed by mtime, invalidation listeners |
-| `src/query.ts` | Task-level filter, sort, group, summaries |
+| `src/query.ts` | Task-level filter, sort, group (two levels), summaries |
+| `src/tint.ts` | The views' Color option: tints and their words for screen readers (pure) |
 | `src/view.ts`, `src/virtual-list.ts`, `src/toolbar.ts` | Rendering |
 | `src/board.ts`, `src/board-view.ts` | Task board: columns and moves (pure), cards and drag and drop |
 | `src/calendar.ts`, `src/calendar-view.ts` | Task calendar: month grid, agenda and date moves (pure), rendering |

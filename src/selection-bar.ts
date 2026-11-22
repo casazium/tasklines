@@ -253,7 +253,7 @@ function showGroupState(box: HTMLInputElement, tasks: Array<{ path: string; line
  * A checkbox for every task under a group, column or day heading: ticked when all are selected,
  * half-ticked when some are. Placed first, in line with the tasks' own boxes.
  */
-export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string; line: number; raw: string }>, sel: SelectionHooks, label: string): void {
+export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string; line: number; raw: string }>, sel: SelectionHooks, label: string, focusKey: string = label): void {
 	if (!tasks.length) return;
 	// The label widens the tap target without moving the box.
 	const wrap = createEl('label', { cls: 'tasklines-group-select' });
@@ -261,7 +261,7 @@ export function drawGroupSelect(parent: HTMLElement, tasks: Array<{ path: string
 	const box = wrap.createEl('input', {
 		type: 'checkbox',
 		cls: 'tasklines-select-box',
-		attr: { 'aria-label': `Select all in ${label || '(none)'}`, 'data-focus-key': `group-select:${label}` },
+		attr: { 'aria-label': `Select all in ${label || '(none)'}`, 'data-focus-key': `group-select:${focusKey}` },
 	});
 	groupTasks.set(box, tasks);
 	showGroupState(box, tasks, sel.has);

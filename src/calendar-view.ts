@@ -7,7 +7,8 @@ import type { IndexedTask } from './extract.ts';
 import type { IndexStats } from './indexer.ts';
 import { statusKind } from './parser.ts';
 import { formatSummary, summarize } from './query.ts';
-import type { ViewRow } from './view.ts';
+import { tintAlreadySaid, type Tint } from './tint.ts';
+import { drawTint, type ViewRow } from './view.ts';
 import { drawGroupSelect, drawSelectBox, type SelectionHooks } from './selection-bar.ts';
 
 /** Tasks shown in a month cell before a "+N more" button. */
@@ -19,6 +20,8 @@ const DRAG_TYPE = 'application/x-tasklines-task';
 export interface CalendarInput {
 	/** Filtered and sorted rows. */
 	rows: ViewRow[];
+	/** The view's Color option: a tint for each task, or null. */
+	tint?: (row: ViewRow) => Tint | null;
 	/** Tasks before task-level filters, for the "N filtered out" count. */
 	total: number;
 	today: string;
@@ -385,6 +388,9 @@ export class TaskCalendar {
 			} else if (overdue) meta.createSpan({ cls: 'tasklines-sr-only', text: '(overdue)' });
 			if (task.recurrence) meta.createSpan({ text: '🔁', attr: { role: 'img', 'aria-label': `Repeats ${task.recurrence}` } });
 		}
+
+		const tint = input.tint?.(row);
+		drawTint(chip, top, tint, !!tint && tintAlreadySaid(tint, { view: 'calendar', field: input.field }));
 
 		if (input.touch || input.selection?.active) return; // phones reschedule with the menu; select mode doesn't drag
 		chip.draggable = true;

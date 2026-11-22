@@ -89,6 +89,9 @@
 .tasklines-editable.is-editing > .tasklines-cell-input { width: auto; min-width: 100%; }
 .tasklines-group { gap: var(--size-4-2); }
 .tasklines-group-summary { color: var(--text-muted); font-weight: normal; font-size: var(--font-ui-smaller); }
+/* Second-level groups: indented under their group, lighter, with an ordinary row border. In select mode only the label moves in; the checkbox stays above the tasks' boxes. */
+.tasklines-subgroup { font-weight: var(--font-medium); border-bottom-color: var(--background-modifier-border); }
+.tasklines-subgroup .tasklines-group-label { padding-inline-start: var(--size-4-4); }
 .tasklines-summary { color: var(--text-normal); }
 
 /* Recurring tasks */
@@ -287,3 +290,19 @@
 .tasklines-view input.tasklines-select-box:indeterminate { background: linear-gradient(var(--text-on-accent), var(--text-on-accent)) center / 55% 2px no-repeat, var(--interactive-accent); border-color: var(--interactive-accent); }
 .tasklines-view input.tasklines-select-box:indeterminate::after { display: none; }
 .tasklines-view.is-selecting .tasklines-group { align-items: center; }
+
+/* Color option: a bar on the leading edge and a faint wash, in the theme's own colours. The wash is a
+   background image so it sits over a card's own background. A list row's hover and selection
+   backgrounds replace the wash, so they look as they always do; the bar stays. */
+.tasklines-tint-red { --tasklines-tint: var(--color-red-rgb); }
+.tasklines-tint-orange { --tasklines-tint: var(--color-orange-rgb); }
+.tasklines-tint-yellow { --tasklines-tint: var(--color-yellow-rgb); }
+.tasklines-tint-green { --tasklines-tint: var(--color-green-rgb); }
+.tasklines-tint-cyan { --tasklines-tint: var(--color-cyan-rgb); }
+.tasklines-tint-blue { --tasklines-tint: var(--color-blue-rgb); }
+.tasklines-tint-purple { --tasklines-tint: var(--color-purple-rgb); }
+.tasklines-tint-pink { --tasklines-tint: var(--color-pink-rgb); }
+.tasklines-tinted {
+	box-shadow: inset 3px 0 0 rgb(var(--tasklines-tint));
+	background-image: linear-gradient(rgba(var(--tasklines-tint), 0.08), rgba(var(--tasklines-tint), 0.08));
+}
