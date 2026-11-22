@@ -110,15 +110,16 @@ Status as of 0.9.9 (checked against the docs on 2026-11-20): ✅ done · ⬜ nee
 | `mobile.png` | The view on a phone (Android emulator), with taller rows and the folded toolbar |
 | `board.png` | `Task board.base` → **By status**, **Color** Due date: the four status columns, overdue cards red and today's orange |
 | `calendar.png` | `Task calendar.base` → **Calendar** (month on desktop), **Color** Priority, with the No date tray |
+| `urgent.png` | `Task board.base` → **Urgent and important** with **Color** Due date (set it in the view's menu, then put the file back): the 2×2 grid with its axes |
 | `bulk.png` | The `overview.png` view in select mode: priority High set on Retro and Task inside a callout (the notice with Undo shows), then the "work" group and Fix gate and Dataview style selected. Undo the change afterwards |
 
 `docs/listing/` holds the community directory's listing images. **The plugin's page takes at most 5 desktop and 5 phone images**, so the folder holds exactly those ten, numbered in upload order; when a release needs a new one, choose which to drop rather than adding a sixth.
 
-- **Desktop**, 1200×800: dark theme, sidebar collapsed, window resized to 1200×800 (the board at 92% zoom so its four columns fit). `desktop-1-overview` and `desktop-5-bulk` are the `overview.png` and `bulk.png` scenes; `desktop-2-editing`, `desktop-3-board` and `desktop-4-calendar` are the `editing.png`, `board.png` and `calendar.png` scenes.
+- **Desktop**, 1200×800: dark theme, sidebar collapsed, window resized to 1200×800 (the board at 92% zoom so its four columns fit). `desktop-1-overview`, `desktop-2-editing`, `desktop-3-board`, `desktop-4-urgent` and `desktop-5-calendar` are the `overview.png`, `editing.png`, `board.png`, `urgent.png` and `calendar.png` scenes. (1.5.0 dropped `desktop-5-bulk`: select mode is on the phone set.) The window can be resized from the developer tools with `require('@electron/remote').getCurrentWindow().setSize(1200, 800)`.
 - **Phone**, 900×1600: the top 1080×1920 of an Android emulator screenshot (light theme), scaled; `mobile-3-card-menu` uses the bottom 1920 instead, to show the menu sheet.
   - `mobile-1-list`: **All tasks by section** set to To do and In progress, grouped by due bucket then note, **Color** Note property `owner`.
   - `mobile-2-board`: **By status**, **Color** Due date.
-  - `mobile-3-card-menu`: the same board with a card's **⋯** menu open.
+  - `mobile-3-card-menu`: **Urgent and important**, **Color** Due date, swiped to Delegate with Confirm catering's **⋯** menu open (Move to Do first, Schedule, Later).
   - `mobile-4-agenda`: **Agenda**, **Color** Priority.
   - `mobile-5-select`: **Calendar** (the agenda on phones), **Color** Priority, in select mode with Overdue selected but one task and Today selected.
 
