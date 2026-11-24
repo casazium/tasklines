@@ -63,9 +63,10 @@ const PRIORITIES: Array<[Priority, string]> = [
 const TASKS_EMOJI = '📅📆🗓⏳⌛🛫➕✅❌🔺⏫🔼🔽⏬🔁🆔⛔🏁';
 // It also stops before a Dataview inline field, e.g. `🔁 every week [completion:: …]`, and is
 // never a Dataview field itself (a bare `🔁 [completion:: …]` has no rule). Inline code ends it
-// too (\uE000 is the placeholder for a code span), and it needs some text: a bare 🔁 followed by
-// another emoji has no rule and stays part of the description.
-const FREE_TEXT = `(?!\\s*[[(][\\p{L}\\p{N}_ -]+::)(?=\\s*[^\\s${TASKS_EMOJI}^\\uE000])([^${TASKS_EMOJI}^\\uE000]+?)(?=\\s*(?:[${TASKS_EMOJI}\\uE000]|[[(][\\p{L}\\p{N}_ -]+::|\\^[\\w-]+\\s*$|$))`;
+// too (\uE000 is the placeholder for a code span), as do links and comments (\uE001) and a
+// #tag, and it needs some text: a bare 🔁 followed by another emoji has no rule and stays part
+// of the description.
+const FREE_TEXT = `(?!\\s*[[(][\\p{L}\\p{N}_ -]+::)(?=\\s*[^\\s${TASKS_EMOJI}^\\uE000\\uE001#])([^${TASKS_EMOJI}^\\uE000\\uE001]+?)(?=\\s*(?:[${TASKS_EMOJI}\\uE000\\uE001]|[[(][\\p{L}\\p{N}_ -]+::|\\^[\\w-]+\\s*$|$)|\\s+#[\\p{L}\\p{N}_/-])`;
 const RECURRENCE = new RegExp(`🔁${VS}\\s*${FREE_TEXT}`, 'u');
 const ON_COMPLETION = new RegExp(`🏁${VS}\\s*([a-z]+)`, 'u');
 const TASK_ID = new RegExp(`🆔${VS}\\s*([\\w-]+)`, 'u');
@@ -82,10 +83,78 @@ const WIKILINK = /\[\[([^\]|#^]+)(?:[#^][^\]|]*)?(?:\|[^\]]*)?\]\]/gu;
 // A tag starts after whitespace or line start and has at least one non-digit character.
 // No lookbehind: it is unsupported on iOS before 16.4.
 const TAG = /(^|\s)(#(?![\d/]+(?:\s|$))[\p{L}\p{N}_/-]+)/gu;
-const CODE_SPAN = /`[^`]*`/g;
-// Private-use character: marks where a code span was hidden during parsing.
+// Private-use characters: mark where a code span, or a link or comment, was hidden during parsing.
 const CODE_MARK = '\uE000';
 const CODE_PLACEHOLDER = /\uE000(\d+)\uE000/g;
+const LINK_MARK = '\uE001';
+const LINK_PLACEHOLDER = /\uE001(\d+)\uE001/g;
+// A Tasks emoji in a note name, a link address or a %% comment %% is not task metadata.
+const OPAQUE_SPAN = /\[\[[^\]]*\]\]|\]\([^)]*\)|%%.*?%%/gu;
+
+/**
+ * Where the inline code is, as CommonMark reads it: a run of backticks closes at the next run of
+ * the same length, a run with no partner is literal, and a backslash escapes a backtick outside code.
+ */
+function codeRanges(text: string): Array<[number, number]> {
+	const ranges: Array<[number, number]> = [];
+	const runAt = (from: number) => {
+		let end = from;
+		while (text[end] === '`') end++;
+		return end - from;
+	};
+	let i = 0;
+	while (i < text.length) {
+		if (text[i] === '\\') {
+			i += 2;
+			continue;
+		}
+		if (text[i] !== '`') {
+			i++;
+			continue;
+		}
+		const size = runAt(i);
+		let close = -1;
+		for (let j = i + size; j < text.length; ) {
+			if (text[j] !== '`') {
+				j++;
+				continue;
+			}
+			const run = runAt(j);
+			if (run === size) {
+				close = j;
+				break;
+			}
+			j += run;
+		}
+		if (close < 0) {
+			i += size;
+			continue;
+		}
+		ranges.push([i, close + size]);
+		i = close + size;
+	}
+	return ranges;
+}
+
+function replaceCode(text: string, replace: (span: string) => string): string {
+	let out = '';
+	let at = 0;
+	for (const [start, end] of codeRanges(text)) {
+		out += text.slice(at, start) + replace(text.slice(start, end));
+		at = end;
+	}
+	return out + text.slice(at);
+}
+
+/**
+ * The line with inline code blanked out, at the same length, so searches never match inside it.
+ * With `links`, also blanks wikilinks, link addresses and comments, for finding Tasks emoji.
+ */
+export function maskInline(line: string, links = false): string {
+	const blank = (span: string) => CODE_MARK.repeat(span.length);
+	const code = replaceCode(line, blank);
+	return links ? code.replace(OPAQUE_SPAN, blank) : code;
+}
 
 const DATAVIEW_DATE_KEYS: Record<string, DateKey> = {
 	due: 'due',
@@ -120,9 +189,15 @@ export function parseTaskLine(line: string): ParsedTask | null {
 
 	// Hide inline code so nothing inside it is read as metadata; restore it at the end.
 	const codeSpans: string[] = [];
-	let rest = body.replace(CODE_SPAN, (span) => {
+	let rest = replaceCode(body, (span) => {
 		codeSpans.push(span);
 		return `${CODE_MARK}${codeSpans.length - 1}${CODE_MARK}`;
+	});
+	// Hide links and comments while reading emoji; Dataview fields may hold links, so they come back first.
+	const linkSpans: string[] = [];
+	rest = rest.replace(OPAQUE_SPAN, (span) => {
+		linkSpans.push(span);
+		return `${LINK_MARK}${linkSpans.length - 1}${LINK_MARK}`;
 	});
 	let sawEmoji = false;
 	let sawDataview = false;
@@ -135,6 +210,13 @@ export function parseTaskLine(line: string): ParsedTask | null {
 
 	const blockId = take(BLOCK_ID);
 	if (blockId) task.blockId = blockId;
+
+	// Before the dates: a rule ends at the next emoji, so that emoji must still be there.
+	const recurrence = take(RECURRENCE);
+	if (recurrence !== undefined) {
+		task.recurrence = recurrence.trim();
+		sawEmoji = true;
+	}
 
 	for (const [key, emoji] of EMOJI_DATES) {
 		const value = take(new RegExp(`${emoji}\\s*${DATE}`, 'u'));
@@ -152,11 +234,6 @@ export function parseTaskLine(line: string): ParsedTask | null {
 			break;
 		}
 	}
-	const recurrence = take(RECURRENCE);
-	if (recurrence !== undefined) {
-		task.recurrence = recurrence.trim();
-		sawEmoji = true;
-	}
 	const id = take(TASK_ID);
 	if (id !== undefined) {
 		task.id = id;
@@ -173,6 +250,7 @@ export function parseTaskLine(line: string): ParsedTask | null {
 		sawEmoji = true;
 	}
 
+	rest = rest.replace(LINK_PLACEHOLDER, (_s, i: string) => linkSpans[Number(i)] ?? '');
 	rest = rest.replace(INLINE_FIELD, (_all, k1?: string, v1?: string, k2?: string, v2?: string) => {
 		const key = (k1 ?? k2 ?? '').trim().toLowerCase();
 		const value = (v1 ?? v2 ?? '').trim();

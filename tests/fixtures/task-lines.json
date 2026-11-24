@@ -365,5 +365,429 @@
       "done": "2026-11-20",
       "text": "Water 🔁"
     }
+  },
+  {
+    "name": "custom status: emoji",
+    "line": "- [🔥] Emoji status",
+    "expect": {
+      "status": "🔥",
+      "text": "Emoji status"
+    }
+  },
+  {
+    "name": "custom status: letter",
+    "line": "- [a] Letter status",
+    "expect": {
+      "status": "a"
+    }
+  },
+  {
+    "name": "custom status: star",
+    "line": "- [*] Star",
+    "expect": {
+      "status": "*"
+    }
+  },
+  {
+    "name": "inline code: double backticks hide a date",
+    "line": "- [ ] Double ``code 📅 2026-01-01 with ` tick`` here",
+    "expect": {
+      "text": "Double ``code 📅 2026-01-01 with ` tick`` here",
+      "format": "plain"
+    }
+  },
+  {
+    "name": "inline code: triple backticks hide a date",
+    "line": "- [ ] Triple ```📅 2026-01-01``` here",
+    "expect": {
+      "format": "plain"
+    }
+  },
+  {
+    "name": "inline code: an unclosed backtick is literal",
+    "line": "- [ ] Unclosed ` tick 📅 2026-01-01",
+    "expect": {
+      "text": "Unclosed ` tick",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "inline code: escaped backticks are not code",
+    "line": "- [ ] Escaped \\` tick 📅 2026-01-01 \\` end",
+    "expect": {
+      "text": "Escaped \\` tick \\` end",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "link: a date in a note name is not the due date",
+    "line": "- [ ] [[📅 2026-05-05 meeting]] follow up",
+    "expect": {
+      "text": "[[📅 2026-05-05 meeting]] follow up",
+      "format": "plain",
+      "links": [
+        "📅 2026-05-05 meeting"
+      ]
+    }
+  },
+  {
+    "name": "link: a date in a link address is not the due date",
+    "line": "- [ ] Read [notes](https://example.com/📅2026-02-02) first",
+    "expect": {
+      "format": "plain"
+    }
+  },
+  {
+    "name": "link: address with query and anchor",
+    "line": "- [ ] Link [site](https://example.com/a?b=c#d) 📅 2026-01-01",
+    "expect": {
+      "text": "Link [site](https://example.com/a?b=c#d)",
+      "due": "2026-01-01",
+      "tags": []
+    }
+  },
+  {
+    "name": "link: bare URL with an anchor is not a tag",
+    "line": "- [ ] Bare URL https://example.com/#anchor 📅 2026-01-01",
+    "expect": {
+      "tags": [],
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "link: aliases and headings",
+    "line": "- [ ] [[Note|Alias]] and [[Other#Head|x]] 🔼",
+    "expect": {
+      "links": [
+        "Note",
+        "Other"
+      ],
+      "priority": "medium"
+    }
+  },
+  {
+    "name": "link: embed",
+    "line": "- [ ] ![[image.png]] embed",
+    "expect": {
+      "links": [
+        "image.png"
+      ]
+    }
+  },
+  {
+    "name": "comment: a date in a comment is not the due date",
+    "line": "- [ ] %% hidden 📅 2026-03-03 %% visible",
+    "expect": {
+      "text": "%% hidden 📅 2026-03-03 %% visible",
+      "format": "plain"
+    }
+  },
+  {
+    "name": "comment: a Dataview field in a comment still counts",
+    "line": "- [ ] Hidden field %% [due:: 2026-03-03] %%",
+    "expect": {
+      "due": "2026-03-03",
+      "format": "dataview"
+    }
+  },
+  {
+    "name": "formatting stays in the text",
+    "line": "- [ ] **bold** _it_ ~~gone~~ ==mark== 📅 2026-01-01",
+    "expect": {
+      "text": "**bold** _it_ ~~gone~~ ==mark=="
+    }
+  },
+  {
+    "name": "footnote reference",
+    "line": "- [ ] Footnote[^1] here 📅 2026-01-01",
+    "expect": {
+      "text": "Footnote[^1] here"
+    }
+  },
+  {
+    "name": "math with a caret is not a block id",
+    "line": "- [ ] Math $x^2 + y$ here",
+    "expect": {
+      "text": "Math $x^2 + y$ here"
+    }
+  },
+  {
+    "name": "a lone caret at the end stays in the text",
+    "line": "- [ ] Ends with caret ^",
+    "expect": {
+      "text": "Ends with caret ^"
+    }
+  },
+  {
+    "name": "HTML stays in the text",
+    "line": "- [ ] <span>html</span> 📅 2026-01-01",
+    "expect": {
+      "text": "<span>html</span>"
+    }
+  },
+  {
+    "name": "table pipes stay in the text",
+    "line": "- [ ] A | pipe | table",
+    "expect": {
+      "text": "A | pipe | table"
+    }
+  },
+  {
+    "name": "date before the description",
+    "line": "- [ ] 📅 2026-01-01 date first",
+    "expect": {
+      "text": "date first",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "Dataview: uppercase key, no space",
+    "line": "- [ ] A [DUE::2026-01-01]",
+    "expect": {
+      "due": "2026-01-01",
+      "format": "dataview"
+    }
+  },
+  {
+    "name": "Dataview: paren field mid-sentence",
+    "line": "- [ ] A (due::2026-01-01) B",
+    "expect": {
+      "text": "A B",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "Dataview: words are not a date",
+    "line": "- [ ] A [due:: tomorrow]",
+    "expect": {
+      "text": "A"
+    }
+  },
+  {
+    "name": "Dataview: capitalized priority",
+    "line": "- [ ] A [priority:: High]",
+    "expect": {
+      "priority": "high"
+    }
+  },
+  {
+    "name": "Dataview: field holding a URL",
+    "line": "- [ ] A [url:: https://e.com/a] B",
+    "expect": {
+      "text": "A B"
+    }
+  },
+  {
+    "name": "Dataview: link with alias in a value",
+    "line": "- [ ] A [note:: has [[Link|x]] here]",
+    "expect": {
+      "text": "A"
+    }
+  },
+  {
+    "name": "Dataview: link value next to a date",
+    "line": "- [ ] A [project::[[Alpha]]] [due:: 2026-01-01]",
+    "expect": {
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "not a Dataview field: no brackets",
+    "line": "- [ ] Key:: value not field",
+    "expect": {
+      "text": "Key:: value not field",
+      "format": "plain"
+    }
+  },
+  {
+    "name": "not a Dataview field: a time",
+    "line": "- [ ] Time 10:30::45 note",
+    "expect": {
+      "format": "plain"
+    }
+  },
+  {
+    "name": "tags: nested, non-Latin, numbers are not tags",
+    "line": "- [ ] #tag/sub-tag #日本語 #123 #a1 text",
+    "expect": {
+      "tags": [
+        "#tag/sub-tag",
+        "#日本語",
+        "#a1"
+      ]
+    }
+  },
+  {
+    "name": "tags: C# and F# are not tags",
+    "line": "- [ ] C# and F# tips",
+    "expect": {
+      "tags": []
+    }
+  },
+  {
+    "name": "tags: issue number is not a tag",
+    "line": "- [ ] issue #42 fix",
+    "expect": {
+      "tags": []
+    }
+  },
+  {
+    "name": "Unicode: Japanese",
+    "line": "- [ ] 日本語のタスク 📅 2026-01-01",
+    "expect": {
+      "text": "日本語のタスク",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "Unicode: Arabic",
+    "line": "- [ ] مهمة عربية 📅 2026-01-01",
+    "expect": {
+      "text": "مهمة عربية",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "Unicode: joined emoji and flags",
+    "line": "- [ ] Family 👨‍👩‍👧 emoji 🇺🇸 📅 2026-01-01",
+    "expect": {
+      "text": "Family 👨‍👩‍👧 emoji 🇺🇸"
+    }
+  },
+  {
+    "name": "list: four-space indent",
+    "line": "    - [x] four",
+    "expect": {
+      "indent": "    ",
+      "status": "x"
+    }
+  },
+  {
+    "name": "list: blockquote without a space",
+    "line": ">- [ ] tight quote",
+    "expect": {
+      "text": "tight quote"
+    }
+  },
+  {
+    "name": "list: deep callout",
+    "line": "> > > - [ ] deep",
+    "expect": {
+      "text": "deep"
+    }
+  },
+  {
+    "name": "list: big ordered number",
+    "line": "999. [-] big",
+    "expect": {
+      "marker": "999.",
+      "status": "-"
+    }
+  },
+  {
+    "name": "list: extra space after the marker",
+    "line": "-   [x] more",
+    "expect": {
+      "status": "x",
+      "text": "more"
+    }
+  },
+  {
+    "name": "body: double space",
+    "line": "- [ ]  double space body",
+    "expect": {
+      "text": "double space body"
+    }
+  },
+  {
+    "name": "body: tab",
+    "line": "- [ ]\ttab body",
+    "expect": {
+      "text": "tab body"
+    }
+  },
+  {
+    "name": "body: trailing spaces",
+    "line": "- [ ] trailing spaces   ",
+    "expect": {
+      "text": "trailing spaces"
+    }
+  },
+  {
+    "name": "recurrence: a tag after the date stays a tag",
+    "line": "- [ ] A 🔁 every month on the last Friday ⏳ 2026-01-01 #tag",
+    "expect": {
+      "text": "A #tag",
+      "tags": [
+        "#tag"
+      ],
+      "recurrence": "every month on the last Friday",
+      "scheduled": "2026-01-01"
+    }
+  },
+  {
+    "name": "recurrence: a tag right after the rule stays a tag",
+    "line": "- [ ] A 🔁 every week #home 📅 2026-01-01",
+    "expect": {
+      "text": "A #home",
+      "tags": [
+        "#home"
+      ],
+      "recurrence": "every week"
+    }
+  },
+  {
+    "name": "recurrence: stops before a link",
+    "line": "- [ ] A 🔁 every week [[Note]] 📅 2026-01-01",
+    "expect": {
+      "text": "A [[Note]]",
+      "recurrence": "every week"
+    }
+  },
+  {
+    "name": "recurrence: several weekdays",
+    "line": "- [ ] A 🔁 every 2 weeks on Tuesday, Friday 📅 2026-01-01",
+    "expect": {
+      "recurrence": "every 2 weeks on Tuesday, Friday"
+    }
+  },
+  {
+    "name": "recurrence: variation selectors",
+    "line": "- [ ] A 🔁️ every day 📅️ 2026-01-01",
+    "expect": {
+      "recurrence": "every day",
+      "due": "2026-01-01"
+    }
+  },
+  {
+    "name": "Tasks: every date field",
+    "line": "- [ ] A ➕ 2026-01-01 🛫 2026-01-02 ⏳ 2026-01-03 📅 2026-01-04 🔺",
+    "expect": {
+      "created": "2026-01-01",
+      "start": "2026-01-02",
+      "scheduled": "2026-01-03",
+      "due": "2026-01-04",
+      "priority": "highest"
+    }
+  },
+  {
+    "name": "Tasks: dependencies with spaces",
+    "line": "- [ ] A ⛔ x , y 🏁 keep",
+    "expect": {
+      "dependsOn": [
+        "x",
+        "y"
+      ],
+      "onCompletion": "keep"
+    }
+  },
+  {
+    "name": "Tasks: global filter tag",
+    "line": "- [ ] #task Global filter 📅 2026-01-01",
+    "expect": {
+      "tags": [
+        "#task"
+      ]
+    }
   }
 ]

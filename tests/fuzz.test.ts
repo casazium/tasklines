@@ -4,7 +4,7 @@
 // Every failure found here becomes a fixture in tests/fixtures/task-lines.json.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { parseTaskLine, statusKind, type Priority } from '../src/parser.ts';
+import { maskInline, parseTaskLine, statusKind, type Priority } from '../src/parser.ts';
 import { editInContent, insertTaskInContent, splitLines, toggleInContent, type ToggleOptions } from '../src/writeback.ts';
 import type { TaskEdit } from '../src/edit.ts';
 
@@ -28,12 +28,13 @@ const chance = (r: R, p: number) => r() < p;
 
 const INDENTS = ['', '', '', '  ', '    ', '\t', '\t\t', ' \t', '> ', '>', '> > ', '>  ', '  > '];
 const MARKERS = ['-', '-', '-', '*', '+', '1.', '12)', '3.'];
-const STATUSES = [' ', ' ', ' ', 'x', 'X', '/', '-', '>', '<', '?', '!', 'é'];
+const STATUSES = [' ', ' ', ' ', 'x', 'X', '/', '-', '>', '<', '?', '!', 'é', '🔥'];
 const WORDS = [
 	'Ship', 'the', 'report', 'naïve', '日本語', '🚀', 'émoji', 'a|b', 'C++', '$x$', '**bold**', '_it_', '(paren)', '::', 'x::y',
 	'[link](https://example.com/📅)', '[[Note]]', '[[Note|alias]]', '[[Note#Head]]', '#tag', '#tag/sub', '#2026', 'http://x.y/?a=b&c=d',
 	'%%comment%%', '<br>', ' ', '​', '—', '“quoted”', "it's", '[ ]', '[x]', '- [ ]', '\\', '\\[', '^not-id', 'end^', '1.', '#',
 	'`code`', '`📅 2026-01-01`', '`[due:: 2026-01-01]`', '``a ` b``', '`🔁 every day`', 'x'.repeat(120), '2026-11-25', '📅', '✅', '🔁',
+	'[[📅 2026-05-05 meeting]]', '[x](https://e.com/⏫)', '[y](https://e.com/📅2026-02-02)', '%% ⏳ 2026-01-02 %%', '``📅 2026-01-01``', '```⏫```', '\\`',
 ];
 const EMOJI_FIELDS = [
 	'📅 2026-11-25', '📅 2026-12-31', '📆 2026-11-25', '📅️ 2026-11-25', '⏳ 2026-11-19', '⌛ 2026-11-19', '🛫 2026-11-18', '➕ 2026-11-01',
@@ -86,7 +87,10 @@ function genDoc(r: R, target: string): { doc: string; line: number } {
 // Words of a description, ignoring emoji, dates and spacing: a stray bare 🔁 can move between
 // text and metadata, and clearing a date also removes a repeated copy of it.
 const wordsOf = (s: string) => s.replace(/[\p{Extended_Pictographic}\uFE0F]/gu, ' ').replace(/\d{4}-\d{2}-\d{2}/g, ' ').replace(/\s+/g, ' ').trim();
-const codeSpans = (s: string) => s.match(/`+[^`]*`+/g) ?? [];
+// Inline code as the parser reads it (runs of backticks, CommonMark rules).
+// Note names and link addresses: an edit must never change them.
+const linkSpans = (l: string) => maskInline(l).match(/\[\[[^\]]*\]\]|\]\([^)]*\)/g) ?? [];
+const codeSpans = (l: string) => { const m = maskInline(l); return [...m.matchAll(/\uE000+/g)].map((x) => l.slice(x.index, x.index + x[0].length)); };
 
 function sameOutside(doc: string, out: string, line: number, label: string): void {
 	const a = splitLines(doc);
@@ -148,6 +152,7 @@ test(`fuzz: ${CASES} random task lines (seed ${SEED})`, () => {
 			const wasOpen = !['done', 'cancelled'].includes(statusKind(task.status));
 			assert.equal(['done', 'cancelled'].includes(statusKind(p.status)), wasOpen, `${label}: status flipped`);
 			assert.deepEqual(codeSpans(outLine), codeSpans(raw), `${label}: inline code untouched`);
+			assert.deepEqual(linkSpans(outLine), linkSpans(raw), `${label}: links untouched`);
 			keepsFormat(raw, outLine, label);
 
 			// 3. Round trip: tick then untick restores an open task (minus trailing spaces trimmed before a date).
@@ -185,6 +190,7 @@ test(`fuzz: ${CASES} random task lines (seed ${SEED})`, () => {
 			if (edit.kind === 'priority') assert.equal(p.priority, edit.value, `${label}: priority ${edit.value} → ${JSON.stringify(outLine)}`);
 			if (edit.kind === 'status') assert.equal(p.status, edit.value, `${label}: status ${JSON.stringify(edit.value)}`);
 			assert.deepEqual(codeSpans(outLine), codeSpans(raw), `${label}: inline code untouched by edit`);
+			assert.deepEqual(linkSpans(outLine), linkSpans(raw), `${label}: links untouched by edit`);
 			assert.equal(wordsOf(p.text), wordsOf(task.text), `${label}: description kept by ${JSON.stringify(edit)} → ${JSON.stringify(outLine)}`);
 			keepsFormat(raw, outLine, `${label} edit`);
 		}

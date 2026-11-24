@@ -111,3 +111,16 @@ test('status: cancelled dates follow the cancelled status, in the line’s style
 	assert.equal(edit('- [x] A ✅ 2026-11-01', { kind: 'status', value: '-' }), '- [-] A ❌ 2026-11-20', 'done to cancelled swaps the date');
 	assert.equal(edit('- [-] A `❌ 2026-11-01`', { kind: 'status', value: ' ' }), '- [ ] A `❌ 2026-11-01`', 'never inside inline code');
 });
+
+test('an edit never rewrites a date inside a link, a comment or inline code', () => {
+	const due = { kind: 'date', field: 'due', value: '2030-01-02' } as const;
+	assert.equal(edit('- [ ] [[📅 2026-05-05 meeting]] notes', due), '- [ ] [[📅 2026-05-05 meeting]] notes 📅 2030-01-02');
+	assert.equal(edit('- [ ] [x](https://e.com/📅2026-02-02) 📅 2026-01-01', due), '- [ ] [x](https://e.com/📅2026-02-02) 📅 2030-01-02');
+	assert.equal(edit('- [ ] %% 📅 2026-03-03 %% later', due), '- [ ] %% 📅 2026-03-03 %% later 📅 2030-01-02');
+	assert.equal(edit('- [ ] ``a 📅 2026-01-01 ` b`` c', due), '- [ ] ``a 📅 2026-01-01 ` b`` c 📅 2030-01-02');
+});
+
+test('a status that is one emoji is replaced whole', () => {
+	assert.equal(edit('- [🔥] Hot', { kind: 'status', value: '/' }), '- [/] Hot');
+	assert.equal(edit('- [/] Hot', { kind: 'status', value: '🔥' }), '- [🔥] Hot');
+});
