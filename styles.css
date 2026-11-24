@@ -234,8 +234,8 @@
 .tasklines-cal-grid { display: flex; flex-direction: column; min-width: 42rem; border: 1px solid var(--background-modifier-border); border-radius: var(--radius-m); overflow: hidden; }
 .tasklines-cal-weekdays, .tasklines-cal-week { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); }
 .tasklines-cal-weekdays > div { padding: 4px 6px; font-size: var(--font-ui-smaller); color: var(--text-muted); background: var(--background-secondary); border-bottom: 1px solid var(--background-modifier-border); }
-.tasklines-cal-day { min-height: 7rem; padding: 4px; border-right: 1px solid var(--background-modifier-border); border-bottom: 1px solid var(--background-modifier-border); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
-.tasklines-cal-day:nth-child(7n) { border-right: none; }
+.tasklines-cal-day { min-height: 7rem; padding: 4px; border-inline-end: 1px solid var(--background-modifier-border); border-bottom: 1px solid var(--background-modifier-border); display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tasklines-cal-day:nth-child(7n) { border-inline-end: none; }
 .tasklines-cal-week:last-child .tasklines-cal-day { border-bottom: none; }
 .tasklines-cal-day.is-other-month { background: var(--background-secondary); }
 .tasklines-cal-day.is-other-month .tasklines-cal-daynum { color: var(--text-faint); }
@@ -345,3 +345,12 @@
 	box-shadow: inset 3px 0 0 rgb(var(--tasklines-tint));
 	background-image: linear-gradient(rgba(var(--tasklines-tint), 0.08), rgba(var(--tasklines-tint), 0.08));
 }
+
+/* Each task keeps its own language's direction, so in a right-to-left vault English text is cut off
+   at its end and numbers stay beside their words. */
+.tasklines-open,
+.tasklines-card-text,
+.tasklines-select-text,
+.tasklines-summary,
+.tasklines-group-label,
+.tasklines-group-summary { unicode-bidi: plaintext; }

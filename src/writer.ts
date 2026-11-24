@@ -45,6 +45,8 @@ const FAILURE_TEXT: Record<string, string> = {
 		'This recurring task does not contain your Tasks global filter, so the Tasks plugin would complete it without creating the next occurrence. Add the filter to the line, or complete it in the note.',
 	'not-completed': 'The Tasks plugin would move this task to a status other than done (it follows your Tasks status cycle). Complete it in the note instead.',
 	'invalid-edit': 'That change could not be made safely on this line (it has repeated or ambiguous fields). Make it in the note instead.',
+	'tasks-localized-dates':
+		"The Tasks plugin would write this recurring task's dates in your language's digits, which can't be read back as dates. To complete it, switch Obsidian to a language that uses 0-9, or edit the line by hand.",
 	'tasks-format-mismatch':
 		'The Tasks plugin is set to a different task format than this line uses (emoji or Dataview), so it cannot create the next occurrence. Change the format in the Tasks settings, or complete it in the note.',
 };
