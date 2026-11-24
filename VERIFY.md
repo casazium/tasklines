@@ -612,3 +612,13 @@ Batch: the urgent-and-important board (#63), its 2×2 grid (#64, #65) and **New 
 - [x] Desktop: the board, the grid, New task base, embeds, a popout window, five themes, and a regression pass over every view (see the sections above).
 - [x] Android, iPhone and Windows: see the sections above.
 - [x] Images: `docs/screenshots/urgent.png` is new. In the directory set, `desktop-4-urgent` replaces `desktop-5-bulk` (Calendar moves to 5), and `mobile-3-card-menu` was retaken on the new board. Afterwards the Mac window, theme and sidebar were put back, the Color setting used for the images was reverted, and the emulator's vault matches `test-vault/`.
+
+## Languages, week starts and right-to-left
+
+Run on 2026-11-23 in Obsidian 1.15.1 (macOS) with Tasks 8.6.0, in a separate demo vault and profile, with notes in Arabic, Hebrew, Japanese, German and mixed scripts. Every view was opened in each language and checked for clipped or overflowing controls.
+
+- [x] German, Japanese, British English, Arabic and Hebrew: the table, board, 2×2 grid and calendar lay out correctly.
+- [x] The calendar starts on the language's first weekday (German and British English Monday, Japanese and Hebrew Sunday, Arabic Saturday), and its headings line up with the dates.
+- [x] Right-to-left: columns, the grid and the calendar mirror. Fixed here: English task names were cut off at their start, mixed text and summary numbers were out of order, and calendar borders were on the wrong side.
+- [x] In Arabic, date edits, ticking, board moves, grid moves and calendar moves wrote the expected line, with 0-9 dates.
+- [x] Fixed here: in Arabic the Tasks plugin wrote `📅 ٢٠٢٦-١١-٢٩`, which neither plugin reads as a date. Tasklines now refuses that output. A plain task is completed by the built-in toggle with its dates intact, and a recurring task is refused with nothing changed.

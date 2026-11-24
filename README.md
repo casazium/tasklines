@@ -241,6 +241,7 @@ Tasklines works entirely inside your vault. It makes no network requests, collec
 - Rows have a fixed height. Long text is cut off with an ellipsis, and the full text is in the tooltip.
 - Sorting and grouping by a note property use the value's displayed text, with numbers in natural order (`9` before `10`).
 - In files with old Mac line endings (CR only), a change may be refused if Obsidian numbers lines differently. Tasklines never writes to the wrong line.
+- With Obsidian set to a language that doesn't use 0-9, such as Arabic, the Tasks plugin can write dates in that language's digits, which neither plugin reads back as dates. Tasklines won't accept those lines: it completes plain tasks itself with 0-9 dates and refuses recurring ones.
 - A change to a line with repeated or competing fields (two priorities, or a date written both as an emoji and as a Dataview field) is refused if the line wouldn't read back exactly as asked. Make that change in the note.
 
 ## Development

@@ -189,3 +189,25 @@ test('a recurring task outside the Tasks global filter is refused, untouched', (
 	const reopen = toggleInContent(done, { line: 0, raw: done }, { ...OPTS, external: (l) => l.replace('[x]', '[ ]').replace(' ✅ 2026-11-20', ''), tasksGlobalFilter: '#task' });
 	assert.ok(reopen.ok);
 });
+
+test('a line the Tasks plugin wrote with non-ASCII date digits is never accepted', () => {
+	const arabic = (line: string) => line.replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[Number(d)] ?? d).replace('[ ]', '[x]') + ' ✅ ٢٠٢٦-١١-٢٠';
+	const plain = '- [ ] Tick me 📅 2026-11-29';
+	const r = toggleInContent(plain, { line: 0, raw: plain }, { ...OPTS, external: arabic });
+	assert.ok(r.ok);
+	assert.equal(r.via, 'built-in', 'falls back to the built-in toggle');
+	assert.equal(r.newLines[0]?.includes('📅 2026-11-29'), true, 'the due date keeps its digits');
+	assert.doesNotMatch(r.content, /[٠-٩]/);
+
+	const repeat = '- [ ] Repeat 🔁 every week 📅 2026-11-29';
+	const refused = toggleInContent(repeat, { line: 0, raw: repeat }, { ...OPTS, external: arabic });
+	assert.equal(refused.ok, false, 'a recurring task needs Tasks for its next occurrence, so it is refused');
+	assert.equal(!refused.ok && refused.reason, 'tasks-localized-dates');
+});
+
+test('a line that already had non-ASCII date digits can still be toggled by Tasks', () => {
+	const line = '- [ ] Old 📅 ٢٠٢٦-١١-٢٩';
+	const r = toggleInContent(line, { line: 0, raw: line }, { ...OPTS, external: (l) => l.replace('[ ]', '[x]') });
+	assert.ok(r.ok);
+	assert.equal(r.via, 'tasks-plugin');
+});

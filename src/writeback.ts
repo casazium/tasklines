@@ -34,7 +34,7 @@ export type ToggleResult =
 	| { ok: true; content: string; newLines: string[]; via: 'tasks-plugin' | 'built-in' }
 	| {
 			ok: false;
-			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch' | 'invalid-edit' | 'not-completed';
+			reason: 'line-missing' | 'line-changed' | 'not-a-task' | 'recurring-needs-tasks' | 'recurring-outside-global-filter' | 'bad-external-output' | 'tasks-format-mismatch' | 'tasks-localized-dates' | 'invalid-edit' | 'not-completed';
 			detail: string;
 	  };
 
@@ -57,6 +57,14 @@ function introducesOtherStyle(input: ParsedTask['format'], outputs: ParsedTask[]
 	if (input === 'plain' || input === 'mixed') return false;
 	const other = input === 'dataview' ? ['tasks-emoji', 'mixed'] : ['dataview', 'mixed'];
 	return outputs.some((o) => other.includes(o.format));
+}
+
+/**
+ * True if `line` has a date in non-ASCII digits. With Obsidian set to a language such as Arabic,
+ * the Tasks plugin can write ٢٠٢٦-١١-٢٩, which neither plugin reads back as a date.
+ */
+export function hasLocalizedDate(line: string): boolean {
+	return (line.match(/\p{Nd}{4}-\p{Nd}{2}-\p{Nd}{2}/gu) ?? []).some((d) => /[^\d-]/.test(d));
 }
 
 /** Built-in toggle of one task line: open → done (with completion date), done/cancelled → open. */
@@ -133,6 +141,7 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 	let newLines: string[] | null = null;
 	let via: 'tasks-plugin' | 'built-in' = 'built-in';
 	let formatMismatch = false;
+	let localizedDates = false;
 	const completing = !['done', 'cancelled'].includes(statusKind(task.status));
 	if (completing && task.recurrence && opts.external && opts.tasksGlobalFilter && !target.text.includes(opts.tasksGlobalFilter)) {
 		return {
@@ -151,7 +160,9 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 			if (!valid) return { ok: false, reason: 'bad-external-output', detail: 'the Tasks plugin returned an unexpected result' };
 			// Tasks reads one format at a time (emoji or Dataview). If it is set to the other
 			// format it does not see this line's fields and adds its own style: never accept that.
-			if (introducesOtherStyle(task.format, parsed as ParsedTask[])) formatMismatch = true;
+			// Its dates must stay readable: never accept a line it wrote in another script's digits.
+			if (out.some(hasLocalizedDate) && !hasLocalizedDate(target.text)) localizedDates = true;
+			else if (introducesOtherStyle(task.format, parsed as ParsedTask[])) formatMismatch = true;
 			else {
 				newLines = out;
 				via = 'tasks-plugin';
@@ -159,6 +170,13 @@ export function toggleInContent(content: string, ref: TaskRef, opts: ToggleOptio
 		}
 	}
 	if (!newLines) {
+		if (completing && task.recurrence && localizedDates) {
+			return {
+				ok: false,
+				reason: 'tasks-localized-dates',
+				detail: 'the Tasks plugin would write the dates in your language\'s digits, which cannot be read back as dates',
+			};
+		}
 		if (completing && task.recurrence && formatMismatch) {
 			return {
 				ok: false,
