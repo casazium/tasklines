@@ -30,3 +30,13 @@ jobs:
             - run: npm run build --if-present
             - run: npm run lint
             - run: npm test
+            # Dates are local: catch code that only works in one time zone.
+            - run: npm test
+              env:
+                  TZ: Pacific/Auckland
+            - run: npm test
+              env:
+                  TZ: Pacific/Honolulu
+            - run: npm test
+              env:
+                  TZ: Asia/Kolkata

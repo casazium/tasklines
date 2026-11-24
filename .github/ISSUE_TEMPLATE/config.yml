@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+    - name: Ideas and questions
+      url: https://github.com/casazium/tasklines/discussions
+      about: Feature requests and how-to questions go in Discussions.

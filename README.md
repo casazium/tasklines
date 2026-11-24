@@ -219,9 +219,20 @@ Anything else (`OR` inside `WHERE`, `LIMIT`, `FLATTEN`, link sources, custom fun
 - **Task statuses:** one per line, `character | name | kind`, where kind is `todo`, `in-progress`, `done`, `cancelled` or `other`. Space, `x` and `-` always mean to do, done and cancelled.
 - **Excluded folders:** notes in these folders are never indexed (for example `Templates`).
 
+## Troubleshooting
+
+- **A task disappeared after I ticked it.** It's still in your note. The view's **Status** filter is hiding finished tasks. Turn on **Done** in the task toolbar to see it.
+- **A task doesn't show up.** It must be a list item with a checkbox (`- [ ] Task`), in a note the base's **Filters** select, and outside your **Excluded folders**. Check the task toolbar's filters too, or press **Reset**.
+- **A date isn't recognized.** Dates are written `YYYY-MM-DD`. A date inside inline code, a link or a `%% comment %%` is treated as text on purpose.
+- **"That change could not be made safely on this line."** The line has repeated or competing fields, such as two priorities. Tasklines refuses rather than guess, so make that change in the note.
+- **A recurring task won't complete.** The next occurrence comes from the Tasks plugin, so it needs Tasks 7.2.0 or later, turned on, with **Let the Tasks plugin complete tasks** enabled.
+- **I can't find the Tasklines layout.** It needs Obsidian 1.13 or newer with the **Bases** core plugin turned on.
+
+**Still stuck?** [Report a bug](https://github.com/casazium/tasklines/issues/new?template=bug_report.yml). Run **Tasklines: Copy debug info** from the command palette and paste the result into the form. It has versions and settings, and no note content.
+
 ## Privacy
 
-Tasklines works entirely inside your vault. It makes no network requests, collects no data, and changes notes only when you tick, edit or add a task. It touches the clipboard only when you press **Copy** in select mode, which writes the selected tasks to it; it never reads the clipboard. Turning the plugin off leaves every note and `.base` file as plain, valid Markdown and YAML.
+Tasklines works entirely inside your vault. It makes no network requests, collects no data, and changes notes only when you tick, edit or add a task. It touches the clipboard only when you press **Copy** in select mode, which writes the selected tasks to it, or run **Copy debug info**, which writes versions and settings with no note content; it never reads the clipboard. Turning the plugin off leaves every note and `.base` file as plain, valid Markdown and YAML.
 
 ## Known limits
 

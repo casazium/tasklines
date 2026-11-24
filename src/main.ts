@@ -1,6 +1,7 @@
 import { Notice, Plugin, TAbstractFile } from 'obsidian';
 import { registerTasklinesView } from './bases-adapter.ts';
 import { TaskIndex } from './indexer.ts';
+import { registerDebugCommand } from './debug-command.ts';
 import { registerFolderBaseCommand } from './folder-base-command.ts';
 import { registerMigrateCommand } from './migrate-command.ts';
 import { applyStatusSetting, DEFAULT_SETTINGS, excludedFolders, TasklinesSettingTab, type TasklinesSettings } from './settings.ts';
@@ -35,6 +36,7 @@ export default class TasklinesPlugin extends Plugin {
 
 		registerMigrateCommand(this);
 		registerFolderBaseCommand(this);
+		registerDebugCommand(this, this.taskSettings);
 
 		if (!registerTasklinesView(this, this.index, writer)) {
 			new Notice('Tasklines needs the Bases core plugin, which is off in this vault.');
