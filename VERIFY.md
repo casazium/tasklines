@@ -622,3 +622,14 @@ Run on 2026-11-23 in Obsidian 1.15.1 (macOS) with Tasks 8.6.0, in a separate dem
 - [x] Right-to-left: columns, the grid and the calendar mirror. Fixed here: English task names were cut off at their start, mixed text and summary numbers were out of order, and calendar borders were on the wrong side.
 - [x] In Arabic, date edits, ticking, board moves, grid moves and calendar moves wrote the expected line, with 0-9 dates.
 - [x] Fixed here: in Arabic the Tasks plugin wrote `📅 ٢٠٢٦-١١-٢٩`, which neither plugin reads as a date. Tasklines now refuses that output. A plain task is completed by the built-in toggle with its dates intact, and a recurring task is refused with nothing changed.
+
+## Release 1.5.1
+
+Batch: real-world task lines (#72), easier bug reports (#73), and other languages and right-to-left (#74). The full pass ran on `main` at fa5e18b plus this release commit (version only):
+
+- [x] Build, lint (no warnings), 1,590 tests, and fuzz at 200,000 cases (seed 7). An earlier fuzz run failed its 50 ms per-line timing check on a different random line each time while another test suite was using several cores; each line parsed in under 7 ms alone, and the run passed once the machine was quiet.
+- [x] Desktop (macOS, Obsidian 1.15.1, Tasks 8.6.0): every view in `test-vault/` (three lists, four boards, three calendars) renders with no console errors, and ticking from the list writes the note. The batch's own sections are above (languages and right-to-left), and the link, code and debug-info checks ran in a separate demo vault.
+- [x] Windows (hypatia, Obsidian 1.15.1, Tasks 8.6.0, separate profile): dates in links and code stay text, a tag after a repeat rule survives, date edits and ticks write the expected lines, a CRLF note keeps its line endings, the board and calendar moves write one line each, and Copy debug info has no note content. The real `obsidian.json` was unchanged and the test folder was removed.
+- [x] Android emulator (Obsidian 1.15.1, Tasks 8.6.0): the same checks, without drags (phones move cards with the menu). The emulator's vault matches `test-vault/` again, checked after a reboot. Note for testers: copying files and stopping the emulator straight away can leave them empty, and Obsidian then fills an empty `.base` with a default table view. Run `adb shell sync` before stopping it.
+- [x] iPhone (iCloud vault): with the old build the table showed the bugs (the link's date taken out, `#home` missing, two false overdue tasks). After a restart picked up the new build, links and code stayed text, `#home` showed, and a tick synced back as `- [x] Tick me 📅 2026-11-29 ✅ 2026-11-24` with the other lines untouched. The vault and plugin were put back afterwards.
+
