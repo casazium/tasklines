@@ -6,6 +6,10 @@
 - **Leaves your notes as they are.** Tasklines reads and writes Tasks plugin emoji and Dataview fields, and keeps each line in the format it already uses. An edit changes only that one line, and if the line has changed since Tasklines read it, the edit is refused rather than guessed.
 - **Free, with no limits and no account.** Every feature is in the plugin, with no cap on tasks. It never goes online, and it works on desktop and mobile.
 
+**[Watch the 4-minute demo](https://youtu.be/aes_OPfhGVg)** (captions, no sound):
+
+[![Video thumbnail: Tasklines for Obsidian, your tasks inside Bases, as a table, board, matrix and calendar](docs/screenshots/demo-video.jpg)](https://youtu.be/aes_OPfhGVg)
+
 ![Tasks from several notes in a Tasklines view, grouped by area and then by section, with overdue tasks tinted red and the notes' properties as columns](docs/screenshots/overview.png)
 
 ![A due date being edited in place, in a view grouped by owner](docs/screenshots/editing.png)
