@@ -1,7 +1,7 @@
 // Pure single-line task edits: status, dates and priority. Each edit keeps the line's
 // existing metadata style (Tasks emoji or Dataview fields) and changes nothing else.
 
-import { parseTaskLine, statusKind, type ParsedTask, type Priority } from './parser.ts';
+import { maskInline, parseTaskLine, statusKind, type ParsedTask, type Priority } from './parser.ts';
 
 export type FieldFormat = 'tasks-emoji' | 'dataview';
 export type DateField = 'due' | 'scheduled' | 'start';
@@ -36,14 +36,12 @@ const BLOCK_ID_TAIL = /\s+\^[\w-]+\s*$/u;
 
 const fieldRe = (key: string): RegExp => new RegExp(`\\s*[[(]${key}::\\s*(?:\\[\\[[^\\]]*\\]\\]|[^\\[\\]()])*[\\])]`, 'iu');
 
-/** The line with inline code blanked out (same length), so searches never match inside code. */
-function masked(line: string): string {
-	return line.replace(/`[^`]*`/g, (m) => ''.repeat(m.length));
-}
-
-/** First match of `re` outside inline code and outside the `- [ ]` prefix. */
-function find(line: string, re: RegExp): { index: number; text: string } | null {
-	const m = masked(line);
+/**
+ * First match of `re` outside inline code and outside the `- [ ]` prefix. Tasks emoji (`emoji`)
+ * are also never matched inside a link or comment; Dataview fields may hold links.
+ */
+function find(line: string, re: RegExp, emoji = false): { index: number; text: string } | null {
+	const m = maskInline(line, emoji);
 	const bodyStart = m.indexOf(']') + 1;
 	const hit = re.exec(m.slice(bodyStart));
 	if (!hit) return null;
@@ -52,11 +50,11 @@ function find(line: string, re: RegExp): { index: number; text: string } | null 
 }
 
 /** Remove every match of `re` (outside inline code) that starts at or after `from`. */
-function removeAllFrom(line: string, re: RegExp, from: number): string {
+function removeAllFrom(line: string, re: RegExp, from: number, emoji = false): string {
 	let head = line.slice(0, from);
 	let rest = line.slice(from);
 	// find() looks after the first ']', so give the tail a stand-in prefix.
-	for (let hit = find(' ]' + rest, re); hit; hit = find(' ]' + rest, re)) rest = replaceAt(' ]' + rest, hit, '').slice(2);
+	for (let hit = find(' ]' + rest, re, emoji); hit; hit = find(' ]' + rest, re, emoji)) rest = replaceAt(' ]' + rest, hit, '').slice(2);
 	return head + rest;
 }
 
@@ -66,7 +64,7 @@ function replaceAt(line: string, hit: { index: number; text: string }, replaceme
 
 /** Append a metadata token at the end of the line, before a trailing ^block-id. */
 export function insertToken(line: string, token: string): string {
-	const tail = BLOCK_ID_TAIL.exec(masked(line));
+	const tail = BLOCK_ID_TAIL.exec(maskInline(line));
 	if (tail) {
 		const body = line.slice(0, tail.index).replace(/\s+$/, '');
 		return `${body} ${token}${line.slice(tail.index)}`;
@@ -86,7 +84,7 @@ function setDate(line: string, task: ParsedTask, field: DateField, value: string
 	// A line can carry the same date more than once (both styles, or repeated); the edit makes
 	// the line read back as the value that was set.
 	const dv = find(line, fieldRe(field));
-	const emoji = find(line, DATE_EMOJI_RE[field]);
+	const emoji = find(line, DATE_EMOJI_RE[field], true);
 	const first = dv && emoji ? (dv.index < emoji.index ? dv : emoji) : (dv ?? emoji);
 	if (first) {
 		const isDv = first === dv;
@@ -96,8 +94,8 @@ function setDate(line: string, task: ParsedTask, field: DateField, value: string
 		// Clearing removes every copy (a later one would otherwise become the date). Setting
 		// removes copies in the other style, which compete with it; a repeated copy in the same
 		// style reads as plain text and is left alone.
-		if (value === null) return removeAllFrom(removeAllFrom(out, fieldRe(field), from), DATE_EMOJI_RE[field], from);
-		return removeAllFrom(out, isDv ? DATE_EMOJI_RE[field] : fieldRe(field), from);
+		if (value === null) return removeAllFrom(removeAllFrom(out, fieldRe(field), from), DATE_EMOJI_RE[field], from, true);
+		return removeAllFrom(out, isDv ? DATE_EMOJI_RE[field] : fieldRe(field), from, isDv);
 	}
 	if (value === null) return line;
 	return insertToken(line, styleFor(task, opts) === 'dataview' ? `[${field}:: ${value}]` : `${DATE_EMOJI[field]} ${value}`);
@@ -106,7 +104,7 @@ function setDate(line: string, task: ParsedTask, field: DateField, value: string
 function setPriority(line: string, task: ParsedTask, value: Priority, opts: EditOptions): string {
 	const dv = find(line, fieldRe('priority'));
 	if (dv) return value === 'none' ? replaceAt(line, dv, '') : replaceAt(line, dv, dv.text.replace(/::\s*[^\])]*/u, `:: ${value}`));
-	const emoji = find(line, PRIORITY_EMOJI_RE);
+	const emoji = find(line, PRIORITY_EMOJI_RE, true);
 	if (emoji) return value === 'none' ? replaceAt(line, emoji, '') : replaceAt(line, emoji, emoji.text.replace(/(?:🔺|⏫|🔼|🔽|⏬)️?/u, PRIORITY_EMOJI[value]));
 	if (value === 'none') return line;
 	return insertToken(line, styleFor(task, opts) === 'dataview' ? `[priority:: ${value}]` : PRIORITY_EMOJI[value]);
@@ -115,7 +113,7 @@ function setPriority(line: string, task: ParsedTask, value: Priority, opts: Edit
 function setStatus(line: string, task: ParsedTask, value: string, opts: EditOptions): string {
 	if ([...value].length !== 1 || value === '\n' || value === ']') throw new Error(`invalid status: ${JSON.stringify(value)}`);
 	const pos = line.indexOf('[') + 1;
-	let out = line.slice(0, pos) + value + line.slice(pos + 1);
+	let out = line.slice(0, pos) + value + line.slice(pos + task.status.length); // a status may be two UTF-16 units
 	const was = statusKind(task.status);
 	const now = statusKind(value);
 	// A finishing date belongs to the status that set it: drop it when leaving that status.
@@ -128,7 +126,7 @@ function setStatus(line: string, task: ParsedTask, value: string, opts: EditOpti
 
 /** Remove the Dataview field if present, otherwise the emoji token. */
 function removeFirst(line: string, dvRe: RegExp, emojiRe: RegExp): string {
-	const hit = find(line, dvRe) ?? find(line, emojiRe);
+	const hit = find(line, dvRe) ?? find(line, emojiRe, true);
 	return hit ? replaceAt(line, hit, '') : line;
 }
 
