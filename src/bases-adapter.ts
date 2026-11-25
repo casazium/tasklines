@@ -16,6 +16,7 @@ import {
 	Plugin,
 	QueryController,
 	TFile,
+	WorkspaceLeaf,
 	type Value,
 } from 'obsidian';
 import { AddTaskModal } from './add-task-modal.ts';
@@ -79,15 +80,19 @@ export function registerTasklinesView(plugin: Plugin, index: TaskIndex, writer: 
 }
 
 /**
- * Reopens bases that are open and showing an error. A base that opened before these views
- * were registered (Tasklines just installed or turned on, or a vault's plugins trusted on
- * first open) keeps showing "Unknown view type" until it is reopened; Bases does not redraw
- * it when the view type appears. Reopening is the only public way to redraw it.
+ * Reopens tabs that show a base with an error: base files, and notes with a base embedded
+ * in them. A base drawn before these views were registered (Tasklines just installed or
+ * turned on, or a vault's plugins trusted on first open) keeps showing "Unknown view type"
+ * until its tab is reopened; Bases does not redraw it when the view type appears. Reopening
+ * is the only public way to redraw it.
  */
 export async function reopenBasesShowingErrors(plugin: Plugin): Promise<void> {
 	// Every base has a .bases-error element; it is hidden and empty unless there is an error.
 	const showsError = (el: HTMLElement) => Array.from(el.querySelectorAll<HTMLElement>('.bases-error')).some((e) => e.isShown() && !!e.textContent?.trim());
-	const leaves = plugin.app.workspace.getLeavesOfType('bases').filter((leaf) => showsError(leaf.view.containerEl));
+	const leaves: WorkspaceLeaf[] = [];
+	plugin.app.workspace.iterateAllLeaves((leaf) => {
+		if (showsError(leaf.view.containerEl)) leaves.push(leaf);
+	});
 	for (const leaf of leaves) {
 		const state = leaf.getViewState();
 		await leaf.setViewState({ type: 'empty' });

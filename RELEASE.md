@@ -23,6 +23,7 @@ Run all of this on the commit you'll tag, and note the results in [VERIFY.md](VE
    1. Open `Project tasks.base`.
    2. Turn Tasklines off in Settings → Community plugins, then reopen the base. It shows "Unknown view type: tasklines".
    3. Turn Tasklines back on. The base should redraw with its saved filters and sorting, without being reopened.
+   4. Repeat with a base embedded in a note: open `Manual tests/Other languages.md` and scroll to its base. It should redraw too.
 
    If the batch touches dates, write-back, the Tasks plugin, or layout and styles, also run `test-vault/Manual tests/Other languages.md`, which covers Obsidian in Arabic and right-to-left layout.
 
