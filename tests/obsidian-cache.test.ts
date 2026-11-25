@@ -7,6 +7,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import { extractTasks } from '../src/extract.ts';
+import { parseTaskLine } from '../src/parser.ts';
+import { editInContent, splitLines, toggleInContent, type ToggleOptions } from '../src/writeback.ts';
 
 interface Snapshot {
 	capturedWith: string;
@@ -56,6 +58,56 @@ for (const [name, file] of Object.entries(snapshot.files)) {
 
 		// Children point back at their parent.
 		for (const t of tasks) for (const c of t.children) assert.equal(tasks.find((x) => x.line === c)?.parentLine, t.line);
+	});
+}
+
+// Write-back inside the real notes: each task is ticked, unticked and given a due date where
+// it sits, and nothing else in the note may change.
+const OPTS: ToggleOptions = { today: '2026-11-25', completionDate: 'auto', plainGetsEmojiDate: true, newFieldFormat: 'tasks-emoji' };
+
+function assertOnlyLineChanged(before: string, after: string, line: number, label: string): void {
+	const a = splitLines(before);
+	const b = splitLines(after);
+	assert.equal(b.length, a.length, `${label}: line count unchanged`);
+	a.forEach((was, i) => {
+		if (i === line) {
+			assert.equal(b[i]?.eol, was.eol, `${label}: line ending kept`);
+			const p = parseTaskLine(b[i]?.text ?? '');
+			const q = parseTaskLine(was.text);
+			assert.ok(p && q, `${label}: still a task`);
+			assert.equal(p.indent + p.marker, q.indent + q.marker, `${label}: indent and marker kept`);
+		} else {
+			assert.deepEqual(b[i], was, `${label}: line ${i} untouched`);
+		}
+	});
+}
+
+for (const [name, file] of Object.entries(snapshot.files)) {
+	test(`write-back in place: ${name}`, () => {
+		const tasks = extractTasks(name, file.content, file.listItems, file.headings);
+		const shape = (content: string) => extractTasks(name, content, file.listItems, file.headings).map((t) => `${t.line}:${t.depth}:${t.parentLine ?? '-'}`);
+		for (const t of tasks) {
+			const ref = { line: t.line, raw: t.raw };
+			const label = `${name} line ${t.line}`;
+
+			const ticked = toggleInContent(file.content, ref, OPTS);
+			assert.ok(ticked.ok, `${label}: toggle refused (${ticked.ok ? '' : ticked.detail})`);
+			assertOnlyLineChanged(file.content, ticked.content, t.line, `${label} toggle`);
+			assert.deepEqual(shape(ticked.content), shape(file.content), `${label}: tasks and nesting unchanged after toggle`);
+
+			if (t.status === ' ' && !t.recurrence) {
+				const newRaw = splitLines(ticked.content)[t.line]?.text ?? '';
+				const back = toggleInContent(ticked.content, { line: t.line, raw: newRaw }, OPTS);
+				assert.ok(back.ok, `${label}: untoggle refused`);
+				// Adding the ✅ date trims trailing spaces, so compare without them.
+				assert.equal(back.content.split(/\r?\n/)[t.line]?.trimEnd(), t.raw.trimEnd(), `${label}: tick then untick restores the line`);
+			}
+
+			const dated = editInContent(file.content, ref, { kind: 'date', field: 'due', value: '2026-12-01' }, OPTS);
+			assert.ok(dated.ok, `${label}: date edit refused (${dated.ok ? '' : dated.detail})`);
+			assertOnlyLineChanged(file.content, dated.content, t.line, `${label} due date`);
+			assert.equal(parseTaskLine(splitLines(dated.content)[t.line]?.text ?? '')?.due, '2026-12-01', `${label}: due date set`);
+		}
 	});
 }
 

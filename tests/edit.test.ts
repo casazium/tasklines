@@ -1,12 +1,12 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { applyEdit, type EditOptions, type TaskEdit } from '../src/edit.ts';
 import { parseTaskLine, type ParsedTask } from '../src/parser.ts';
 import { editInContent, splitLines } from '../src/writeback.ts';
+import { fixtureLines } from './fixture-lines.ts';
 
 const OPTS: EditOptions = { today: '2026-11-20', completionDate: 'auto', plainGetsEmojiDate: false, newFieldFormat: 'tasks-emoji' };
-const fixtures = JSON.parse(readFileSync(new URL('./fixtures/task-lines.json', import.meta.url), 'utf8')) as Array<{ name: string; line: string }>;
+const fixtures = fixtureLines;
 
 function edit(line: string, e: TaskEdit, opts: Partial<EditOptions> = {}): string {
 	const t = parseTaskLine(line);

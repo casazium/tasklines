@@ -1,15 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { copyText, describePlan, describeSummary, orderForWrite, planBulk, planStep, rangeKeys, shiftRecords, summarize, type BulkAction, type UndoRecord } from '../src/bulk.ts';
 import { applyEdit, type EditOptions } from '../src/edit.ts';
 import type { IndexedTask } from '../src/extract.ts';
 import { parseTaskLine, statusKind } from '../src/parser.ts';
 import { editInContent, replaceLineInContent, toggleInContent, toggleTaskLine } from '../src/writeback.ts';
+import { fixtureLines } from './fixture-lines.ts';
 
 const TODAY = '2026-11-21';
 const OPTS: EditOptions = { today: TODAY, completionDate: 'auto', plainGetsEmojiDate: false, newFieldFormat: 'tasks-emoji' };
-const fixtures = JSON.parse(readFileSync(new URL('./fixtures/task-lines.json', import.meta.url), 'utf8')) as Array<{ name: string; line: string }>;
+const fixtures = fixtureLines;
 
 function task(line: string, n = 0, path = 'A.md'): IndexedTask {
 	const p = parseTaskLine(line);
