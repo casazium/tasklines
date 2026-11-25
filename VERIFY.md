@@ -633,3 +633,20 @@ Batch: real-world task lines (#72), easier bug reports (#73), and other language
 - [x] Android emulator (Obsidian 1.15.1, Tasks 8.6.0): the same checks, without drags (phones move cards with the menu). The emulator's vault matches `test-vault/` again, checked after a reboot. Note for testers: copying files and stopping the emulator straight away can leave them empty, and Obsidian then fills an empty `.base` with a default table view. Run `adb shell sync` before stopping it.
 - [x] iPhone (iCloud vault): with the old build the table showed the bugs (the link's date taken out, `#home` missing, two false overdue tasks). After a restart picked up the new build, links and code stayed text, `#home` showed, and a tick synced back as `- [x] Tick me 📅 2026-11-29 ✅ 2026-11-24` with the other lines untouched. The vault and plugin were put back afterwards.
 
+
+## Release 1.5.2
+
+Batch: bases redraw after Tasklines turns on, and mixed tab and space nesting (#76); the redraw for bases embedded in notes (#81); tests, docs and process (#77, #78, #79, #80). The full pass ran on 2026-11-25 on `main` at 2ce140a plus this release commit (version, VERIFY.md and the test vault's stylesheet only):
+
+- [x] Build, lint (no warnings), 2,495 tests, and fuzz at 200,000 cases (seed 7).
+- [x] Desktop (macOS, Obsidian 1.15.1, Tasks 8.6.0):
+  - All ten views in `test-vault/` (three lists, four boards, three calendars) render with no visible errors and no console errors.
+  - Ticking Fix gate from the list wrote `- [x] Fix gate ⏫ 📅 2026-11-18 ✅ 2026-11-25` and changed no other line.
+  - Redraw: `Project tasks.base` opened while Tasklines was off shows "Unknown view type: tasklines" and redraws with its 14 tasks when Tasklines is turned on. The note `Manual tests/Other languages.md` does the same for its embedded base. Choosing "Trust author and enable plugins" when opening `test-vault` as a new vault also redraws the open base (checked earlier the same day, on the #76 build).
+- [x] Android emulator (API 37, Obsidian 1.15.1, Tasks 8.6.0), driven through the WebView's debugging socket:
+  - The same ten views render with the same task counts and no console errors.
+  - The base-tab and embedded-base redraw checks pass.
+  - Obsidian re-saved `Project tasks.base` in its own format during the checks; it was put back, and the emulator's vault matches `test-vault/`.
+  - Note for testers: the tab had remembered a view named "View", which `Task board.base` doesn't have, so it opened with 'View "View" not found'. Choosing a view fixed it. This was leftover state, not a Tasklines problem.
+- [ ] iPhone and Windows: not needed. The batch doesn't change touch, pickers, the keyboard, files, line endings or paths.
+- [x] Found during the pass: the committed `test-vault/.obsidian/plugins/tasklines/styles.css` predated the 1.5.1 right-to-left styles, so `git checkout -- test-vault/` restored an old stylesheet. It now matches `styles.css`.
