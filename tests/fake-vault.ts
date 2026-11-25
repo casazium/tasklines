@@ -1,5 +1,8 @@
 // A minimal stand-in for Obsidian's App, vault and metadata cache, built from note text.
-// List items are derived the way the metadata cache reports them (code blocks excluded).
+// List items are a rough guess at what the metadata cache reports (backtick fences excluded).
+// It is good enough for indexer and query tests, but it differs from Obsidian on callouts,
+// comments, loose lists and more: tests/obsidian-cache.test.ts checks extraction against
+// Obsidian's real cache instead.
 
 import type { App, TFile } from 'obsidian';
 
