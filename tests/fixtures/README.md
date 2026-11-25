@@ -8,6 +8,11 @@ Task lines and what the parser should make of them. Every case also runs through
 
 What Obsidian's metadata cache reports (list items and headings) for the notes in `test-vault/Cache samples/`. `tests/obsidian-cache.test.ts` runs extraction against it, so the tests use Obsidian's real view of callouts, blockquotes, code blocks, comments, loose lists and mixed indentation instead of the guess in `tests/fake-vault.ts`.
 
+It also feeds write-back:
+
+- Every task line in these notes joins the per-line suites (toggle, edit, board, calendar, bulk) through `tests/fixture-lines.ts`, alongside `task-lines.json`.
+- `tests/obsidian-cache.test.ts` ticks, unticks and sets a due date on each task inside its whole note. It checks that no other line or line ending changes, and that the note's tasks and nesting stay the same.
+
 Add a sample note when a bug depends on how Obsidian reads a note's structure, then recapture.
 
 ### Recapturing

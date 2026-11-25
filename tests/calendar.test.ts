@@ -1,15 +1,15 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
 import { agenda, byDay, CALENDAR_FIELDS, canClear, isRealDate, monthGrid, moveToDate, normalizeCalendarField, normalizeCalendarLayout, quickDates, shiftMonth, weekday } from '../src/calendar.ts';
 import { applyEdit, type EditOptions } from '../src/edit.ts';
 import type { IndexedTask } from '../src/extract.ts';
 import { parseTaskLine } from '../src/parser.ts';
 import type { QueryRow } from '../src/query.ts';
+import { fixtureLines } from './fixture-lines.ts';
 
 const TODAY = '2026-11-21'; // a Saturday
 const OPTS: EditOptions = { today: TODAY, completionDate: 'auto', plainGetsEmojiDate: false, newFieldFormat: 'tasks-emoji' };
-const fixtures = JSON.parse(readFileSync(new URL('./fixtures/task-lines.json', import.meta.url), 'utf8')) as Array<{ name: string; line: string }>;
+const fixtures = fixtureLines;
 
 function task(line: string, n = 0): IndexedTask {
 	const p = parseTaskLine(line);
