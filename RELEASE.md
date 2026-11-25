@@ -24,6 +24,8 @@ Run all of this on the commit you'll tag, and note the results in [VERIFY.md](VE
    2. Turn Tasklines off in Settings → Community plugins, then reopen the base. It shows "Unknown view type: tasklines".
    3. Turn Tasklines back on. The base should redraw with its saved filters and sorting, without being reopened.
 
+   If the batch touches dates, write-back, the Tasks plugin, or layout and styles, also run `test-vault/Manual tests/Other languages.md`, which covers Obsidian in Arabic and right-to-left layout.
+
    Afterwards, put the notes back (`git checkout -- test-vault/`).
 4. **Android emulator:** for any change you can see or touch. Check the list, the board, editing and New task, then pull the notes back and diff them.
 5. **iPhone:** for changes to touch, pickers, menus or the keyboard.
