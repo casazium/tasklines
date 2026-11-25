@@ -1,0 +1,13 @@
+- [ ] Normal task
+-[ ] No space after dash
+- [] Empty brackets
+- [ ]No space after box
+- [ ]
+- [/] In progress
+- [-] Cancelled
+- [>] Forwarded
+- [?] Question
+- [ ] Task with trailing spaces   
+- [X] Capital X
+-  [ ] Two spaces after dash
+- [ ]  Two spaces after box

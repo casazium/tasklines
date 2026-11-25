@@ -43,13 +43,15 @@ export function extractTasks(path: string, content: string, items: ListItemLike[
 		}
 
 		// Walk up through list parents; plain bullets between tasks do not count as depth.
-		// A root item's parent is -(first line of the list), which is 0 for a list on line 0,
-		// so "parent >= 0" alone is ambiguous. A real parent is always indented less.
+		// A root item's parent is negative: -(first line of the list), and Obsidian 1.15 uses -1
+		// for a list on line 0. Older or other caches might say 0 there, so a parent of 0 counts
+		// only when line 0 is indented less. Other parents are trusted as Obsidian reports them,
+		// even when tabs and spaces are mixed (tests/fixtures/obsidian-cache.json).
 		let depth = 0;
 		let parentLine: number | undefined;
 		let child = lineNo;
 		let p = item.parent;
-		while (p >= 0 && p !== child && parentOf.has(p) && indentWidth(lines[p] ?? '') < indentWidth(lines[child] ?? '')) {
+		while (p >= 0 && p !== child && parentOf.has(p) && (p > 0 || indentWidth(lines[p] ?? '') < indentWidth(lines[child] ?? ''))) {
 			if (taskLines.has(p)) {
 				parentLine ??= p;
 				depth++;

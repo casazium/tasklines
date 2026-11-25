@@ -19,7 +19,12 @@ Run all of this on the commit you'll tag, and note the results in [VERIFY.md](VE
 
 1. **Automated:** `npm run build`, `npm test` and `npm run lint` pass. Lint must report no warnings: it uses the same `eslint-plugin-obsidianmd` rules as the directory's review.
 2. **Fuzz, large run:** `FUZZ_CASES=200000 FUZZ_SEED=7 node --test tests/fuzz.test.ts`. Turn any failure into a fixture.
-3. **Desktop:** the VERIFY.md sections for everything in the batch, plus a quick pass over the list view and the task board in `test-vault/`. Afterwards, put the notes back (`git checkout -- test-vault/`).
+3. **Desktop:** the VERIFY.md sections for everything in the batch, plus a quick pass over the list view and the task board in `test-vault/`. Then check that a base opened before Tasklines loads redraws when it turns on:
+   1. Open `Project tasks.base`.
+   2. Turn Tasklines off in Settings → Community plugins, then reopen the base. It shows "Unknown view type: tasklines".
+   3. Turn Tasklines back on. The base should redraw with its saved filters and sorting, without being reopened.
+
+   Afterwards, put the notes back (`git checkout -- test-vault/`).
 4. **Android emulator:** for any change you can see or touch. Check the list, the board, editing and New task, then pull the notes back and diff them.
 5. **iPhone:** for changes to touch, pickers, menus or the keyboard.
 6. **Windows** (hypatia): for changes to reading or writing files, line endings, paths or the Tasks plugin.
