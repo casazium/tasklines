@@ -1,7 +1,7 @@
 {
 	"id": "tasklines",
 	"name": "Tasklines",
-	"version": "1.5.1",
+	"version": "1.5.2",
 	"minAppVersion": "1.13.0",
 	"description": "Show inline checkbox tasks in Bases as a table, a board, an urgent-and-important matrix or a calendar, with each note’s properties as columns. Filter, sort, group, color, tick and edit tasks in place.",
 	"author": "Casazium",
