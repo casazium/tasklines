@@ -1,5 +1,5 @@
 import { Notice, Plugin, TAbstractFile } from 'obsidian';
-import { registerTasklinesView } from './bases-adapter.ts';
+import { registerTasklinesView, reopenBasesShowingErrors } from './bases-adapter.ts';
 import { TaskIndex } from './indexer.ts';
 import { registerDebugCommand } from './debug-command.ts';
 import { registerFolderBaseCommand } from './folder-base-command.ts';
@@ -40,6 +40,12 @@ export default class TasklinesPlugin extends Plugin {
 
 		if (!registerTasklinesView(this, this.index, writer)) {
 			new Notice('Tasklines needs the Bases core plugin, which is off in this vault.');
+		} else if (this.app.workspace.layoutReady) {
+			// Turned on after startup: bases already open may show "Unknown view type".
+			// Redraw them once onload has returned and the views are in place.
+			window.setTimeout(() => {
+				reopenBasesShowingErrors(this).catch((e: unknown) => console.error('Tasklines: could not redraw open bases', e));
+			}, 0);
 		}
 	}
 }
