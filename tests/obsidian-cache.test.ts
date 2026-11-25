@@ -5,7 +5,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
 import { extractTasks } from '../src/extract.ts';
 import { parseTaskLine } from '../src/parser.ts';
 import { editInContent, splitLines, toggleInContent, type ToggleOptions } from '../src/writeback.ts';
@@ -41,6 +41,18 @@ const expected: Record<string, string[]> = {
 	'markers.md': ['0:0:-:-', '5:0:-:-', '6:0:-:-', '7:0:-:-', '8:0:-:-', '9:0:-:-', '10:0:-:-', '11:0:-:-', '12:0:-:-'],
 	'numbered.md': ['2:0:-:Numbered', '3:0:-:Numbered', '4:1:3:Numbered', '5:1:3:Numbered', '6:0:-:Numbered', '7:0:-:Numbered', '9:0:-:Numbered', '10:1:9:Numbered', '11:0:-:Numbered', '12:0:-:Numbered'],
 };
+
+// The tests read note text from the snapshot, so a sample note edited without recapturing
+// would leave them checking old text. Fail instead, and say how to fix it.
+test('the sample notes in test-vault match the snapshot', () => {
+	const dir = new URL('../test-vault/Cache samples/', import.meta.url);
+	const recapture = 'recapture the snapshot (tests/fixtures/README.md, "Recapturing")';
+	const onDisk = readdirSync(dir).filter((f) => f.endsWith('.md')).sort();
+	assert.deepEqual(onDisk, Object.keys(snapshot.files).sort(), `sample notes were added or removed: ${recapture}`);
+	for (const name of onDisk) {
+		assert.equal(readFileSync(new URL(name, dir), 'utf8'), snapshot.files[name]?.content, `${name} changed since the snapshot: ${recapture}`);
+	}
+});
 
 test('the snapshot covers exactly the expected sample notes', () => {
 	assert.deepEqual(Object.keys(snapshot.files).sort(), Object.keys(expected).sort());

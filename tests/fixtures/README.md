@@ -17,7 +17,7 @@ Add a sample note when a bug depends on how Obsidian reads a note's structure, t
 
 ### Recapturing
 
-Recapture after changing a sample note, and when a new Obsidian version might read lists differently.
+Recapture after adding, removing or changing a sample note (`npm test` fails until you do), and when a new Obsidian version might read lists differently.
 
 1. Open `test-vault` in Obsidian and wait for it to finish indexing.
 2. Open View → Toggle Developer Tools → Console, and run:
